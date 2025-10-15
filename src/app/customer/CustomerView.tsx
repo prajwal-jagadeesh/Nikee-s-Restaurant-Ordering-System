@@ -1,6 +1,5 @@
 'use client';
 import { useState, useMemo } from 'react';
-import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { menuItems, menuCategories } from '@/lib/data';
 import type { MenuItem, OrderItem } from '@/lib/types';
@@ -25,20 +24,26 @@ function PopularDishes() {
     setIsLoading(true);
     try {
       const result = await suggestPopularDishes({
-        userInput: userInput || 'something light and spicy',
+        userInput: userInput,
+        menu: JSON.stringify(menuItems),
         pastTrends: 'Paneer Butter Masala, Aglio e Olio Spaghetti, Butterfly Paneer Crisps are frequently ordered.',
         pastOrderHistory: '',
       });
       setSuggestions(result.suggestions);
     } catch (error) {
       console.error('AI suggestion failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Suggestion Failed',
+        description: 'Sorry, I couldn\'t come up with suggestions right now. Please try again.',
+      })
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Card className="mb-6 bg-primary/10 border-primary/20">
+    <Card className="mb-6 bg-primary/5 border-primary/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-headline">
           <Wand2 className="text-primary" />
@@ -48,7 +53,7 @@ function PopularDishes() {
       <CardContent className="space-y-4">
         <p className="text-muted-foreground">Get AI-powered dish recommendations!</p>
         <div className="space-y-2">
-            <Label htmlFor="dish-preference">Tell us what you're in the mood for (e.g., "spicy", "healthy")</Label>
+            <Label htmlFor="dish-preference">Tell us what you're in the mood for (e.g., "spicy", "healthy", "something light")</Label>
             <Input 
                 id="dish-preference"
                 placeholder="e.g. something light..." 
@@ -63,7 +68,7 @@ function PopularDishes() {
         {suggestions.length > 0 && (
           <div className="pt-4">
             <h4 className="font-semibold mb-2">Our suggestions:</h4>
-            <ul className="list-disc list-inside space-y-1">
+            <ul className="list-disc list-inside space-y-1 text-primary-foreground/90">
               {suggestions.map((dish, i) => <li key={i}>{dish}</li>)}
             </ul>
           </div>
@@ -97,6 +102,7 @@ export default function CustomerView() {
   const updateQuantity = (itemId: string, quantity: number) => {
     setCart((prev) => {
       if (quantity <= 0) {
+        toast({ title: `${prev.find(i => i.menuItem.id === itemId)?.menuItem.name} removed from cart`, variant: 'destructive' });
         return prev.filter((i) => i.menuItem.id !== itemId);
       }
       return prev.map((i) =>
@@ -118,6 +124,8 @@ export default function CustomerView() {
       title: 'Order Placed!',
       description: `Your order from Table ${tableNumber} has been sent to the kitchen.`,
     });
+    // Here you would typically send the order to a backend.
+    console.log('Order Placed:', { tableNumber, cart, total });
     setCart([]);
   };
 
@@ -133,7 +141,7 @@ export default function CustomerView() {
       <PopularDishes />
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
           {menuCategories.map((cat) => (
             <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
           ))}
@@ -146,24 +154,22 @@ export default function CustomerView() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
             >
-                <TabsContent value={activeTab} forceMount>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-                        {filteredMenuItems.map((item) => (
-                            <Card key={item.id} className="h-full flex flex-col overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300">
-                                <CardHeader>
-                                    <CardTitle>{item.name}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex-1">
-                                <p className="text-sm text-muted-foreground">{item.description}</p>
-                                </CardContent>
-                                <CardFooter className="flex justify-between items-center mt-auto">
-                                <span className="font-bold text-lg">₹{item.price.toFixed(2)}</span>
-                                <Button onClick={() => addToCart(item)}>Add to Order</Button>
-                                </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
-                </TabsContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                    {filteredMenuItems.map((item) => (
+                        <Card key={item.id} className="h-full flex flex-col overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 bg-card/70">
+                            <CardHeader>
+                                <CardTitle>{item.name}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex-1">
+                            <p className="text-sm text-muted-foreground">{item.description}</p>
+                            </CardContent>
+                            <CardFooter className="flex justify-between items-center mt-auto">
+                            <span className="font-bold text-lg">₹{item.price.toFixed(2)}</span>
+                            <Button onClick={() => addToCart(item)}>Add to Order</Button>
+                            </CardFooter>
+                        </Card>
+                    ))}
+                </div>
             </motion.div>
         </AnimatePresence>
       </Tabs>
@@ -201,7 +207,7 @@ export default function CustomerView() {
                     </div>
                     <div className="text-right">
                         <p className="font-semibold">₹{(item.menuItem.price * item.quantity).toFixed(2)}</p>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => updateQuantity(item.mIenuItem.id, 0)}><Trash2 className="h-4 w-4"/></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => updateQuantity(item.menuItem.id, 0)}><Trash2 className="h-4 w-4"/></Button>
                     </div>
                   </div>
                 ))}
@@ -209,8 +215,9 @@ export default function CustomerView() {
             )}
           </div>
           {cart.length > 0 && (
-            <SheetFooter className="border-t pt-4 mt-auto">
+            <SheetFooter className="border-t pt-4 mt-auto bg-background">
                 <div className="w-full space-y-4">
+                    <Separator />
                     <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
                         <span>₹{total.toFixed(2)}</span>

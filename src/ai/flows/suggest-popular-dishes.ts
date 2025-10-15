@@ -12,13 +12,14 @@ import {z} from 'genkit';
 
 const SuggestPopularDishesInputSchema = z.object({
   userInput: z.string().describe('The user input or query.'),
+  menu: z.string().describe('The entire restaurant menu as a JSON string.'),
   pastTrends: z.string().describe('The past trends of dishes ordered.'),
   pastOrderHistory: z.string().describe('The past order history of the user.'),
 });
 export type SuggestPopularDishesInput = z.infer<typeof SuggestPopularDishesInputSchema>;
 
 const SuggestPopularDishesOutputSchema = z.object({
-  suggestions: z.array(z.string()).describe('An array of suggested popular dishes.'),
+  suggestions: z.array(z.string()).describe('An array of suggested popular dishes that are present in the menu.'),
 });
 export type SuggestPopularDishesOutput = z.infer<typeof SuggestPopularDishesOutputSchema>;
 
@@ -30,15 +31,19 @@ const prompt = ai.definePrompt({
   name: 'suggestPopularDishesPrompt',
   input: {schema: SuggestPopularDishesInputSchema},
   output: {schema: SuggestPopularDishesOutputSchema},
-  prompt: `You are a restaurant expert specializing in suggesting popular dishes or combinations based on current trends or past order history.
+  prompt: `You are a restaurant expert specializing in suggesting popular dishes or combinations from the menu provided.
 
-You will use this information to suggest popular dishes based on user input, past trends, and past order history.
+You will use this information to suggest popular dishes based on user input.
 
-User Input: {{{userInput}}}
-Past Trends: {{{pastTrends}}}
-Past Order History: {{{pastOrderHistory}}}
+You MUST only suggest dishes that are available on the following menu. Do not suggest anything that is not on this menu.
 
-Suggest popular dishes:
+Menu:
+{{{menu}}}
+
+User Input: "{{{userInput}}}"
+
+Based on the user's input, suggest 2-3 dishes from the menu.
+If the user input is empty or generic, suggest some of the most popular or recommended dishes (items with 🏅 or 👨‍🍳 icons).
 `,
   config: {
     safetySettings: [
@@ -73,4 +78,3 @@ const suggestPopularDishesFlow = ai.defineFlow(
     return output!;
   }
 );
-
