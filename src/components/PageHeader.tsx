@@ -1,7 +1,6 @@
 'use client';
 import Link from 'next/link';
 import { UtensilsCrossed } from 'lucide-react';
-import AppSwitcher from './AppSwitcher';
 
 export default function PageHeader() {
   return (
@@ -13,7 +12,6 @@ export default function PageHeader() {
             Nikee's Zara OrderFlow
           </span>
         </Link>
-        <AppSwitcher />
       </div>
     </header>
   );
