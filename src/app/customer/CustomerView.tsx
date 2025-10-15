@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AnimatePresence, motion } from 'framer-motion';
 
-function PopularDishes() {
+function PopularDishes({toast}: {toast: any}) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [userInput, setUserInput] = useState('');
@@ -138,7 +138,7 @@ export default function CustomerView() {
         <p className="text-lg text-muted-foreground">You are ordering for Table {tableNumber}</p>
       </div>
 
-      <PopularDishes />
+      <PopularDishes toast={toast} />
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
