@@ -60,8 +60,7 @@ export const useHydratedOrderStore = <T>(
   selector: (state: OrderState) => T,
   defaultValue: T
 ): T => {
-  const store = useOrderStore();
-  const isHydrated = store._rehydrated;
-  const result = store(selector);
+  const isHydrated = useOrderStore((state) => state._rehydrated);
+  const result = useOrderStore(selector);
   return isHydrated ? result : defaultValue;
 };
