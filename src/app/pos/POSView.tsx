@@ -1,17 +1,20 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useOrderStore } from '@/lib/orders-store';
+import { useOrderStore, useHydratedOrderStore } from '@/lib/orders-store';
 import type { Order } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function POSView() {
-  const allOrders = useOrderStore((state) => state.orders);
+  const allOrders = useHydratedOrderStore((state) => state.orders, []);
   const [orders, setOrders] = useState<Order[]>([]);
   const { toast } = useToast();
+  const isHydrated = useHydratedOrderStore((state) => state._rehydrated, false);
+
 
   useEffect(() => {
     setOrders(allOrders.filter(o => o.status !== 'Paid'));
@@ -30,6 +33,16 @@ export default function POSView() {
       description: `Printing bill for Table #${order.tableNumber}. Total: ₹${order.total.toFixed(2)}`,
     });
   };
+
+  if (!isHydrated) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-64 w-full" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

@@ -1,4 +1,6 @@
+import { Suspense } from 'react';
 import CaptainView from './CaptainView';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CaptainPage() {
   return (
@@ -9,7 +11,9 @@ export default function CaptainPage() {
         </div>
       </header>
       <main className="container mx-auto py-4">
-        <CaptainView />
+        <Suspense fallback={<Skeleton className="h-[80vh] w-full" />}>
+          <CaptainView />
+        </Suspense>
       </main>
     </div>
   );

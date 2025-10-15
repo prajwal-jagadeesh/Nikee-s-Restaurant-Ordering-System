@@ -1,13 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useOrderStore } from '@/lib/orders-store';
+import { useOrderStore, useHydratedOrderStore } from '@/lib/orders-store';
 import type { Order, OrderStatus } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const KDS_STATUSES: OrderStatus[] = ['New', 'Preparing', 'Ready'];
+
+const KDS_STATUSES: OrderStatus[] = ['New', 'Confirmed', 'Preparing', 'Ready'];
 
 const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | null> = {
   New: { next: 'Preparing', label: 'Start Preparing' },
@@ -20,9 +22,10 @@ const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | 
 };
 
 export default function KDSView() {
-  const allOrders = useOrderStore((state) => state.orders);
+  const allOrders = useHydratedOrderStore((state) => state.orders, []);
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const [kdsOrders, setKdsOrders] = useState<Order[]>([]);
+  const isHydrated = useHydratedOrderStore((state) => state._rehydrated, false);
 
   useEffect(() => {
     setKdsOrders(allOrders.filter(o => KDS_STATUSES.includes(o.status)));
@@ -34,6 +37,22 @@ export default function KDSView() {
       updateOrderStatus(orderId, action.next);
     }
   };
+
+  if (!isHydrated) {
+    return (
+      <div className="flex h-[calc(100vh-12rem)] gap-4">
+        {KDS_STATUSES.map((status) => (
+          <div key={status} className="flex-1 flex flex-col bg-muted/50 rounded-lg">
+            <h2 className="p-4 text-lg font-semibold border-b font-headline">{status}</h2>
+            <div className="p-4 space-y-4">
+               <Skeleton className="h-48 w-full" />
+               <Skeleton className="h-48 w-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-12rem)] gap-4">

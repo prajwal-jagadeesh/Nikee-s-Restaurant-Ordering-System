@@ -1,4 +1,6 @@
+import { Suspense } from 'react';
 import KDSView from './KDSView';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function KDSPage() {
   return (
@@ -9,7 +11,9 @@ export default function KDSPage() {
         </div>
       </header>
       <main className="container mx-auto py-4">
-        <KDSView />
+        <Suspense fallback={<Skeleton className="h-[calc(100vh-12rem)] w-full" />}>
+          <KDSView />
+        </Suspense>
       </main>
     </div>
   );

@@ -1,4 +1,6 @@
+import { Suspense } from 'react';
 import POSView from './POSView';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function POSPage() {
   return (
@@ -9,7 +11,9 @@ export default function POSPage() {
         </div>
       </header>
       <main className="container mx-auto py-4">
-        <POSView />
+        <Suspense fallback={<Skeleton className="h-[80vh] w-full" />}>
+          <POSView />
+        </Suspense>
       </main>
     </div>
   );
