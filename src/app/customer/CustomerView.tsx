@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { menuItems, menuCategories } from '@/lib/data';
 import type { MenuItem, OrderItem, Order, OrderStatus } from '@/lib/types';
