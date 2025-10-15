@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "1",
+      "description": "Grilled cottage cheese marinated in spices",
+      "imageUrl": "https://picsum.photos/seed/1/400/400",
+      "imageHint": "paneer tikka"
+    },
+    {
+      "id": "2",
+      "description": "Creamy and tangy tomato soup",
+      "imageUrl": "https://picsum.photos/seed/2/400/400",
+      "imageHint": "tomato soup"
+    },
+    {
+      "id": "3",
+      "description": "Black lentils and kidney beans in a creamy gravy",
+      "imageUrl": "https://picsum.photos/seed/3/400/400",
+      "imageHint": "dal makhani"
+    },
+    {
+      "id": "4",
+      "description": "Sweet dumplings in sugar syrup",
+      "imageUrl": "https://picsum.photos/seed/4/400/400",
+      "imageHint": "gulab jamun"
+    },
+    {
+      "id": "5",
+      "description": "Spiced Indian tea",
+      "imageUrl": "https://picsum.photos/seed/5/400/400",
+      "imageHint": "masala chai"
+    },
+    {
+      "id": "6",
+      "description": "Aromatic rice dish with mixed vegetables",
+      "imageUrl": "https://picsum.photos/seed/6/400/400",
+      "imageHint": "veg biryani"
+    },
+    {
+      "id": "7",
+      "description": "Crispy fried rolls with vegetable filling",
+      "imageUrl": "https://picsum.photos/seed/7/400/400",
+      "imageHint": "spring rolls"
+    },
+    {
+      "id": "8",
+      "description": "Spicy and sour soup with fried noodles",
+      "imageUrl": "https://picsum.photos/seed/8/400/400",
+      "imageHint": "manchow soup"
+    }
+  ]
 }

@@ -1,0 +1,125 @@
+import type { MenuItem, Order } from '@/lib/types';
+
+export const menuCategories = [
+  'Appetizers',
+  'Soups',
+  'Main Course',
+  'Desserts',
+  'Beverages',
+];
+
+export const menuItems: MenuItem[] = [
+  {
+    id: '1',
+    name: 'Paneer Tikka',
+    description: 'Grilled cottage cheese marinated in spices',
+    price: 250,
+    category: 'Appetizers',
+    imageUrl: 'https://picsum.photos/seed/1/400/400',
+    imageHint: 'paneer tikka',
+  },
+  {
+    id: '2',
+    name: 'Tomato Soup',
+    description: 'Creamy and tangy tomato soup',
+    price: 150,
+    category: 'Soups',
+    imageUrl: 'https://picsum.photos/seed/2/400/400',
+    imageHint: 'tomato soup',
+  },
+  {
+    id: '3',
+    name: 'Dal Makhani',
+    description: 'Black lentils and kidney beans in a creamy gravy',
+    price: 350,
+    category: 'Main Course',
+    imageUrl: 'https://picsum.photos/seed/3/400/400',
+    imageHint: 'dal makhani',
+  },
+  {
+    id: '4',
+    name: 'Gulab Jamun',
+    description: 'Sweet dumplings in sugar syrup',
+    price: 120,
+    category: 'Desserts',
+    imageUrl: 'https://picsum.photos/seed/4/400/400',
+    imageHint: 'gulab jamun',
+  },
+  {
+    id: '5',
+    name: 'Masala Chai',
+    description: 'Spiced Indian tea',
+    price: 80,
+    category: 'Beverages',
+    imageUrl: 'https://picsum.photos/seed/5/400/400',
+    imageHint: 'masala chai',
+  },
+  {
+    id: '6',
+    name: 'Veg Biryani',
+    description: 'Aromatic rice dish with mixed vegetables',
+    price: 300,
+    category: 'Main Course',
+    imageUrl: 'https://picsum.photos/seed/6/400/400',
+    imageHint: 'veg biryani',
+  },
+    {
+    id: '7',
+    name: 'Spring Rolls',
+    description: 'Crispy fried rolls with vegetable filling',
+    price: 200,
+    category: 'Appetizers',
+    imageUrl: 'https://picsum.photos/seed/7/400/400',
+    imageHint: 'spring rolls',
+  },
+    {
+    id: '8',
+    name: 'Manchow Soup',
+    description: 'Spicy and sour soup with fried noodles',
+    price: 160,
+    category: 'Soups',
+    imageUrl: 'https://picsum.photos/seed/8/400/400',
+    imageHint: 'manchow soup',
+  },
+];
+
+export const initialOrders: Order[] = [
+  {
+    id: 'ORD001',
+    tableNumber: 5,
+    items: [
+      { menuItem: menuItems[0], quantity: 2 },
+      { menuItem: menuItems[2], quantity: 1 },
+    ],
+    status: 'New',
+    timestamp: Date.now() - 5 * 60 * 1000,
+    total: menuItems[0].price * 2 + menuItems[2].price * 1,
+  },
+  {
+    id: 'ORD002',
+    tableNumber: 3,
+    items: [{ menuItem: menuItems[5], quantity: 2 }],
+    status: 'Preparing',
+    timestamp: Date.now() - 3 * 60 * 1000,
+    total: menuItems[5].price * 2,
+  },
+  {
+    id: 'ORD003',
+    tableNumber: 8,
+    items: [{ menuItem: menuItems[3], quantity: 4 }],
+    status: 'Ready',
+    timestamp: Date.now() - 1 * 60 * 1000,
+    total: menuItems[3].price * 4,
+  },
+  {
+    id: 'ORD004',
+    tableNumber: 2,
+    items: [
+      { menuItem: menuItems[1], quantity: 1 },
+      { menuItem: menuItems[4], quantity: 1 },
+    ],
+    status: 'Served',
+    timestamp: Date.now() - 10 * 60 * 1000,
+    total: menuItems[1].price + menuItems[4].price,
+  },
+];
