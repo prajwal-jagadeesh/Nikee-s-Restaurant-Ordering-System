@@ -20,7 +20,6 @@ export const useOrderStore = create(
     (set, get) => ({
       orders: [],
       addOrder: (order) => {
-        // This is a simplistic way to generate IDs. In a real app, use UUIDs or database IDs.
         const latestId = get().orders.reduce((maxId, o) => {
           const idNum = parseInt(o.id.replace('ORD', ''), 10);
           return idNum > maxId ? idNum : maxId;
@@ -63,8 +62,7 @@ export const useOrderStore = create(
                   ...order, 
                   items: updatedItems,
                   total: newTotal,
-                  // If adding items to a confirmed order, it should be reflected in KDS
-                  status: order.status === 'Served' ? 'Confirmed' : order.status,
+                  status: (order.status === 'Served' || order.status === 'Ready') ? 'Confirmed' : order.status,
                   timestamp: Date.now() 
                 };
               }
@@ -80,8 +78,8 @@ export const useOrderStore = create(
       setRehydrated: () => set({ _rehydrated: true }),
     }),
     {
-      name: 'order-storage', // name of the item in the storage (must be unique)
-      storage: createJSONStorage(() => localStorage), // (optional) by default, 'localStorage' is used
+      name: 'order-storage', 
+      storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
         if (state) state.setRehydrated();
       },
@@ -89,7 +87,6 @@ export const useOrderStore = create(
   )
 );
 
-// Selector to use in components to ensure they only render after rehydration
 export const useHydratedOrderStore = <T>(
   selector: (state: OrderState) => T,
   defaultValue: T
