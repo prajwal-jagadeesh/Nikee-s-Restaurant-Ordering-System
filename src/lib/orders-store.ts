@@ -1,12 +1,13 @@
 'use client';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Order, OrderStatus } from './types';
+import type { Order, OrderStatus, OrderItem, MenuItem } from './types';
 
 interface OrderState {
   orders: Order[];
   addOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  addItemsToOrder: (orderId: string, items: OrderItem[]) => void;
   clearOrders: () => void;
   _rehydrated: boolean;
   setRehydrated: () => void;
@@ -38,6 +39,39 @@ export const useOrderStore = create(
             order.id === orderId ? { ...order, status } : order
           ),
         })),
+       addItemsToOrder: (orderId, newItems) =>
+        set((state) => {
+          return {
+            orders: state.orders.map((order) => {
+              if (order.id === orderId) {
+                const updatedItems = [...order.items];
+                let newTotal = order.total;
+
+                newItems.forEach((newItem) => {
+                    const existingItemIndex = updatedItems.findIndex(
+                        (i) => i.menuItem.id === newItem.menuItem.id
+                    );
+                    if (existingItemIndex > -1) {
+                        updatedItems[existingItemIndex].quantity += newItem.quantity;
+                    } else {
+                        updatedItems.push(newItem);
+                    }
+                    newTotal += newItem.menuItem.price * newItem.quantity;
+                });
+                
+                return { 
+                  ...order, 
+                  items: updatedItems,
+                  total: newTotal,
+                  // If adding items to a confirmed order, it should be reflected in KDS
+                  status: order.status === 'Served' ? 'Confirmed' : order.status,
+                  timestamp: Date.now() 
+                };
+              }
+              return order;
+            }),
+          };
+        }),
       clearOrders: () => {
         set({ orders: [] });
         orderCounter = 0;
@@ -60,7 +94,7 @@ export const useHydratedOrderStore = <T>(
   selector: (state: OrderState) => T,
   defaultValue: T
 ): T => {
-  const isHydrated = useOrderStore((state) => state._rehydrated);
   const result = useOrderStore(selector);
+  const isHydrated = useOrderStore((state) => state._rehydrated);
   return isHydrated ? result : defaultValue;
 };
