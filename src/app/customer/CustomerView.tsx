@@ -8,7 +8,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOrderStore } from '@/lib/orders-store';
@@ -17,7 +16,6 @@ import { useOrderStore } from '@/lib/orders-store';
 export default function CustomerView() {
   const searchParams = useSearchParams();
   const tableNumber = searchParams.get('table') || '5';
-  const { toast } = useToast();
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
   const addOrder = useOrderStore((state) => state.addOrder);
@@ -33,13 +31,11 @@ export default function CustomerView() {
       }
       return [...prev, { menuItem: item, quantity: 1 }];
     });
-    toast({ title: `${item.name} added to cart` });
   };
 
   const updateQuantity = (itemId: string, quantity: number) => {
     setCart((prev) => {
       if (quantity <= 0) {
-        toast({ title: `${prev.find(i => i.menuItem.id === itemId)?.menuItem.name} removed from cart`, variant: 'destructive' });
         return prev.filter((i) => i.menuItem.id !== itemId);
       }
       return prev.map((i) =>
@@ -54,7 +50,6 @@ export default function CustomerView() {
 
   const placeOrder = () => {
     if (cart.length === 0) {
-      toast({ title: "Your cart is empty!", variant: 'destructive' });
       return;
     }
     
@@ -67,10 +62,6 @@ export default function CustomerView() {
       total,
     });
 
-    toast({
-      title: 'Order Placed!',
-      description: `Your order from Table ${tableNumber} has been sent to the kitchen.`,
-    });
     setCart([]);
   };
 

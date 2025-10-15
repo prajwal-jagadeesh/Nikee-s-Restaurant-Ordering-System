@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
 import PageHeader from '@/components/PageHeader';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -23,7 +22,6 @@ export default function RootLayout({
           <PageHeader />
           <main className="flex-1">{children}</main>
         </div>
-        <Toaster />
       </body>
     </html>
   );

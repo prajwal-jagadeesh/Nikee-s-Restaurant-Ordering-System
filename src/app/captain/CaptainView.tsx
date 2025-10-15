@@ -5,7 +5,6 @@ import type { Order, OrderStatus } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CaptainView() {
@@ -13,11 +12,10 @@ export default function CaptainView() {
   const updateOrderStatusInStore = useOrderStore((state) => state.updateOrderStatus);
   
   const [orders, setOrders] = useState<Order[]>([]);
-  const { toast } = useToast();
   const isHydrated = useHydratedOrderStore((state) => state._rehydrated, false);
 
   useEffect(() => {
-    setOrders(allOrders.filter(o => o.status !== 'Paid'));
+    setOrders(allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled'));
   }, [allOrders]);
 
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
@@ -26,18 +24,20 @@ export default function CaptainView() {
   
   const handleConfirm = (orderId: string) => {
     updateOrderStatus(orderId, 'Confirmed');
-    toast({ title: "Order Confirmed", description: `${orderId} sent to KDS.` });
   };
   
   const handleServed = (orderId: string) => {
     updateOrderStatus(orderId, 'Served');
-    toast({ title: "Order Served", description: `Food for ${orderId} has been served.` });
   };
   
   const handlePayment = (orderId: string) => {
     updateOrderStatus(orderId, 'Paid');
-    toast({ title: "Payment Received", description: `Payment for ${orderId} complete. Table cleared.` });
   };
+
+  const handleCancel = (orderId: string) => {
+    updateOrderStatus(orderId, 'Cancelled');
+  };
+
 
   if (!isHydrated) {
     return (
@@ -66,9 +66,14 @@ export default function CaptainView() {
               <OrderCard order={order}>
                 <div className="mt-4 flex flex-col space-y-2">
                   {order.status === 'New' && (
-                    <Button onClick={() => handleConfirm(order.id)} className="w-full">
-                      Confirm Order
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleConfirm(order.id)} className="w-full">
+                        Confirm Order
+                      </Button>
+                      <Button onClick={() => handleCancel(order.id)} variant="destructive" className="w-full">
+                        Cancel
+                      </Button>
+                    </div>
                   )}
                   {order.status === 'Ready' && (
                     <Button onClick={() => handleServed(order.id)} className="w-full">

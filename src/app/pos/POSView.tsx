@@ -5,33 +5,25 @@ import type { Order } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function POSView() {
   const allOrders = useHydratedOrderStore((state) => state.orders, []);
   const [orders, setOrders] = useState<Order[]>([]);
-  const { toast } = useToast();
   const isHydrated = useHydratedOrderStore((state) => state._rehydrated, false);
 
 
   useEffect(() => {
-    setOrders(allOrders.filter(o => o.status !== 'Paid'));
+    setOrders(allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled'));
   }, [allOrders]);
 
   const handlePrintKOT = (order: Order) => {
-    toast({
-      title: 'Printing KOT...',
-      description: `Sending KOT for Order #${order.id} to the kitchen printer.`,
-    });
+    console.log(`Printing KOT for Order #${order.id}`);
   };
 
   const handlePrintBill = (order: Order) => {
-    toast({
-      title: 'Printing Bill...',
-      description: `Printing bill for Table #${order.tableNumber}. Total: ₹${order.total.toFixed(2)}`,
-    });
+    console.log(`Printing bill for Table #${order.tableNumber}. Total: ₹${order.total.toFixed(2)}`);
   };
 
   if (!isHydrated) {
@@ -74,7 +66,7 @@ export default function POSView() {
                     <Button onClick={() => handlePrintBill(order)} className="w-full">
                       <Printer className="mr-2 h-4 w-4" />
                       Print Bill
-                    </Button>
+                    Button>
                   )}
                 </div>
               </OrderCard>
