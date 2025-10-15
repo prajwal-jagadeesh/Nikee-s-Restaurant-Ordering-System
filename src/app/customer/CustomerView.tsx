@@ -11,6 +11,7 @@ import { Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useOrderStore } from '@/lib/orders-store';
 
 
 export default function CustomerView() {
@@ -19,6 +20,7 @@ export default function CustomerView() {
   const { toast } = useToast();
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
+  const addOrder = useOrderStore((state) => state.addOrder);
 
 
   const addToCart = (item: MenuItem) => {
@@ -55,12 +57,20 @@ export default function CustomerView() {
       toast({ title: "Your cart is empty!", variant: 'destructive' });
       return;
     }
+    
+    addOrder({
+      id: '', // Will be set by the store
+      tableNumber: parseInt(tableNumber),
+      items: cart,
+      status: 'New',
+      timestamp: Date.now(),
+      total,
+    });
+
     toast({
       title: 'Order Placed!',
       description: `Your order from Table ${tableNumber} has been sent to the kitchen.`,
     });
-    // Here you would typically send the order to a backend.
-    console.log('Order Placed:', { tableNumber, cart, total });
     setCart([]);
   };
 

@@ -323,43 +323,4 @@ export const menuItems: MenuItem[] = [
     }
 ];
 
-export const initialOrders: Order[] = [
-  {
-    id: 'ORD001',
-    tableNumber: 5,
-    items: [
-      { menuItem: menuItems.find(i => i.id === '1')!, quantity: 2 },
-      { menuItem: menuItems.find(i => i.id === '22')!, quantity: 1 },
-    ],
-    status: 'New',
-    timestamp: Date.now() - 5 * 60 * 1000,
-    total: menuItems.find(i => i.id === '1')!.price * 2 + menuItems.find(i => i.id === '22')!.price * 1,
-  },
-  {
-    id: 'ORD002',
-    tableNumber: 3,
-    items: [{ menuItem: menuItems.find(i => i.id === '29')!, quantity: 2 }],
-    status: 'Preparing',
-    timestamp: Date.now() - 3 * 60 * 1000,
-    total: menuItems.find(i => i.id === '29')!.price * 2,
-  },
-  {
-    id: 'ORD003',
-    tableNumber: 8,
-    items: [{ menuItem: menuItems.find(i => i.id === '41')!, quantity: 4 }],
-    status: 'Ready',
-    timestamp: Date.now() - 1 * 60 * 1000,
-    total: menuItems.find(i => i.id === '41')!.price * 4,
-  },
-  {
-    id: 'ORD004',
-    tableNumber: 2,
-    items: [
-      { menuItem: menuItems.find(i => i.id === '12')!, quantity: 1 },
-      { menuItem: menuItems.find(i => i.id === '37')!, quantity: 1 },
-    ],
-    status: 'Served',
-    timestamp: Date.now() - 10 * 60 * 1000,
-    total: menuItems.find(i => i.id === '12')!.price + menuItems.find(i => i.id === '37')!.price,
-  },
-];
+export const initialOrders: Order[] = [];

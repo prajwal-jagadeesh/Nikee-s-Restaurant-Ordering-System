@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { initialOrders } from '@/lib/data';
+import { useState, useEffect } from 'react';
+import { useOrderStore } from '@/lib/orders-store';
 import type { Order, OrderStatus } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
@@ -8,15 +8,18 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CaptainView() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders.filter(o => o.status !== 'Paid'));
+  const allOrders = useOrderStore((state) => state.orders);
+  const updateOrderStatusInStore = useOrderStore((state) => state.updateOrderStatus);
+  
+  const [orders, setOrders] = useState<Order[]>([]);
   const { toast } = useToast();
 
+  useEffect(() => {
+    setOrders(allOrders.filter(o => o.status !== 'Paid'));
+  }, [allOrders]);
+
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
+    updateOrderStatusInStore(orderId, newStatus);
   };
   
   const handleConfirm = (orderId: string) => {
@@ -32,16 +35,13 @@ export default function CaptainView() {
   const handlePayment = (orderId: string) => {
     updateOrderStatus(orderId, 'Paid');
     toast({ title: "Payment Received", description: `Payment for ${orderId} complete. Table cleared.` });
-    // In a real app, this might be removed after a delay or moved to a 'completed' tab.
-    setTimeout(() => {
-        setOrders(prev => prev.filter(o => o.id !== orderId));
-    }, 2000);
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       <AnimatePresence>
         {orders
+          .filter(o => o.status !== 'Paid' && o.status !== 'Cancelled')
           .sort((a,b) => a.timestamp - b.timestamp)
           .map((order) => (
             <motion.div

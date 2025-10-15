@@ -1,17 +1,17 @@
 'use client';
-import { useState } from 'react';
-import { initialOrders } from '@/lib/data';
+import { useState, useEffect } from 'react';
+import { useOrderStore } from '@/lib/orders-store';
 import type { Order, OrderStatus } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const KDS_STATUSES: OrderStatus[] = ['New', 'Preparing', 'Ready'];
 
 const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | null> = {
   New: { next: 'Preparing', label: 'Start Preparing' },
-  Confirmed: null,
+  Confirmed: { next: 'Preparing', label: 'Start Preparing' },
   Preparing: { next: 'Ready', label: 'Mark as Ready' },
   Ready: null,
   Served: null,
@@ -20,15 +20,13 @@ const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | 
 };
 
 export default function KDSView() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders.filter(o => KDS_STATUSES.includes(o.status)));
+  const allOrders = useOrderStore((state) => state.orders);
+  const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
+  const [kdsOrders, setKdsOrders] = useState<Order[]>([]);
 
-  const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
-  };
+  useEffect(() => {
+    setKdsOrders(allOrders.filter(o => KDS_STATUSES.includes(o.status)));
+  }, [allOrders]);
   
   const handleAction = (orderId: string, currentStatus: OrderStatus) => {
     const action = statusActions[currentStatus];
@@ -41,11 +39,11 @@ export default function KDSView() {
     <div className="flex h-[calc(100vh-12rem)] gap-4">
       {KDS_STATUSES.map((status) => (
         <div key={status} className="flex-1 flex flex-col bg-muted/50 rounded-lg">
-          <h2 className="p-4 text-lg font-semibold border-b font-headline">{status} ({orders.filter(o => o.status === status).length})</h2>
+          <h2 className="p-4 text-lg font-semibold border-b font-headline">{status} ({kdsOrders.filter(o => o.status === status).length})</h2>
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
               <AnimatePresence>
-                {orders
+                {kdsOrders
                   .filter((order) => order.status === status)
                   .sort((a,b) => a.timestamp - b.timestamp)
                   .map((order) => (

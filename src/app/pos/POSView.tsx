@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { initialOrders } from '@/lib/data';
+import { useState, useEffect } from 'react';
+import { useOrderStore } from '@/lib/orders-store';
 import type { Order } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,13 @@ import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function POSView() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders.filter(o => o.status !== 'Paid'));
+  const allOrders = useOrderStore((state) => state.orders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setOrders(allOrders.filter(o => o.status !== 'Paid'));
+  }, [allOrders]);
 
   const handlePrintKOT = (order: Order) => {
     toast({
@@ -30,6 +35,7 @@ export default function POSView() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       <AnimatePresence>
         {orders
+          .filter(o => o.status !== 'Paid' && o.status !== 'Cancelled')
           .sort((a, b) => a.timestamp - b.timestamp)
           .map((order) => (
             <motion.div
