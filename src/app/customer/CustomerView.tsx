@@ -7,76 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { Plus, Minus, ShoppingCart, Trash2, Wand2 } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { suggestPopularDishes } from '@/ai/flows/suggest-popular-dishes';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { AnimatePresence, motion } from 'framer-motion';
 
-function PopularDishes({toast}: {toast: any}) {
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [userInput, setUserInput] = useState('');
-
-  const getSuggestions = async () => {
-    setIsLoading(true);
-    try {
-      const result = await suggestPopularDishes({
-        userInput: userInput,
-        menu: JSON.stringify(menuItems),
-        pastTrends: 'Paneer Butter Masala, Aglio e Olio Spaghetti, Butterfly Paneer Crisps are frequently ordered.',
-        pastOrderHistory: '',
-      });
-      setSuggestions(result.suggestions);
-    } catch (error) {
-      console.error('AI suggestion failed:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Suggestion Failed',
-        description: 'Sorry, I couldn\'t come up with suggestions right now. Please try again.',
-      })
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Card className="mb-6 bg-primary/5 border-primary/10">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 font-headline">
-          <Wand2 className="text-primary" />
-          Feeling Adventurous?
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-muted-foreground">Get AI-powered dish recommendations!</p>
-        <div className="space-y-2">
-            <Label htmlFor="dish-preference">Tell us what you're in the mood for (e.g., "spicy", "healthy", "something light")</Label>
-            <Input 
-                id="dish-preference"
-                placeholder="e.g. something light..." 
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                disabled={isLoading}
-            />
-        </div>
-        <Button onClick={getSuggestions} disabled={isLoading}>
-          {isLoading ? 'Thinking...' : 'Suggest Dishes'}
-        </Button>
-        {suggestions.length > 0 && (
-          <div className="pt-4">
-            <h4 className="font-semibold mb-2">Our suggestions:</h4>
-            <ul className="list-disc list-inside space-y-1 text-primary-foreground/90">
-              {suggestions.map((dish, i) => <li key={i}>{dish}</li>)}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function CustomerView() {
   const searchParams = useSearchParams();
@@ -138,10 +73,8 @@ export default function CustomerView() {
         <p className="text-lg text-muted-foreground">You are ordering for Table {tableNumber}</p>
       </div>
 
-      <PopularDishes toast={toast} />
-
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9">
           {menuCategories.map((cat) => (
             <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
           ))}
