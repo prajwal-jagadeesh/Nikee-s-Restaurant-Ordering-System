@@ -2,51 +2,267 @@
   "placeholderImages": [
     {
       "id": "1",
-      "description": "Grilled cottage cheese marinated in spices",
-      "imageUrl": "https://picsum.photos/seed/1/400/400",
-      "imageHint": "paneer tikka"
+      "description": "Golden-fried paneer, delicately wrapped in a ribbon of potato, offering a delightful crunch. Served with a ketchup dip. 🏅👨‍🍳",
+      "imageUrl": "https://picsum.photos/seed/p-crisps/400/400",
+      "imageHint": "paneer crisps"
     },
     {
       "id": "2",
-      "description": "Creamy and tangy tomato soup",
-      "imageUrl": "https://picsum.photos/seed/2/400/400",
-      "imageHint": "tomato soup"
+      "description": "Crispy baby corn pieces wok-tossed in a fiery soy-chilli garlic sauce, loaded with spring onions and sprinkled with toasted sesame seeds.",
+      "imageUrl": "https://picsum.photos/seed/d-bcorn/400/400",
+      "imageHint": "baby corn"
     },
     {
       "id": "3",
-      "description": "Black lentils and kidney beans in a creamy gravy",
-      "imageUrl": "https://picsum.photos/seed/3/400/400",
-      "imageHint": "dal makhani"
+      "description": "Baby corn coated in cracked black pepper, garlic, and fragrant curry leaves for a savory bite.",
+      "imageUrl": "https://picsum.photos/seed/p-bcorn/400/400",
+      "imageHint": "pepper babycorn"
     },
     {
       "id": "4",
-      "description": "Sweet dumplings in sugar syrup",
-      "imageUrl": "https://picsum.photos/seed/4/400/400",
-      "imageHint": "gulab jamun"
+      "description": "Fresh rice paper rolls with carrot, bell peppers, and lettuce. Served with a sweet-chilli peanut dip.",
+      "imageUrl": "https://picsum.photos/seed/v-rolls/400/400",
+      "imageHint": "garden rolls"
     },
     {
       "id": "5",
-      "description": "Spiced Indian tea",
-      "imageUrl": "https://picsum.photos/seed/5/400/400",
-      "imageHint": "masala chai"
+      "description": "Crispy potato fingers wok-tossed in a rich garlic–soy glaze with a fiery chilly kick.",
+      "imageUrl": "https://picsum.photos/seed/g-potato/400/400",
+      "imageHint": "potato bites"
     },
     {
       "id": "6",
-      "description": "Aromatic rice dish with mixed vegetables",
-      "imageUrl": "https://picsum.photos/seed/6/400/400",
-      "imageHint": "veg biryani"
+      "description": "Double-fried potatoes coated in a sweet and spicy honey–chilli glaze with sesame seeds.",
+      "imageUrl": "https://picsum.photos/seed/h-potato/400/400",
+      "imageHint": "honey potatoes"
     },
     {
       "id": "7",
-      "description": "Crispy fried rolls with vegetable filling",
-      "imageUrl": "https://picsum.photos/seed/7/400/400",
-      "imageHint": "spring rolls"
+      "description": "Crisp taco shells bursting with spiced Vegetables, crisp lettuce, fresh salsa, and creamy mayo.",
+      "imageUrl": "https://picsum.photos/seed/v-tacos/400/400",
+      "imageHint": "veg tacos"
     },
     {
       "id": "8",
-      "description": "Spicy and sour soup with fried noodles",
-      "imageUrl": "https://picsum.photos/seed/8/400/400",
+      "description": "Delicate dumplings filled with babycorn, cheese, and onions. Served with a soy–chilli dip.",
+      "imageUrl": "https://picsum.photos/seed/v-dimsum/400/400",
+      "imageHint": "dim sums"
+    },
+    {
+      "id": "9",
+      "description": "Golden fries tossed with a bold peri peri spice mix and served with a side of mayo.",
+      "imageUrl": "https://picsum.photos/seed/pp-fries/400/400",
+      "imageHint": "peri peri fries"
+    },
+    {
+      "id": "10",
+      "description": "Crispy, salted fries served with ketchup.",
+      "imageUrl": "https://picsum.photos/seed/c-fries/400/400",
+      "imageHint": "classic fries"
+    },
+    {
+      "id": "11",
+      "description": "A modern twist on a classic. Mini crispy puris filled with spiced potato, served with vibrant mint–coriander and tangy tamarind waters in dramatic test tubes for a fun, hands-on twist on the street classic. A playful, Insta-worthy upgrade to India’s favorite chaat. 🏅",
+      "imageUrl": "https://picsum.photos/seed/pp-shots/400/400",
+      "imageHint": "pani puri"
+    },
+    {
+      "id": "12",
+      "description": "A hearty Indo-Chinese broth with garlic, ginger, and soy, topped with crunchy fried noodles. 🏅",
+      "imageUrl": "https://picsum.photos/seed/r-manchow/400/400",
       "imageHint": "manchow soup"
+    },
+    {
+      "id": "13",
+      "description": "A perfectly balanced, tangy broth with soy, vinegar, pepper, and finely diced vegetables.",
+      "imageUrl": "https://picsum.photos/seed/hs-soup/400/400",
+      "imageHint": "hot sour soup"
+    },
+    {
+      "id": "14",
+      "description": "A light, fragrant ginger–garlic broth with fresh coriander and spring onions.",
+      "imageUrl": "https://picsum.photos/seed/h-soup/400/400",
+      "imageHint": "herb soup"
+    },
+    {
+      "id": "15",
+      "description": "Penne pasta tossed in a rich white sauce with garlic, oregano, and Cheese. 🏅",
+      "imageUrl": "https://picsum.photos/seed/a-pasta/400/400",
+      "imageHint": "alfredo pasta"
+    },
+    {
+      "id": "16",
+      "description": "A timeless Italian classic with fresh garlic, and chilli flakes. 👨‍🍳",
+      "imageUrl": "https://picsum.photos/seed/ao-spaghetti/400/400",
+      "imageHint": "aglio e olio"
+    },
+    {
+      "id": "17",
+      "description": "Our laid-back, saucy spaghetti slathered in a rich, tangy tomato-red sauce with hints of garlic and herbs. The ultimate comfy classic with a cool kick.",
+      "imageUrl": "https://picsum.photos/seed/rs-spaghetti/400/400",
+      "imageHint": "red sauce spaghetti"
+    },
+    {
+      "id": "18",
+      "description": "Whole wheat tandoor flatbread.",
+      "imageUrl": "https://picsum.photos/seed/t-roti/400/400",
+      "imageHint": "tandoori roti"
+    },
+    {
+      "id": "19",
+      "description": "Tandoori roti brushed with rich butter.",
+      "imageUrl": "https://picsum.photos/seed/b-roti/400/400",
+      "imageHint": "butter roti"
+    },
+    {
+      "id": "20",
+      "description": "Soft, fluffy tandoor-baked kulcha.",
+      "imageUrl": "https://picsum.photos/seed/kulcha/400/400",
+      "imageHint": "kulcha"
+    },
+    {
+      "id": "21",
+      "description": "Warm kulcha with a generous coat of butter.",
+      "imageUrl": "https://picsum.photos/seed/b-kulcha/400/400",
+      "imageHint": "butter kulcha"
+    },
+    {
+      "id": "22",
+      "description": "A rich and creamy black lentil dal, slow-simmered with butter, cream, and aromatic spices for a luxurious finish.",
+      "imageUrl": "https://picsum.photos/seed/dm-luxe/400/400",
+      "imageHint": "dal makhani"
+    },
+    {
+      "id": "23",
+      "description": "Yellow moong dal with a smoky tempering of cumin and garlic in ghee.",
+      "imageUrl": "https://picsum.photos/seed/tt-dal/400/400",
+      "imageHint": "tadka dal"
+    },
+    {
+      "id": "24",
+      "description": "A simple, comforting yellow dal simmered with turmeric and fresh coriander seasoning.",
+      "imageUrl": "https://picsum.photos/seed/p-dal/400/400",
+      "imageHint": "plain dal"
+    },
+    {
+      "id": "25",
+      "description": "A fiery Maharashtrian curry with roasted coconut, red chillies, and bold masala.",
+      "imageUrl": "https://picsum.photos/seed/k-curry/400/400",
+      "imageHint": "kolhapuri curry"
+    },
+    {
+      "id": "26",
+      "description": "Veggies tossed with bell peppers, onions, and aromatic kadai spices.",
+      "imageUrl": "https://picsum.photos/seed/kv-masala/400/400",
+      "imageHint": "kadai veg"
+    },
+    {
+      "id": "27",
+      "description": "Our house specialty! Paneer simmered in a velvety tomato–cashew gravy, finished with kasuri methi for a truly royal experience. 👨‍🍳🏅",
+      "imageUrl": "https://picsum.photos/seed/pbm/400/400",
+      "imageHint": "paneer butter masala"
+    },
+    {
+      "id": "28",
+      "description": "Garden-fresh vegetables in a perfectly spiced onion–tomato gravy. 👨‍🍳",
+      "imageUrl": "https://picsum.photos/seed/svm/400/400",
+      "imageHint": "veg melange"
+    },
+    {
+      "id": "29",
+      "description": "Aromatic vegetable biryani with saffron and whole garam masala.",
+      "imageUrl": "https://picsum.photos/seed/rv-biryani/400/400",
+      "imageHint": "veg biryani"
+    },
+    {
+      "id": "30",
+      "description": "Basmati rice cooked with fragrant ghee, cloves, and cardamom.",
+      "imageUrl": "https://picsum.photos/seed/gg-rice/400/400",
+      "imageHint": "ghee rice"
+    },
+    {
+      "id": "31",
+      "description": "Steamed rice with a light tempering of cumin and ghee.",
+      "imageUrl": "https://picsum.photos/seed/je-rice/400/400",
+      "imageHint": "jeera rice"
+    },
+    {
+      "id": "32",
+      "description": "A classic South Indian comfort with a tempering of curry leaves and ginger.",
+      "imageUrl": "https://picsum.photos/seed/cr-bliss/400/400",
+      "imageHint": "curd rice"
+    },
+    {
+      "id": "33",
+      "description": "A tropical fruit mocktail with Strawberry Syrup, lime and herbs, finished with a hint of smoky flavor.",
+      "imageUrl": "https://picsum.photos/seed/st-elixir/400/400",
+      "imageHint": "fruit mocktail"
+    },
+    {
+      "id": "34",
+      "description": "A refreshing blend of citrus, blueberry syrup and fresh mint.",
+      "imageUrl": "https://picsum.photos/seed/es-cooler/400/400",
+      "imageHint": "citrus cooler"
+    },
+    {
+      "id": "35",
+      "description": "Fresh guava juice with a zesty chilli–salt rim and a touch of pepper.",
+      "imageUrl": "https://picsum.photos/seed/sg-kick/400/400",
+      "imageHint": "guava juice"
+    },
+    {
+      "id": "36",
+      "description": "Slow-drip iced coffee with sweetened condensed milk.",
+      "imageUrl": "https://picsum.photos/seed/v-icoffee/400/400",
+      "imageHint": "iced coffee"
+    },
+    {
+      "id": "37",
+      "description": "A smooth, frothy frappe with a dusting of cocoa.",
+      "imageUrl": "https://picsum.photos/seed/c-ccoffee/400/400",
+      "imageHint": "cold coffee"
+    },
+    {
+      "id": "38",
+      "description": "Hazelnut coffee with chewy tapioca pearls. 🏅",
+      "imageUrl": "https://picsum.photos/seed/hb-bliss/400/400",
+      "imageHint": "boba coffee"
+    },
+    {
+      "id": "39",
+      "description": "Tangy raw mango with fresh mint, soda, and lime.",
+      "imageUrl": "https://picsum.photos/seed/rm-mojito/400/400",
+      "imageHint": "mango mojito"
+    },
+    {
+      "id": "40",
+      "description": "Stay hydrated with pure, fresh Bisleri Himalayan spring water.",
+      "imageUrl": "https://picsum.photos/seed/water/400/400",
+      "imageHint": "water bottle"
+    },
+    {
+      "id": "41",
+      "description": "Our signature fusion dessert inspired by Mysore Pak—rich, melt-in-the-mouth traditional South Indian fudge",
+      "imageUrl": "https://picsum.photos/seed/m-doce/400/400",
+      "imageHint": "fusion dessert"
+    },
+    {
+      "id": "42",
+      "description": "Bold espresso poured over creamy vanilla ice cream—an unbeatable sweet caffeine fix. 🏅",
+      "imageUrl": "https://picsum.photos/seed/affogato/400/400",
+      "imageHint": "affogato"
+    },
+    {
+      "id": "43",
+      "description": "Light, fresh filter coffee—simple and satisfying.",
+      "imageUrl": "https://picsum.photos/seed/r-coffee/400/400",
+      "imageHint": "filter coffee"
+    },
+    {
+      "id": "44",
+      "description": "A fuller cup for those who want extra comfort.",
+      "imageUrl": "https://picsum.photos/seed/l-coffee/400/400",
+      "imageHint": "large coffee"
     }
   ]
 }

@@ -26,7 +26,7 @@ function PopularDishes() {
     try {
       const result = await suggestPopularDishes({
         userInput: userInput || 'something light and spicy',
-        pastTrends: 'Paneer Tikka, Veg Biryani, Dal Makhani are frequently ordered.',
+        pastTrends: 'Paneer Butter Masala, Aglio e Olio Spaghetti, Butterfly Paneer Crisps are frequently ordered.',
         pastOrderHistory: '',
       });
       setSuggestions(result.suggestions);
@@ -78,6 +78,8 @@ export default function CustomerView() {
   const tableNumber = searchParams.get('table') || '5';
   const { toast } = useToast();
   const [cart, setCart] = useState<OrderItem[]>([]);
+  const [activeTab, setActiveTab] = useState(menuCategories[0]);
+
 
   const addToCart = (item: MenuItem) => {
     setCart((prev) => {
@@ -94,7 +96,7 @@ export default function CustomerView() {
 
   const updateQuantity = (itemId: string, quantity: number) => {
     setCart((prev) => {
-      if (quantity === 0) {
+      if (quantity <= 0) {
         return prev.filter((i) => i.menuItem.id !== itemId);
       }
       return prev.map((i) =>
@@ -119,6 +121,8 @@ export default function CustomerView() {
     setCart([]);
   };
 
+  const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab]);
+
   return (
     <>
       <div className="text-center mb-6">
@@ -128,50 +132,48 @@ export default function CustomerView() {
 
       <PopularDishes />
 
-      <Tabs defaultValue={menuCategories[0]} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5">
+      <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
           {menuCategories.map((cat) => (
             <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
           ))}
         </TabsList>
-        {menuCategories.map((cat) => (
-          <TabsContent key={cat} value={cat}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-              <AnimatePresence>
-                {menuItems.filter(item => item.category === cat).map((item) => (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                  >
-                    <Card className="h-full flex flex-col overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300">
-                      <CardHeader className="p-0">
-                        <Image
-                          src={item.imageUrl}
-                          alt={item.name}
-                          width={400}
-                          height={250}
-                          className="object-cover w-full h-48"
-                          data-ai-hint={item.imageHint}
-                        />
-                      </CardHeader>
-                      <CardContent className="pt-4 flex-1">
-                        <h3 className="text-lg font-bold font-headline">{item.name}</h3>
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                      </CardContent>
-                      <CardFooter className="flex justify-between items-center">
-                        <span className="font-bold text-lg">₹{item.price.toFixed(2)}</span>
-                        <Button onClick={() => addToCart(item)}>Add to Order</Button>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </TabsContent>
-        ))}
+        <AnimatePresence mode="wait">
+            <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+            >
+                <TabsContent value={activeTab} forceMount>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                        {filteredMenuItems.map((item) => (
+                            <Card key={item.id} className="h-full flex flex-col overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300">
+                                <CardHeader className="p-0">
+                                <Image
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    width={400}
+                                    height={250}
+                                    className="object-cover w-full h-48"
+                                    data-ai-hint={item.imageHint}
+                                />
+                                </CardHeader>
+                                <CardContent className="pt-4 flex-1">
+                                <h3 className="text-lg font-bold font-headline">{item.name}</h3>
+                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                                </CardContent>
+                                <CardFooter className="flex justify-between items-center">
+                                <span className="font-bold text-lg">₹{item.price.toFixed(2)}</span>
+                                <Button onClick={() => addToCart(item)}>Add to Order</Button>
+                                </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
+                </TabsContent>
+            </motion.div>
+        </AnimatePresence>
       </Tabs>
 
       <Sheet>
