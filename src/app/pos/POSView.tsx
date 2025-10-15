@@ -66,7 +66,7 @@ export default function POSView() {
                     <Button onClick={() => handlePrintBill(order)} className="w-full">
                       <Printer className="mr-2 h-4 w-4" />
                       Print Bill
-                    Button>
+                    </Button>
                   )}
                 </div>
               </OrderCard>
