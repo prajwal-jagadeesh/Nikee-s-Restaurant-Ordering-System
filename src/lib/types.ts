@@ -13,8 +13,6 @@ export interface MenuItem {
   description: string;
   price: number;
   category: string;
-  imageUrl: string;
-  imageHint: string;
 }
 
 export interface OrderItem {

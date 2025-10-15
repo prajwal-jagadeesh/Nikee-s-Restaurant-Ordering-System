@@ -150,21 +150,13 @@ export default function CustomerView() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                         {filteredMenuItems.map((item) => (
                             <Card key={item.id} className="h-full flex flex-col overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300">
-                                <CardHeader className="p-0">
-                                <Image
-                                    src={item.imageUrl}
-                                    alt={item.name}
-                                    width={400}
-                                    height={250}
-                                    className="object-cover w-full h-48"
-                                    data-ai-hint={item.imageHint}
-                                />
+                                <CardHeader>
+                                    <CardTitle>{item.name}</CardTitle>
                                 </CardHeader>
-                                <CardContent className="pt-4 flex-1">
-                                <h3 className="text-lg font-bold font-headline">{item.name}</h3>
+                                <CardContent className="flex-1">
                                 <p className="text-sm text-muted-foreground">{item.description}</p>
                                 </CardContent>
-                                <CardFooter className="flex justify-between items-center">
+                                <CardFooter className="flex justify-between items-center mt-auto">
                                 <span className="font-bold text-lg">₹{item.price.toFixed(2)}</span>
                                 <Button onClick={() => addToCart(item)}>Add to Order</Button>
                                 </CardFooter>
@@ -198,7 +190,6 @@ export default function CustomerView() {
               <div className="space-y-4 mt-4">
                 {cart.map(item => (
                   <div key={item.menuItem.id} className="flex items-center gap-4">
-                    <Image src={item.menuItem.imageUrl} alt={item.menuItem.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={item.menuItem.imageHint}/>
                     <div className="flex-1">
                       <p className="font-semibold">{item.menuItem.name}</p>
                       <p className="text-sm text-muted-foreground">₹{item.menuItem.price.toFixed(2)}</p>
@@ -210,7 +201,7 @@ export default function CustomerView() {
                     </div>
                     <div className="text-right">
                         <p className="font-semibold">₹{(item.menuItem.price * item.quantity).toFixed(2)}</p>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => updateQuantity(item.menuItem.id, 0)}><Trash2 className="h-4 w-4"/></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => updateQuantity(item.mIenuItem.id, 0)}><Trash2 className="h-4 w-4"/></Button>
                     </div>
                   </div>
                 ))}
