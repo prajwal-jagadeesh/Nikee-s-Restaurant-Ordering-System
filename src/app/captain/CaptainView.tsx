@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useOrderStore, useHydratedOrderStore } from '@/lib/orders-store';
+import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import type { Order, OrderStatus } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
@@ -8,11 +8,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CaptainView() {
-  const allOrders = useHydratedOrderStore((state) => state.orders, []);
+  const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const updateOrderStatusInStore = useOrderStore((state) => state.updateOrderStatus);
   
   const [orders, setOrders] = useState<Order[]>([]);
-  const isHydrated = useHydratedOrderStore((state) => state._rehydrated, false);
+  const isHydrated = allOrders.length > 0 || useHydratedStore(useOrderStore, (state) => !!state.orders, false);
+
 
   useEffect(() => {
     setOrders(allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled'));

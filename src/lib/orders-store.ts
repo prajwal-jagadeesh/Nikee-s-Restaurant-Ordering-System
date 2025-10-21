@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Order, OrderStatus, OrderItem, MenuItem } from './types';
+import { useState, useEffect } from 'react';
 
 interface OrderState {
   orders: Order[];
@@ -9,8 +10,6 @@ interface OrderState {
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   addItemsToOrder: (orderId: string, items: OrderItem[]) => void;
   clearOrders: () => void;
-  _rehydrated: boolean;
-  setRehydrated: () => void;
 }
 
 let orderCounter = 0;
@@ -74,24 +73,32 @@ export const useOrderStore = create(
         set({ orders: [] });
         orderCounter = 0;
       },
-      _rehydrated: false,
-      setRehydrated: () => set({ _rehydrated: true }),
     }),
     {
       name: 'order-storage', 
       storage: createJSONStorage(() => localStorage),
-      onRehydrateStorage: () => (state) => {
-        if (state) state.setRehydrated();
-      },
     }
   )
 );
 
-export const useHydratedOrderStore = <T>(
-  selector: (state: OrderState) => T,
-  defaultValue: T
-): T => {
-  const result = useOrderStore(selector);
-  const isHydrated = useOrderStore((state) => state._rehydrated);
-  return isHydrated ? result : defaultValue;
-};
+
+/**
+ * A hook that provides a Zustand store that is safe to use with SSR and hydration.
+ * @param selector The selector function to pick data from the store
+ * @param defaultState The default state to use before hydration
+ * @returns The selected state from the store, or the default state if not hydrated yet.
+ */
+export function useHydratedStore<T, F>(
+  store: (callback: (state: T) => unknown) => unknown,
+  selector: (state: T) => F,
+  defaultState: F
+) {
+  const [hydrated, setHydrated] = useState(false);
+  const result = store(selector) as F;
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  return hydrated ? result : defaultState;
+}

@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter
 import { Plus, Minus, ShoppingCart, Trash2, RotateCcw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useOrderStore, useHydratedOrderStore } from '@/lib/orders-store';
+import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
@@ -30,7 +30,7 @@ export default function CustomerView() {
   const searchParams = useSearchParams();
   const tableNumber = searchParams.get('table') || '5';
 
-  const orders = useHydratedOrderStore(state => state.orders, []);
+  const orders = useHydratedStore(useOrderStore, state => state.orders, []);
   const addOrder = useOrderStore((state) => state.addOrder);
   const addItemsToOrder = useOrderStore((state) => state.addItemsToOrder);
   

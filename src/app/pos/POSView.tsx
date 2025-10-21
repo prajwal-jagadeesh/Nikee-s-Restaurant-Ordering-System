@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useOrderStore, useHydratedOrderStore } from '@/lib/orders-store';
+import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import type { Order } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function POSView() {
-  const allOrders = useHydratedOrderStore((state) => state.orders, []);
+  const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const [orders, setOrders] = useState<Order[]>([]);
-  const isHydrated = useHydratedOrderStore((state) => state._rehydrated, false);
+  const isHydrated = allOrders.length > 0 || useHydratedStore(useOrderStore, (state) => !!state.orders, false);
 
 
   useEffect(() => {
