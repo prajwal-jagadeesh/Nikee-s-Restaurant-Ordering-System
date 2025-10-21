@@ -35,7 +35,12 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
   const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
   
   const readyItems = onServeItem ? order.items.filter(i => i.itemStatus === 'Ready') : [];
-  const itemsForDisplay = printedItems.filter(i => i.itemStatus !== 'Ready' || !onServeItem);
+  
+  // When showing KOT details (POS), filter out ready items because they have their own section.
+  // When not showing KOT details (Captain), show all printed items.
+  const itemsForDisplay = showKotDetails 
+    ? printedItems.filter(i => !readyItems.some(readyItem => readyItem.menuItem.id === i.menuItem.id))
+    : printedItems;
 
   const groupedPrintedItems = groupBy(itemsForDisplay, 'kotId');
 
@@ -91,6 +96,20 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
           </Accordion>
           </>
         )}
+        
+        {/* Captain View: Show all printed items in a simple list */}
+        {!showKotDetails && itemsForDisplay.length > 0 && (
+            <>
+                <Separator />
+                <h4 className="text-sm font-semibold text-center text-muted-foreground pt-2">Sent to Kitchen</h4>
+                <ul className="space-y-1 text-sm divide-y">
+                    {itemsForDisplay.map((item, index) => (
+                        <ItemRow key={`${item.menuItem.id}-${index}`} item={item} isNew={false} />
+                    ))}
+                </ul>
+            </>
+        )}
+
 
         {/* Ready to Serve Section */}
         {readyItems.length > 0 && onServeItem && (
