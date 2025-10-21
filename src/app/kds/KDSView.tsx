@@ -49,7 +49,7 @@ export default function KDSView() {
       .filter(o => !['Paid', 'Cancelled', 'New'].includes(o.status))
       .flatMap(order => 
         order.items
-          .filter(item => item.kotStatus === 'Printed' && item.itemStatus !== 'Ready')
+          .filter(item => item.kotStatus === 'Printed')
           .map(item => ({
             ...item,
             orderId: order.id,
