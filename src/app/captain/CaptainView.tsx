@@ -1,5 +1,4 @@
 'use client';
-import { useState, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import type { Order, OrderStatus } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
@@ -11,14 +10,10 @@ export default function CaptainView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const updateOrderStatusInStore = useOrderStore((state) => state.updateOrderStatus);
   
-  const [orders, setOrders] = useState<Order[]>([]);
-  const isHydrated = allOrders.length > 0 || useHydratedStore(useOrderStore, (state) => !!state.orders, false);
+  const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
-
-  useEffect(() => {
-    setOrders(allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled'));
-  }, [allOrders]);
-
+  const orders = allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled');
+  
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
     updateOrderStatusInStore(orderId, newStatus);
   };
@@ -39,7 +34,6 @@ export default function CaptainView() {
     updateOrderStatus(orderId, 'Cancelled');
   };
 
-
   if (!isHydrated) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -54,7 +48,6 @@ export default function CaptainView() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       <AnimatePresence>
         {orders
-          .filter(o => o.status !== 'Paid' && o.status !== 'Cancelled')
           .sort((a,b) => a.timestamp - b.timestamp)
           .map((order) => (
             <motion.div

@@ -6,10 +6,12 @@ import { useState, useEffect } from 'react';
 
 interface OrderState {
   orders: Order[];
+  hydrated: boolean;
   addOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   addItemsToOrder: (orderId: string, items: OrderItem[]) => void;
   clearOrders: () => void;
+  setHydrated: () => void;
 }
 
 let orderCounter = 0;
@@ -18,6 +20,7 @@ export const useOrderStore = create(
   persist<OrderState>(
     (set, get) => ({
       orders: [],
+      hydrated: false,
       addOrder: (order) => {
         const latestId = get().orders.reduce((maxId, o) => {
           const idNum = parseInt(o.id.replace('ORD', ''), 10);
@@ -73,10 +76,14 @@ export const useOrderStore = create(
         set({ orders: [] });
         orderCounter = 0;
       },
+      setHydrated: () => set({ hydrated: true }),
     }),
     {
       name: 'order-storage', 
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) state.setHydrated();
+      }
     }
   )
 );
@@ -93,8 +100,8 @@ export function useHydratedStore<T, F>(
   selector: (state: T) => F,
   defaultState: F
 ) {
-  const [hydrated, setHydrated] = useState(false);
   const result = store(selector) as F;
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setHydrated(true);

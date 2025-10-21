@@ -1,5 +1,4 @@
 'use client';
-import { useState, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import type { Order, OrderStatus } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
@@ -24,13 +23,10 @@ const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | 
 export default function KDSView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
-  const [kdsOrders, setKdsOrders] = useState<Order[]>([]);
-  const isHydrated = allOrders.length > 0 || useHydratedStore(useOrderS_LOG_FORMATTING_ADHERENCEtore, (state) => !!state.orders, false);
+  const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
-  useEffect(() => {
-    setKdsOrders(allOrders.filter(o => KDS_STATUSES.includes(o.status)));
-  }, [allOrders]);
-  
+  const kdsOrders = allOrders.filter(o => KDS_STATUSES.includes(o.status));
+
   const handleAction = (orderId: string, currentStatus: OrderStatus) => {
     const action = statusActions[currentStatus];
     if (action) {
