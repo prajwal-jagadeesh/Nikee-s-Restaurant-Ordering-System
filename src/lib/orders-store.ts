@@ -62,8 +62,8 @@ export const useOrderStore = create(
                 });
                 
                 // When adding new items, reset status to 'New' to force re-confirmation
-                // only if it's in a state where re-confirmation is logical.
-                const shouldResetStatus = ['Served', 'Billed', 'Ready', 'Paid', 'Cancelled'].includes(order.status);
+                // only if it's in a final state like Paid or Cancelled.
+                const shouldResetStatus = ['Paid', 'Cancelled'].includes(order.status);
                 
                 return { 
                   ...order, 
@@ -89,12 +89,19 @@ export const useOrderStore = create(
               });
               
               const allItemsPrinted = updatedItems.every(i => i.kotStatus === 'Printed');
+              const hasNewItems = updatedItems.some(i => i.kotStatus === 'New');
 
+              let newStatus = order.status;
+              // If the order was just confirmed and now all items have a KOT, move it to KOT Printed.
+              // Don't change the status if there are still other new items.
+              if (order.status === 'Confirmed' && !hasNewItems) {
+                newStatus = 'KOT Printed';
+              }
+              
               return { 
                 ...order, 
                 items: updatedItems,
-                // Only move to KOT Printed if the order was previously just confirmed
-                status: order.status === 'Confirmed' && allItemsPrinted ? 'KOT Printed' : order.status,
+                status: newStatus,
               };
             }
             return order;
@@ -111,7 +118,9 @@ export const useOrderStore = create(
       name: 'order-storage', 
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
-        if (state) state.setHydrated(true);
+        if (state) {
+          state.setHydrated(true);
+        }
       }
     }
   )

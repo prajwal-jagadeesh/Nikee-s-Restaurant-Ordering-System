@@ -27,7 +27,12 @@ export default function KDSView() {
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
-  const kdsOrders = allOrders.filter(o => KDS_COLUMNS.includes(o.status));
+  const kdsOrders = allOrders.filter(o => {
+    // An order is relevant for KDS if it's not paid/cancelled AND it has items that are not yet served.
+    // This keeps orders with new additions visible.
+    const isKitchenRelevant = o.items.some(item => item.kotStatus === 'Printed');
+    return !['Paid', 'Cancelled'].includes(o.status) && (KDS_COLUMNS.includes(o.status) || isKitchenRelevant);
+  });
 
   const handleAction = (orderId: string, currentStatus: OrderStatus) => {
     const action = statusActions[currentStatus];
