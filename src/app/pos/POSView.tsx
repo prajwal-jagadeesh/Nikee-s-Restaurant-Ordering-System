@@ -1,12 +1,12 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
 import { useMenuStore } from '@/lib/menu-store';
 import type { Order, Table, MenuItem } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils } from 'lucide-react';
+import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
