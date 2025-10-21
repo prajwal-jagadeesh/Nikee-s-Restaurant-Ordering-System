@@ -48,7 +48,7 @@ export default function POSView() {
             >
               <OrderCard order={order}>
                 <div className="mt-4 flex flex-col space-y-2">
-                  {(order.status === 'Confirmed' || order.status === 'New') && (
+                  {order.status === 'Confirmed' && (
                     <Button
                       variant="outline"
                       onClick={() => handlePrintKOT(order)}
