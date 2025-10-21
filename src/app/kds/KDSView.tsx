@@ -8,7 +8,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
-const KDS_STATUSES: OrderStatus[] = ['New', 'Confirmed', 'Preparing', 'Ready'];
+const KDS_STATUSES: OrderStatus[] = ['New', 'Confirmed', 'Preparing'];
+const KDS_COLUMNS: OrderStatus[] = ['New', 'Confirmed', 'Preparing', 'Ready'];
 
 const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | null> = {
   New: { next: 'Preparing', label: 'Start Preparing' },
@@ -25,7 +26,7 @@ export default function KDSView() {
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
-  const kdsOrders = allOrders.filter(o => KDS_STATUSES.includes(o.status));
+  const kdsOrders = allOrders.filter(o => KDS_COLUMNS.includes(o.status));
 
   const handleAction = (orderId: string, currentStatus: OrderStatus) => {
     const action = statusActions[currentStatus];
@@ -37,7 +38,7 @@ export default function KDSView() {
   if (!isHydrated) {
     return (
       <div className="flex h-[calc(100vh-12rem)] gap-4">
-        {KDS_STATUSES.map((status) => (
+        {KDS_COLUMNS.map((status) => (
           <div key={status} className="flex-1 flex flex-col bg-muted/50 rounded-lg">
             <h2 className="p-4 text-lg font-semibold border-b font-headline">{status}</h2>
             <div className="p-4 space-y-4">
@@ -52,7 +53,7 @@ export default function KDSView() {
 
   return (
     <div className="flex h-[calc(100vh-12rem)] gap-4">
-      {KDS_STATUSES.map((status) => (
+      {KDS_COLUMNS.map((status) => (
         <div key={status} className="flex-1 flex flex-col bg-muted/50 rounded-lg">
           <h2 className="p-4 text-lg font-semibold border-b font-headline">{status} ({kdsOrders.filter(o => o.status === status).length})</h2>
           <ScrollArea className="flex-1 p-4">
