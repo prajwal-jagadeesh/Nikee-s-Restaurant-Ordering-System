@@ -10,6 +10,7 @@ interface OrderState {
   addOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   addItemsToOrder: (orderId: string, items: OrderItem[]) => void;
+  updateOrderItemsKotStatus: (orderId: string, itemIds: string[]) => void;
   clearOrders: () => void;
   setHydrated: (hydrated: boolean) => void;
 }
@@ -53,14 +54,24 @@ export const useOrderStore = create(
                         (i) => i.menuItem.id === newItem.menuItem.id
                     );
                     if (existingItemIndex > -1) {
-                        updatedItems[existingItemIndex].quantity += newItem.quantity;
+                        // This assumes we are adding to existing quantity, but we should handle kotStatus
+                        // For simplicity, let's assume we add as new lines if we want kotStatus to be distinct.
+                        // Or, we update existing but the logic gets more complex.
+                        // Current logic: just add quantity. Let's create new entry instead.
+                        const existingItem = updatedItems[existingItemIndex];
+                        if (existingItem.kotStatus === 'Printed') {
+                             updatedItems.push({ ...newItem, kotStatus: 'New'});
+                        } else {
+                             updatedItems[existingItemIndex].quantity += newItem.quantity;
+                        }
                     } else {
                         updatedItems.push(newItem);
                     }
                     newTotal += newItem.menuItem.price * newItem.quantity;
                 });
                 
-                const shouldResetStatus = ['KOT Printed', 'Preparing', 'Ready', 'Served', 'Billed'].includes(order.status);
+                // Any modification that adds items should require re-confirmation.
+                const shouldResetStatus = order.status !== 'New';
                 
                 return { 
                   ...order, 
@@ -74,6 +85,22 @@ export const useOrderStore = create(
             }),
           };
         }),
+      updateOrderItemsKotStatus: (orderId, itemIds) => {
+        set((state) => ({
+          orders: state.orders.map((order) => {
+            if (order.id === orderId) {
+              const updatedItems = order.items.map((item) => {
+                if (itemIds.includes(item.menuItem.id)) {
+                  return { ...item, kotStatus: 'Printed' as const };
+                }
+                return item;
+              });
+              return { ...order, items: updatedItems };
+            }
+            return order;
+          }),
+        }));
+      },
       clearOrders: () => {
         set({ orders: [] });
         orderCounter = 0;

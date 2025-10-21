@@ -10,19 +10,38 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function POSView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
+  const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
   const orders = allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled');
 
   const handlePrintKOT = (order: Order) => {
-    console.log(`Printing KOT for Order #${order.id}`);
-    updateOrderStatus(order.id, 'KOT Printed');
+    const newItems = order.items.filter(item => item.kotStatus === 'New');
+    if (newItems.length === 0) return;
+
+    console.log(`Printing KOT for Order #${order.id} for new items:`);
+    newItems.forEach(item => {
+      console.log(`- ${item.quantity}x ${item.menuItem.name}`);
+    });
+    
+    const newItemIds = newItems.map(item => item.menuItem.id);
+    updateOrderItemsKotStatus(order.id, newItemIds);
+    
+    // If all items have KOT printed, move status to KOT Printed
+    const allPrinted = order.items.every(item => newItemIds.includes(item.menuItem.id) ? true : item.kotStatus === 'Printed');
+    if (allPrinted) {
+        updateOrderStatus(order.id, 'KOT Printed');
+    }
   };
 
   const handlePrintBill = (order: Order) => {
     console.log(`Printing bill for Table #${order.tableNumber}. Total: ₹${order.total.toFixed(2)}`);
     updateOrderStatus(order.id, 'Billed');
   };
+  
+  const needsKotPrint = (order: Order) => {
+    return order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New');
+  }
 
   if (!isHydrated) {
     return (
@@ -49,7 +68,7 @@ export default function POSView() {
             >
               <OrderCard order={order}>
                 <div className="mt-4 flex flex-col space-y-2">
-                  {order.status === 'Confirmed' && (
+                  {needsKotPrint(order) && (
                     <Button
                       variant="outline"
                       onClick={() => handlePrintKOT(order)}
