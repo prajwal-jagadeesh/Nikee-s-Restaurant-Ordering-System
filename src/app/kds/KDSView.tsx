@@ -21,7 +21,7 @@ type GroupedOrder = {
   orderId: string;
   tableNumber: number;
   orderTimestamp: number;
-  items: OrderItem[];
+  items: (OrderItem & {originalOrderId: string})[];
 }
 
 export default function KDSView() {
@@ -31,6 +31,7 @@ export default function KDSView() {
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
     const activeKitchenItemsByTable = allOrders.reduce((acc, order) => {
+      // Only consider orders that are not yet Paid or Cancelled
       if (['Paid', 'Cancelled'].includes(order.status)) {
         return acc;
       }
@@ -48,6 +49,7 @@ export default function KDSView() {
             items: []
           };
         }
+        
         // Use the latest timestamp for the card
         if(order.timestamp > acc[order.tableNumber].orderTimestamp){
             acc[order.tableNumber].orderTimestamp = order.timestamp;
@@ -60,27 +62,34 @@ export default function KDSView() {
       }
       
       return acc;
-    }, {} as Record<number, GroupedOrder & { items: (OrderItem & {originalOrderId: string})[] }>);
+    }, {} as Record<number, GroupedOrder>);
 
-    // After grouping, let's combine items from different orders for the same table
-    const combinedOrders = Object.values(activeKitchenItemsByTable).reduce((acc, tableOrder) => {
-      const existingTable = acc.find(t => t.tableNumber === tableOrder.tableNumber);
-      if (existingTable) {
-        // Use the newest timestamp
-        if (tableOrder.orderTimestamp > existingTable.orderTimestamp) {
-          existingTable.orderTimestamp = tableOrder.orderTimestamp;
-        }
-        // Merge items, avoiding duplicates
-        tableOrder.items.forEach(newItem => {
-           if (!existingTable.items.some(existingItem => existingItem.menuItem.id === newItem.menuItem.id && (existingItem as any).originalOrderId === (newItem as any).originalOrderId)) {
-             existingTable.items.push(newItem);
-           }
-        });
-      } else {
-        acc.push(tableOrder);
-      }
-      return acc;
-    }, [] as GroupedOrder[]);
+    // Combine all items for a table from different orders into one view
+     const combinedOrders = Object.values(activeKitchenItemsByTable).map(tableOrder => {
+        // Flatten all items from different orders for the same table
+        const allTableItems = allOrders
+            .filter(o => o.tableNumber === tableOrder.tableNumber && !['Paid', 'Cancelled'].includes(o.status))
+            .flatMap(o => 
+                o.items
+                 .filter(item => item.kotStatus === 'Printed')
+                 .map(item => ({ ...item, originalOrderId: o.id }))
+            );
+        
+        // Deduplicate items based on original order ID and menu item ID
+        const uniqueItems = allTableItems.reduce((acc, current) => {
+            const x = acc.find(item => item.originalOrderId === current.originalOrderId && item.menuItem.id === current.menuItem.id);
+            if (!x) {
+                return acc.concat([current]);
+            } else {
+                return acc;
+            }
+        }, [] as (OrderItem & {originalOrderId: string})[]);
+
+        return {
+            ...tableOrder,
+            items: uniqueItems,
+        };
+     });
 
     return combinedOrders.sort((a,b) => a.orderTimestamp - b.orderTimestamp);
 
@@ -137,8 +146,10 @@ export default function KDSView() {
                       </div>
                       {/* Items */}
                       <ul className="divide-y">
-                        {order.items.map((item) => (
-                          <li key={`${(item as any).originalOrderId}-${item.menuItem.id}`} className="flex items-center py-3">
+                        {order.items
+                        .sort((a, b) => a.menuItem.name.localeCompare(b.menuItem.name))
+                        .map((item) => (
+                          <li key={`${item.originalOrderId}-${item.menuItem.id}`} className="flex items-center py-3">
                             <div className="flex-1 font-medium">{item.menuItem.name}</div>
                             <div className="w-12 text-center font-bold">{item.quantity}</div>
                             <div className="w-28 flex justify-center">
@@ -148,7 +159,7 @@ export default function KDSView() {
                               {itemStatusActions[item.itemStatus] && (
                                   <Button
                                     size="sm"
-                                    onClick={() => handleAction((item as any).originalOrderId, item.menuItem.id, item.itemStatus)}
+                                    onClick={() => handleAction(item.originalOrderId, item.menuItem.id, item.itemStatus)}
                                     className="w-full"
                                   >
                                     {itemStatusActions[item.itemStatus]?.label}

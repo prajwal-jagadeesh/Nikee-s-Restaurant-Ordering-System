@@ -26,18 +26,16 @@ const recalculateTotal = (items: OrderItem[]): number => {
 };
 
 const updateOverallOrderStatus = (order: Order): Order => {
-  const someItemsServed = order.items.some(item => item.itemStatus === 'Served');
-  const anyItemPreparing = order.items.some(item => item.itemStatus === 'Preparing');
-  const anyItemReady = order.items.some(item => item.itemStatus === 'Ready');
-  const allItemsServedOrPending = order.items.every(item => ['Served', 'Pending'].includes(item.itemStatus));
-
-
   // If status is manually set or terminal, don't auto-update.
   if (['Billed', 'Paid', 'Cancelled', 'New', 'Confirmed'].includes(order.status)) {
     return order;
   }
+
+  const someItemsServed = order.items.some(item => item.itemStatus === 'Served');
+  const anyItemPreparing = order.items.some(item => item.itemStatus === 'Preparing');
+  const anyItemReady = order.items.some(item => item.itemStatus === 'Ready');
   
-  // If at least one item is served, and nothing is currently being cooked or ready, it's a "Served" state for billing.
+  // If at least one item is served, and nothing is currently cooking or ready, it's a "Served" state for billing.
   if (someItemsServed && !anyItemPreparing && !anyItemReady) {
     return { ...order, status: 'Served' };
   }
@@ -52,6 +50,7 @@ const updateOverallOrderStatus = (order: Order): Order => {
   
   return order;
 };
+
 
 export const useOrderStore = create(
   persist<OrderState>(
@@ -79,12 +78,10 @@ export const useOrderStore = create(
             if (order.id !== orderId) return order;
 
             let updatedOrder = { ...order, status };
-            
+
+            // When confirming, just change the status. KOT printing is a separate step in POS.
             if (status === 'Confirmed') {
-                const updatedItems = order.items.map((item) => 
-                  item.kotStatus === 'New' ? { ...item, kotStatus: 'Printed' as const } : item
-                );
-                updatedOrder.items = updatedItems;
+               // No longer changing KOT status here.
             }
 
             return updatedOrder;
@@ -96,7 +93,6 @@ export const useOrderStore = create(
             orders: state.orders.map((order) => {
               if (order.id === orderId) {
                 const updatedItems = [...order.items];
-                let newTotal = order.total;
 
                 const itemsWithStatus = newItems.map(item => ({...item, itemStatus: 'Pending' as const, kotStatus: 'New' as const}))
 
@@ -112,7 +108,8 @@ export const useOrderStore = create(
                     }
                 });
                 
-                const newStatus: OrderStatus = order.status === 'Paid' || order.status === 'Cancelled' ? order.status : 'New';
+                // If an order was already processed, adding new items makes it 'New' again for confirmation.
+                const newStatus: OrderStatus = ['Billed', 'Paid', 'Cancelled'].includes(order.status) ? order.status : 'New';
 
                 return { 
                   ...order, 
@@ -140,7 +137,6 @@ export const useOrderStore = create(
               const updatedOrder = { 
                 ...order, 
                 items: updatedItems,
-                 status: 'Confirmed' as const,
               };
 
               return updateOverallOrderStatus(updatedOrder);

@@ -38,9 +38,12 @@ export default function POSView() {
   }
 
   const canGenerateBill = (order: Order) => {
-    const allItemsServedOrPending = order.items.every(item => ['Served', 'Pending'].includes(item.itemStatus));
-    const atLeastOneItemServed = order.items.some(item => item.itemStatus === 'Served');
-    return atLeastOneItemServed && allItemsServedOrPending;
+    // Bill can be generated if the order is Served, Ready, or if all items have been served.
+    if (order.status === 'Served' || order.status === 'Ready') {
+      return true;
+    }
+    // This catches the case where all items are served but the overall status hasn't updated yet.
+    return order.items.every(item => item.itemStatus === 'Served');
   }
 
   if (!isHydrated) {
