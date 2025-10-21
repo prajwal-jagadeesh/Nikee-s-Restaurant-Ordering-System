@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
 import { useMenuStore } from '@/lib/menu-store';
-import type { MenuItem, OrderItem, Table } from '@/lib/types';
+import type { MenuItem, OrderItem, Table, Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from '@/components/ui/sheet';
 import { Plus, Minus, Trash2 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import ItemStatusBadge from '@/components/ItemStatusBadge';
 
 interface NewOrderSheetProps {
     isOpen: boolean;
@@ -31,6 +32,7 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
     const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
     const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
     const addOrder = useOrderStore(state => state.addOrder);
+    const addItemsToOrder = useOrderStore(state => state.addItemsToOrder);
 
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
@@ -49,19 +51,10 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
     const sortedTables = useMemo(() => [...tables].sort(naturalSort), [tables]);
     const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
 
-    const occupiedTableIds = useMemo(() => {
-        const occupiedIds = new Set<string>();
-        allOrders.forEach(order => {
-            if (order.status !== 'Paid' && order.status !== 'Cancelled') {
-                occupiedIds.add(order.tableId);
-            }
-        });
-        return occupiedIds;
-    }, [allOrders]);
-
-    const vacantTables = useMemo(() => {
-        return sortedTables.filter(t => !occupiedTableIds.has(t.id));
-    }, [sortedTables, occupiedTableIds]);
+    const activeOrder = useMemo(() => {
+      if (!selectedTableId) return null;
+      return allOrders.find(o => o.tableId === selectedTableId && o.status !== 'Paid' && o.status !== 'Cancelled');
+    }, [allOrders, selectedTableId]);
 
     const addToCart = (item: MenuItem) => {
         setCart((prev) => {
@@ -94,12 +87,17 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
         return cart.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
     }, [cart]);
 
-    const placeOrder = () => {
+    const placeOrUpdateOrder = () => {
         if (cart.length === 0 || !selectedTableId) return;
-        addOrder({
-            tableId: selectedTableId,
-            items: cart,
-        });
+
+        if (activeOrder) {
+            addItemsToOrder(activeOrder.id, cart);
+        } else {
+            addOrder({
+                tableId: selectedTableId,
+                items: cart,
+            });
+        }
         onOpenChange(false);
     };
 
@@ -109,30 +107,26 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
 
     return (
         <Sheet open={isOpen} onOpenChange={onOpenChange}>
-            <SheetContent className="w-full max-w-none sm:max-w-none md:max-w-2xl lg:max-w-4xl flex flex-col">
+            <SheetContent className="w-full max-w-none sm:max-w-none md:max-w-3xl lg:max-w-5xl flex flex-col">
                 <SheetHeader>
-                    <SheetTitle>Create New Order</SheetTitle>
-                    <SheetDescription>Select a table, add items to the order, and send it to the kitchen.</SheetDescription>
+                    <SheetTitle>Create or Add to Order</SheetTitle>
+                    <SheetDescription>Select a table, add items, and send it to the kitchen.</SheetDescription>
                 </SheetHeader>
 
                 {!selectedTableId ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                         <h3 className="text-xl font-semibold mb-4">Select a Table to Begin</h3>
-                        <p className="text-muted-foreground mb-6">Choose a vacant table to start placing an order.</p>
+                        <p className="text-muted-foreground mb-6">Choose any table to start a new order or add to an existing one.</p>
                         <Select onValueChange={setSelectedTableId}>
                             <SelectTrigger className="w-[280px]">
-                                <SelectValue placeholder="Choose a vacant table..." />
+                                <SelectValue placeholder="Choose a table..." />
                             </SelectTrigger>
                             <SelectContent>
-                                {vacantTables.length > 0 ? (
-                                    vacantTables.map(table => (
-                                        <SelectItem key={table.id} value={table.id}>
-                                            {table.name}
-                                        </SelectItem>
-                                    ))
-                                ) : (
-                                    <div className="p-4 text-center text-sm text-muted-foreground">No vacant tables available.</div>
-                                )}
+                                {sortedTables.map(table => (
+                                    <SelectItem key={table.id} value={table.id}>
+                                        {table.name}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -180,40 +174,64 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
                         {/* Cart Section */}
                         <div className="col-span-1 flex flex-col bg-muted/50 rounded-lg overflow-hidden">
                              <div className="p-4 border-b">
-                                <h3 className="font-bold text-lg">Order for {selectedTable?.name}</h3>
+                                <h3 className="font-bold text-lg">
+                                   {activeOrder ? `Order for ${selectedTable?.name}` : `New Order (${selectedTable?.name})`}
+                                </h3>
                                  <Button variant="link" className="p-0 h-auto text-xs" onClick={() => setSelectedTableId(null)}>Change table</Button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4 divide-y">
+                                {activeOrder && (
+                                  <div className="pt-2">
+                                    <h4 className="font-semibold text-md mb-2">Current Items</h4>
+                                    <div className="space-y-2 text-sm">
+                                      {activeOrder.items.map((item, index) => (
+                                          <div key={index} className="flex justify-between items-center">
+                                              <span className="flex-1">{item.quantity} x {item.menuItem.name}</span>
+                                              <ItemStatusBadge status={item.itemStatus} className="mx-2" />
+                                          </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                                 {cart.length === 0 ? (
-                                    <p className="text-muted-foreground text-center pt-8 text-sm">Cart is empty. Add items from the menu.</p>
+                                    <p className="text-muted-foreground text-center pt-8 text-sm">{activeOrder ? 'Add more items from the menu.' : 'Cart is empty.'}</p>
                                 ) : (
-                                    cart.map(item => (
-                                        <div key={item.menuItem.id} className="flex items-start gap-3">
-                                            <div className="flex-1">
-                                                <p className="font-semibold text-sm">{item.menuItem.name}</p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}><Minus className="h-3 w-3" /></Button>
-                                                    <span className="w-5 text-center">{item.quantity}</span>
-                                                    <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-semibold text-sm">₹{(item.menuItem.price * item.quantity).toFixed(2)}</p>
-                                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => removeItemFromCart(item.menuItem.id)}><Trash2 className="h-4 w-4"/></Button>
-                                            </div>
-                                        </div>
-                                    ))
+                                    <div className="pt-4">
+                                      <h4 className="font-semibold text-md mb-2">{activeOrder ? 'New Items' : 'Cart'}</h4>
+                                      {cart.map(item => (
+                                          <div key={item.menuItem.id} className="flex items-start gap-3 py-2">
+                                              <div className="flex-1">
+                                                  <p className="font-semibold text-sm">{item.menuItem.name}</p>
+                                                  <div className="flex items-center gap-2 mt-1">
+                                                      <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}><Minus className="h-3 w-3" /></Button>
+                                                      <span className="w-5 text-center">{item.quantity}</span>
+                                                      <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
+                                                  </div>
+                                              </div>
+                                              <div className="text-right">
+                                                  <p className="font-semibold text-sm">₹{(item.menuItem.price * item.quantity).toFixed(2)}</p>
+                                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => removeItemFromCart(item.menuItem.id)}><Trash2 className="h-4 w-4"/></Button>
+                                              </div>
+                                          </div>
+                                      ))}
+                                    </div>
                                 )}
                             </div>
                             {cart.length > 0 && (
                                 <SheetFooter className="border-t p-4 bg-background mt-auto">
                                     <div className="w-full space-y-3">
                                         <div className="flex justify-between font-bold text-lg">
-                                            <span>Total</span>
+                                            <span>New Items Total</span>
                                             <span>₹{cartTotal.toFixed(2)}</span>
                                         </div>
-                                        <Button size="lg" className="w-full" onClick={placeOrder}>
-                                            Place Order
+                                         {activeOrder && (
+                                          <div className="flex justify-between font-bold text-xl">
+                                            <span>New Grand Total</span>
+                                            <span>₹{(activeOrder.total + cartTotal).toFixed(2)}</span>
+                                          </div>
+                                        )}
+                                        <Button size="lg" className="w-full" onClick={placeOrUpdateOrder}>
+                                            {activeOrder ? 'Add to Order' : 'Place New Order'}
                                         </Button>
                                     </div>
                                 </SheetFooter>

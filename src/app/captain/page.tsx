@@ -15,7 +15,7 @@ export default function CaptainPage() {
           <h1 className="text-2xl font-bold font-headline">Captain Dashboard</h1>
           <Button onClick={() => setNewOrderSheetOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            New Order
+            New / Add to Order
           </Button>
         </div>
       </header>
