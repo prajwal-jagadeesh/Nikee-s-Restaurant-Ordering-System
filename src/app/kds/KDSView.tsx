@@ -1,7 +1,7 @@
 'use client';
 import { useMemo } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import type { OrderItem, ItemStatus, Order } from '@/lib/types';
+import type { OrderItem, ItemStatus, Order, OrderStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,6 @@ type GroupedOrder = {
   tableNumber: number;
   orderTimestamp: number;
   items: OrderItem[];
-  status: Order['status'];
 }
 
 export default function KDSView() {
@@ -31,19 +30,40 @@ export default function KDSView() {
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
-    const grouped = allOrders
-      .filter(o => !['Paid', 'Cancelled', 'New', 'Confirmed', 'Billed'].includes(o.status))
-      .map(order => ({
-        orderId: order.id,
-        tableNumber: order.tableNumber,
-        orderTimestamp: order.timestamp,
-        status: order.status,
-        items: order.items
-          .filter(item => item.kotStatus === 'Printed' && item.itemStatus !== 'Served')
-      }))
-      .filter(order => order.items.length > 0);
+    const activeKitchenItemsByTable = allOrders.reduce((acc, order) => {
+      if (['Paid', 'Cancelled'].includes(order.status)) {
+        return acc;
+      }
+      
+      const kitchenItems = order.items.filter(
+        item => item.kotStatus === 'Printed' && item.itemStatus !== 'Served'
+      );
 
-    return grouped.sort((a,b) => a.orderTimestamp - b.orderTimestamp);
+      if (kitchenItems.length > 0) {
+        if (!acc[order.tableNumber]) {
+          acc[order.tableNumber] = {
+            orderId: order.id,
+            tableNumber: order.tableNumber,
+            orderTimestamp: order.timestamp,
+            items: []
+          };
+        }
+        // Use the latest timestamp for the card
+        if(order.timestamp > acc[order.tableNumber].orderTimestamp){
+            acc[order.tableNumber].orderTimestamp = order.timestamp;
+        }
+
+        // Add items with their original orderId for status updates
+        const itemsWithOrderId = kitchenItems.map(item => ({...item, originalOrderId: order.id}));
+
+        acc[order.tableNumber].items.push(...itemsWithOrderId);
+      }
+      
+      return acc;
+    }, {} as Record<number, GroupedOrder & { items: (OrderItem & {originalOrderId: string})[] }>);
+
+    return Object.values(activeKitchenItemsByTable)
+                 .sort((a,b) => a.orderTimestamp - b.orderTimestamp);
 
   }, [allOrders]);
 
@@ -74,7 +94,7 @@ export default function KDSView() {
         ) : (
           kdsOrders.map((order) => (
              <motion.div
-              key={order.orderId}
+              key={order.tableNumber}
               layout
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -99,7 +119,7 @@ export default function KDSView() {
                       {/* Items */}
                       <ul className="divide-y">
                         {order.items.map((item) => (
-                          <li key={item.menuItem.id} className="flex items-center py-3">
+                          <li key={`${(item as any).originalOrderId}-${item.menuItem.id}`} className="flex items-center py-3">
                             <div className="flex-1 font-medium">{item.menuItem.name}</div>
                             <div className="w-12 text-center font-bold">{item.quantity}</div>
                             <div className="w-28 flex justify-center">
@@ -109,7 +129,7 @@ export default function KDSView() {
                               {itemStatusActions[item.itemStatus] && (
                                   <Button
                                     size="sm"
-                                    onClick={() => handleAction(order.orderId, item.menuItem.id, item.itemStatus)}
+                                    onClick={() => handleAction((item as any).originalOrderId, item.menuItem.id, item.itemStatus)}
                                     className="w-full"
                                   >
                                     {itemStatusActions[item.itemStatus]?.label}
