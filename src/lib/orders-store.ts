@@ -89,9 +89,11 @@ export const useOrderStore = create(
                 const itemsWithStatus = newItems.map(item => ({...item, itemStatus: 'Pending' as const}))
 
                 itemsWithStatus.forEach((newItem) => {
+                    // Only merge with an item if it has the same ID and has a status that implies it's not yet in the kitchen flow.
                     const existingItemIndex = updatedItems.findIndex(
-                        (i) => i.menuItem.id === newItem.menuItem.id && i.kotStatus === 'New'
+                        (i) => i.menuItem.id === newItem.menuItem.id && (i.kotStatus === 'New' && i.itemStatus === 'Pending')
                     );
+                    
                     if (existingItemIndex > -1) {
                          updatedItems[existingItemIndex].quantity += newItem.quantity;
                     } else {
@@ -100,15 +102,20 @@ export const useOrderStore = create(
                     newTotal += newItem.menuItem.price * newItem.quantity;
                 });
                 
-                // When adding new items, reset status to 'New' to force re-confirmation
-                // only if it's in a final state like Paid or Cancelled.
-                const shouldResetStatus = ['Paid', 'Cancelled'].includes(order.status);
-                
+                // When adding new items, reset status to 'Confirmed' if it was already past that stage,
+                // so KOT can be printed for new items.
+                // But don't reset from Billed/Paid/Cancelled.
+                let newStatus = order.status;
+                const activeKitchenStatuses: OrderStatus[] = ['Preparing', 'Ready', 'Served', 'KOT Printed'];
+                if (activeKitchenStatuses.includes(order.status)) {
+                  newStatus = 'Confirmed';
+                }
+
                 return { 
                   ...order, 
                   items: updatedItems,
                   total: newTotal,
-                  status: shouldResetStatus ? 'New' : order.status,
+                  status: newStatus,
                   timestamp: Date.now() 
                 };
               }
@@ -148,14 +155,27 @@ export const useOrderStore = create(
          set((state) => ({
           orders: state.orders.map((order) => {
             if (order.id === orderId) {
-                const updatedItems = order.items.map(item => 
-                    item.menuItem.id === menuItemId && item.itemStatus !== 'Served'
-                    ? { ...item, itemStatus: newStatus }
-                    : item
-                );
-                const updatedOrder = { ...order, items: updatedItems };
+                // This logic needs to be more specific. If there are multiple entries for the same menu item
+                // (e.g. one is 'Served', one is 'Preparing'), we need to only update the one that is not yet 'Served'.
                 
-                return updateOverallOrderStatus(updatedOrder);
+                // Find the first item that matches and is not yet in a final state.
+                const itemIndexToUpdate = order.items.findIndex(item => 
+                    item.menuItem.id === menuItemId && item.itemStatus !== 'Served'
+                );
+
+                if (itemIndexToUpdate > -1) {
+                  const updatedItems = [...order.items];
+                  updatedItems[itemIndexToUpdate] = {
+                    ...updatedItems[itemIndexToUpdate],
+                    itemStatus: newStatus
+                  };
+
+                  const updatedOrder = { ...order, items: updatedItems };
+                  return updateOverallOrderStatus(updatedOrder);
+                }
+
+                // If no item was found to update (e.g., all are served), return original order
+                return order;
             }
             return order;
           }),

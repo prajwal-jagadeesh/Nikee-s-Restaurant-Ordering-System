@@ -37,7 +37,7 @@ export default function CaptainView() {
   };
 
   const needsConfirmation = (order: Order) => {
-    return order.status === 'New' || order.items.some(item => item.kotStatus === 'New');
+    return order.status === 'New' || (order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New'));
   };
 
   const hasReadyItems = (order: Order) => {

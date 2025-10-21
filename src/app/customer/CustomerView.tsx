@@ -14,6 +14,7 @@ import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
+import ItemStatusBadge from '@/components/ItemStatusBadge';
 
 
 const statusInfo: Record<OrderStatus, { label: string, description: string, progress: number }> = {
@@ -98,7 +99,7 @@ export default function CustomerView() {
   };
 
   const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab]);
-  const isItemInCart = (itemId: string) => activeOrder?.items.some(item => item.menuItem.id === itemId);
+  const isItemInCart = (itemId: string) => activeOrder?.items.some(item => item.menuItem.id === itemId && item.itemStatus !== 'Served');
   const cartItemCount = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart]);
 
 
@@ -217,8 +218,9 @@ export default function CustomerView() {
                   <div className="space-y-2">
                       {activeOrder.items.map((item, index) => (
                           <div key={index} className="flex justify-between items-center text-sm">
-                              <span>{item.quantity} x {item.menuItem.name}</span>
-                              <span className="font-mono">₹{(item.quantity * item.menuItem.price).toFixed(2)}</span>
+                              <span className="flex-1">{item.quantity} x {item.menuItem.name}</span>
+                              <ItemStatusBadge status={item.itemStatus} className="mx-2" />
+                              <span className="font-mono w-20 text-right">₹{(item.quantity * item.menuItem.price).toFixed(2)}</span>
                           </div>
                       ))}
                   </div>
