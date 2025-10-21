@@ -26,7 +26,7 @@ const updateOverallOrderStatus = (order: Order): Order => {
 
 
   // Don't automatically change from these statuses
-  if (['Billed', 'Paid', 'Cancelled', 'New'].includes(order.status)) {
+  if (['Billed', 'Paid', 'Cancelled', 'New', 'Confirmed'].includes(order.status)) {
     return order;
   }
   
@@ -104,9 +104,9 @@ export const useOrderStore = create(
                     newTotal += newItem.menuItem.price * newItem.quantity;
                 });
                 
-                let newStatus = order.status;
-                if (order.status === 'Paid' || order.status === 'Cancelled' || order.status === 'Served') {
-                  newStatus = 'New';
+                let newStatus: OrderStatus = order.status;
+                if (order.status === 'Paid' || order.status === 'Cancelled' || order.status === 'Served' || order.status === 'Billed' || order.status === 'Ready' || order.status === 'Preparing') {
+                  newStatus = 'Confirmed';
                 }
 
                 return { 
@@ -132,8 +132,8 @@ export const useOrderStore = create(
                 return item;
               });
 
-              let newStatus = order.status;
-              if (order.status === 'New') {
+              let newStatus: OrderStatus = order.status;
+              if (order.status === 'Confirmed') {
                   newStatus = 'Preparing'; 
               }
               

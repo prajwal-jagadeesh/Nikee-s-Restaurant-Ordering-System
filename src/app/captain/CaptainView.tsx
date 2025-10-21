@@ -5,13 +5,11 @@ import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Printer } from 'lucide-react';
 
 export default function CaptainView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
-  const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
   
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
@@ -29,17 +27,9 @@ export default function CaptainView() {
     updateOrderStatus(orderId, 'Cancelled');
   };
 
-  const handleSendToKitchen = (order: Order) => {
-    const newItems = order.items.filter(item => item.kotStatus === 'New');
-    if (newItems.length === 0) return;
-    
-    const newItemIds = newItems.map(item => item.menuItem.id);
-    updateOrderItemsKotStatus(order.id, newItemIds);
+  const handleConfirmOrder = (orderId: string) => {
+    updateOrderStatus(orderId, 'Confirmed');
   };
-
-  const needsKotPrint = (order: Order) => {
-    return order.items.some(item => item.kotStatus === 'New');
-  }
 
   if (!isHydrated) {
     return (
@@ -66,14 +56,9 @@ export default function CaptainView() {
             >
               <OrderCard order={order} onServeItem={handleMarkServed}>
                 <div className="mt-4 flex flex-col space-y-2">
-                  {needsKotPrint(order) && (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleSendToKitchen(order)}
-                      className="w-full"
-                    >
-                      <Printer className="mr-2 h-4 w-4" />
-                      Send to Kitchen
+                  {order.status === 'New' && (
+                     <Button onClick={() => handleConfirmOrder(order.id)} className="w-full">
+                       Confirm Order
                     </Button>
                   )}
                   <div className="flex gap-2">

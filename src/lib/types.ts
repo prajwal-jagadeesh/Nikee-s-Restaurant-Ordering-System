@@ -1,5 +1,6 @@
 export type OrderStatus =
   | 'New'
+  | 'Confirmed'
   | 'Preparing'
   | 'Ready'
   | 'Served'

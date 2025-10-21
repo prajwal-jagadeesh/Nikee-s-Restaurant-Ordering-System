@@ -32,7 +32,7 @@ export default function KDSView() {
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
     const grouped = allOrders
-      .filter(o => !['Paid', 'Cancelled', 'New'].includes(o.status))
+      .filter(o => !['Paid', 'Cancelled', 'New', 'Confirmed', 'Billed'].includes(o.status))
       .map(order => ({
         orderId: order.id,
         tableNumber: order.tableNumber,
@@ -87,7 +87,7 @@ export default function KDSView() {
                       {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
                   </span>
                 </CardHeader>
-                <CardContent className="flex-1">
+                <CardContent>
                     <div className="text-sm">
                       {/* Header */}
                       <div className="flex items-center font-semibold text-muted-foreground border-b pb-2">
