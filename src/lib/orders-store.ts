@@ -60,11 +60,13 @@ export const useOrderStore = create(
                     newTotal += newItem.menuItem.price * newItem.quantity;
                 });
                 
+                const shouldResetStatus = ['Confirmed', 'Ready', 'Served'].includes(order.status);
+                
                 return { 
                   ...order, 
                   items: updatedItems,
                   total: newTotal,
-                  status: (order.status === 'Served' || order.status === 'Ready') ? 'Confirmed' : order.status,
+                  status: shouldResetStatus ? 'New' : order.status,
                   timestamp: Date.now() 
                 };
               }
