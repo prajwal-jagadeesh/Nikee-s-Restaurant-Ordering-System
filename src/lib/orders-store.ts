@@ -305,7 +305,7 @@ export function useHydratedStore<T, F>(
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'order-storage' || e.key === 'table-storage') {
+      if (e.key === 'order-storage' || e.key === 'table-storage' || e.key === 'menu-storage') {
         useOrderStore.persist.rehydrate();
       }
     };
@@ -316,5 +316,3 @@ export function useHydratedStore<T, F>(
 
   return data;
 }
-
-    

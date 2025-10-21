@@ -1,7 +1,6 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { menuItems, menuCategories } from '@/lib/data';
 import type { MenuItem, OrderItem, Order, OrderStatus, Table } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
+import { useMenuStore } from '@/lib/menu-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
@@ -63,10 +63,20 @@ export default function CustomerView() {
   const orders = useHydratedStore(useOrderStore, state => state.orders, []);
   const addOrder = useOrderStore((state) => state.addOrder);
   const addItemsToOrder = useOrderStore((state) => state.addItemsToOrder);
+
+  const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
+  const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
+  const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
   
   const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    if (menuCategories.length > 0) {
+      setActiveTab(menuCategories[0]);
+    }
+  }, [menuCategories]);
 
   useRedirectIfSwitched(table);
 
@@ -122,7 +132,7 @@ export default function CustomerView() {
     setIsCartOpen(false);
   };
 
-  const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab]);
+  const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab, menuItems]);
   const isItemInCart = (itemId: string) => activeOrder?.items.some(item => item.menuItem.id === itemId && item.itemStatus !== 'Served');
   const cartItemCount = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart]);
 
@@ -318,5 +328,3 @@ export default function CustomerView() {
     </>
   );
 }
-
-    

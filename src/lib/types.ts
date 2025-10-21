@@ -17,6 +17,7 @@ export interface MenuItem {
   description: string;
   price: number;
   category: string;
+  available: boolean;
 }
 
 export interface OrderItem {
@@ -43,5 +44,3 @@ export interface Table {
   id: string;
   name: string;
 }
-
-    

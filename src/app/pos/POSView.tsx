@@ -2,10 +2,11 @@
 import { useState, useMemo } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
-import type { Order, Table } from '@/lib/types';
+import { useMenuStore } from '@/lib/menu-store';
+import type { Order, Table, MenuItem } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, ArrowRightLeft } from 'lucide-react';
+import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -34,12 +35,201 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { groupBy } from 'lodash';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const naturalSort = (a: Table, b: Table) => {
     const numA = parseInt(a.name.match(/\d+/)?.[0] || '0', 10);
     const numB = parseInt(b.name.match(/\d+/)?.[0] || '0', 10);
     return numA - numB;
 };
+
+const MenuManagement = () => {
+    const menuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
+    const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
+    const addMenuItem = useMenuStore(state => state.addMenuItem);
+    const updateMenuItem = useMenuStore(state => state.updateMenuItem);
+    const deleteMenuItem = useMenuStore(state => state.deleteMenuItem);
+    const toggleMenuItemAvailability = useMenuStore(state => state.toggleMenuItemAvailability);
+    
+    const [isFormOpen, setFormOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+
+    const groupedItems = useMemo(() => groupBy(menuItems, 'category'), [menuItems]);
+    
+    const openEditForm = (item: MenuItem) => {
+        setEditingItem(item);
+        setFormOpen(true);
+    };
+
+    const openAddForm = () => {
+        setEditingItem(null);
+        setFormOpen(true);
+    };
+    
+    const handleSubmit = (formData: Omit<MenuItem, 'id' | 'available'>) => {
+      if (editingItem) {
+        updateMenuItem({ ...editingItem, ...formData });
+      } else {
+        addMenuItem(formData);
+      }
+      setFormOpen(false);
+      setEditingItem(null);
+    }
+    
+    return (
+        <div className="max-w-7xl mx-auto">
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Manage Menu</CardTitle>
+                     <Button onClick={openAddForm}>
+                        <Plus className="mr-2 h-4 w-4" /> Add Menu Item
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-8">
+                        {menuCategories.map(category => (
+                            <div key={category}>
+                                <h3 className="text-xl font-semibold mb-4 font-headline">{category}</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {(groupedItems[category] || []).map(item => (
+                                    <Card key={item.id} className="flex flex-col">
+                                        <CardHeader>
+                                            <CardTitle className="text-base">{item.name}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="flex-1">
+                                            <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+                                            <p className="font-bold mt-2">₹{item.price.toFixed(2)}</p>
+                                        </CardContent>
+                                        <CardFooter className="flex justify-between items-center border-t pt-4">
+                                            <div className="flex items-center space-x-2">
+                                                <Switch 
+                                                    id={`available-${item.id}`} 
+                                                    checked={item.available}
+                                                    onCheckedChange={() => toggleMenuItemAvailability(item.id)}
+                                                />
+                                                <Label htmlFor={`available-${item.id}`} className="text-sm">Available</Label>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEditForm(item)}>
+                                                    <Pen className="h-4 w-4"/>
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="destructive" size="icon" className="h-8 w-8">
+                                                            <Trash2 className="h-4 w-4"/>
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>This will permanently delete '{item.name}'. This action cannot be undone.</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => deleteMenuItem(item.id)}>Delete</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </CardFooter>
+                                    </Card>
+                                ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+            <MenuItemForm
+                isOpen={isFormOpen}
+                onOpenChange={setFormOpen}
+                onSubmit={handleSubmit}
+                item={editingItem}
+                categories={menuCategories}
+            />
+        </div>
+    )
+};
+
+
+const MenuItemForm = ({ isOpen, onOpenChange, onSubmit, item, categories }: { 
+    isOpen: boolean; 
+    onOpenChange: (open: boolean) => void;
+    onSubmit: (data: Omit<MenuItem, 'id' | 'available'>) => void;
+    item: MenuItem | null;
+    categories: string[];
+}) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState(0);
+  const [category, setCategory] = useState('');
+
+  useEffect(() => {
+    if (item) {
+      setName(item.name);
+      setDescription(item.description);
+      setPrice(item.price);
+      setCategory(item.category);
+    } else {
+      setName('');
+      setDescription('');
+      setPrice(0);
+      setCategory(categories[0] || '');
+    }
+  }, [item, categories]);
+
+  const handleFormSubmit = () => {
+    if (name && category && price > 0) {
+      onSubmit({ name, description, price, category });
+    } else {
+      // Basic validation feedback
+      alert('Please fill in all required fields.');
+    }
+  };
+
+  return (
+     <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{item ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">Name</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">Description</Label>
+              <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="price" className="text-right">Price</Label>
+              <Input id="price" type="number" value={price} onChange={(e) => setPrice(parseFloat(e.target.value) || 0)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="category" className="text-right">Category</Label>
+              <Select onValueChange={setCategory} value={category}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" onClick={handleFormSubmit}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+  )
+};
+
 
 const TableManagement = () => {
     const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
@@ -364,12 +554,22 @@ export default function POSView({
                         <LayoutGrid className="h-5 w-5" />
                         <span className="ml-4">Active Orders</span>
                     </Button>
-
                     <Button
-                        variant={activeView === 'management' ? 'secondary' : 'ghost'}
+                        variant={activeView === 'menu' ? 'secondary' : 'ghost'}
                         className="w-full justify-start"
                         onClick={() => {
-                          setActiveView('management');
+                          setActiveView('menu');
+                          setSidebarOpen(false);
+                        }}
+                    >
+                        <Utensils className="h-5 w-5" />
+                        <span className="ml-4">Menu Management</span>
+                    </Button>
+                    <Button
+                        variant={activeView === 'tables' ? 'secondary' : 'ghost'}
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setActiveView('tables');
                           setSidebarOpen(false);
                         }}
                     >
@@ -382,7 +582,9 @@ export default function POSView({
       </Sheet>
 
       <main className="flex-1 p-6">
-        {activeView === 'orders' ? <TableGridView /> : <TableManagement />}
+        {activeView === 'orders' && <TableGridView />}
+        {activeView === 'menu' && <MenuManagement />}
+        {activeView === 'tables' && <TableManagement />}
       </main>
     </div>
   );
