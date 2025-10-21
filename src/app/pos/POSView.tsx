@@ -37,6 +37,12 @@ export default function POSView() {
     return order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New');
   }
 
+  const canGenerateBill = (order: Order) => {
+    const allItemsServedOrPending = order.items.every(item => ['Served', 'Pending'].includes(item.itemStatus));
+    const atLeastOneItemServed = order.items.some(item => item.itemStatus === 'Served');
+    return atLeastOneItemServed && allItemsServedOrPending;
+  }
+
   if (!isHydrated) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -72,7 +78,7 @@ export default function POSView() {
                       Print KOT
                     </Button>
                   )}
-                  {(order.status === 'Served' || order.status === 'Ready') && (
+                  {canGenerateBill(order) && (
                     <Button onClick={() => handlePrintBill(order)} className="w-full">
                       <Printer className="mr-2 h-4 w-4" />
                       Generate & Print Bill

@@ -26,28 +26,28 @@ const recalculateTotal = (items: OrderItem[]): number => {
 };
 
 const updateOverallOrderStatus = (order: Order): Order => {
-  const allItemsServed = order.items.every(item => item.itemStatus === 'Served');
   const someItemsServed = order.items.some(item => item.itemStatus === 'Served');
   const anyItemPreparing = order.items.some(item => item.itemStatus === 'Preparing');
   const anyItemReady = order.items.some(item => item.itemStatus === 'Ready');
+  const allItemsServedOrPending = order.items.every(item => ['Served', 'Pending'].includes(item.itemStatus));
+
 
   // If status is manually set or terminal, don't auto-update.
   if (['Billed', 'Paid', 'Cancelled', 'New', 'Confirmed'].includes(order.status)) {
     return order;
   }
   
-  if (allItemsServed) {
+  // If at least one item is served, and nothing is currently being cooked or ready, it's a "Served" state for billing.
+  if (someItemsServed && !anyItemPreparing && !anyItemReady) {
     return { ...order, status: 'Served' };
   }
+
   if (anyItemReady) {
     return { ...order, status: 'Ready' };
   }
-   if (anyItemPreparing) {
+
+  if (anyItemPreparing) {
     return { ...order, status: 'Preparing' };
-  }
-  // If some items are served and the rest are pending (newly added), consider it 'Served' for billing purposes.
-  if (someItemsServed && !anyItemReady && !anyItemPreparing) {
-    return { ...order, status: 'Served' };
   }
   
   return order;
@@ -80,6 +80,13 @@ export const useOrderStore = create(
 
             let updatedOrder = { ...order, status };
             
+            if (status === 'Confirmed') {
+                const updatedItems = order.items.map((item) => 
+                  item.kotStatus === 'New' ? { ...item, kotStatus: 'Printed' as const } : item
+                );
+                updatedOrder.items = updatedItems;
+            }
+
             return updatedOrder;
           }),
         })),
@@ -95,7 +102,7 @@ export const useOrderStore = create(
 
                 itemsWithStatus.forEach((newItem) => {
                     const existingItemIndex = updatedItems.findIndex(
-                        (i) => i.menuItem.id === newItem.menuItem.id && i.kotStatus === 'New'
+                        (i) => i.menuItem.id === newItem.menuItem.id && i.kotStatus === 'New' && i.itemStatus === 'Pending'
                     );
                     
                     if (existingItemIndex > -1) {
@@ -105,7 +112,7 @@ export const useOrderStore = create(
                     }
                 });
                 
-                const newStatus: OrderStatus = order.status === 'New' ? 'New' : order.status;
+                const newStatus: OrderStatus = order.status === 'Paid' || order.status === 'Cancelled' ? order.status : 'New';
 
                 return { 
                   ...order, 
@@ -133,6 +140,7 @@ export const useOrderStore = create(
               const updatedOrder = { 
                 ...order, 
                 items: updatedItems,
+                 status: 'Confirmed' as const,
               };
 
               return updateOverallOrderStatus(updatedOrder);
