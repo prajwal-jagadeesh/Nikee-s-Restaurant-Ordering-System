@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
-import type { Order, OrderItem } from '@/lib/types';
+import type { Order, OrderItem, Table } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -15,8 +15,15 @@ import {
   SheetFooter,
   SheetDescription
 } from '@/components/ui/sheet';
-import { Plus, Minus, Trash2 } from 'lucide-react';
+import { Plus, Minus, Trash2, ArrowRightLeft } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function CaptainView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
@@ -26,9 +33,11 @@ export default function CaptainView() {
   const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
   const updateItemQuantity = useOrderStore((state) => state.updateItemQuantity);
   const removeItem = useOrderStore((state) => state.removeItem);
+  const switchTable = useOrderStore((state) => state.switchTable);
   
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [switchingOrder, setSwitchingOrder] = useState<Order | null>(null);
 
   const orders = allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled');
   
@@ -59,6 +68,34 @@ export default function CaptainView() {
   const editingOrder = orders.find(o => o.id === editingOrderId);
   
   const tableMap = useMemo(() => new Map(tables.map(t => [t.id, t.name])), [tables]);
+  const sortedTables = useMemo(() => [...tables].sort((a,b) => a.name.localeCompare(b.name)), [tables]);
+
+
+  const occupiedTableIds = useMemo(() => {
+    const occupiedIds = new Set<string>();
+    orders.forEach(order => {
+        // The order being switched is not considered "occupied" for the purpose of finding a new table
+        if (switchingOrder && order.id === switchingOrder.id) return;
+        occupiedIds.add(order.tableId);
+    });
+    return occupiedIds;
+  }, [orders, switchingOrder]);
+
+  const vacantTables = useMemo(() => {
+    return sortedTables.filter(t => !occupiedTableIds.has(t.id));
+  }, [sortedTables, occupiedTableIds]);
+
+  const handleSwitchTable = (newTableId: string) => {
+    if (switchingOrder) {
+      const success = switchTable(switchingOrder.id, newTableId);
+      if (success) {
+        setSwitchingOrder(null);
+      } else {
+        alert('Could not switch table. The selected table might be occupied.');
+      }
+    }
+  };
+
 
   const newItemsForEditing = editingOrder?.items.filter(i => i.kotStatus === 'New');
   const newItemsTotal = newItemsForEditing?.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0) || 0;
@@ -95,6 +132,12 @@ export default function CaptainView() {
                          Confirm Order
                       </Button>
                     )}
+                    
+                    <Button variant="secondary" onClick={() => setSwitchingOrder(order)} className="w-full">
+                      <ArrowRightLeft className="mr-2 h-4 w-4"/>
+                      Switch Table
+                    </Button>
+
                     <div className="flex gap-2">
                        {canCancelOrder(order) && (
                          <Button onClick={() => handleCancel(order.id)} variant="destructive" className="w-full">
@@ -180,6 +223,32 @@ export default function CaptainView() {
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={!!switchingOrder} onOpenChange={(isOpen) => !isOpen && setSwitchingOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Switch from {switchingOrder ? tableMap.get(switchingOrder.tableId) : ''}</DialogTitle>
+            <DialogDescription>
+              Select a vacant table to move this order to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+            {vacantTables.length > 0 ? (
+                vacantTables.map(table => (
+                <Button
+                  key={table.id}
+                  variant="outline"
+                  onClick={() => handleSwitchTable(table.id)}
+                >
+                  {table.name}
+                </Button>
+              ))
+            ) : (
+              <p className="col-span-full text-center text-muted-foreground">No vacant tables available.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

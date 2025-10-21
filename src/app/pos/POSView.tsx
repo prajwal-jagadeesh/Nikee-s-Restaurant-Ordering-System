@@ -5,7 +5,7 @@ import { useTableStore } from '@/lib/tables-store';
 import type { Order, Table } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, ArrowRightLeft } from 'lucide-react';
+import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -34,7 +34,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { groupBy } from 'lodash';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const TableManagement = () => {
     const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
@@ -185,7 +184,6 @@ const TableGridView = () => {
   const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
   
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-  const [isSwitchTableDialogOpen, setSwitchTableDialogOpen] = useState(false);
 
   const ordersByTable = useMemo(() => allOrders.reduce((acc, order) => {
     const table = tables.find(t => t.id === order.tableId);
@@ -202,13 +200,6 @@ const TableGridView = () => {
   
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
-  const switchTable = useOrderStore((state) => state.switchTable);
-
-  const vacantTables = useMemo(() => {
-    const occupiedTableIds = new Set(Object.keys(ordersByTable));
-    return sortedTables.filter(t => !occupiedTableIds.has(t.id));
-  }, [sortedTables, ordersByTable]);
-
 
   const handlePrintKOT = (order: Order) => {
     const newItems = order.items.filter(item => item.kotStatus === 'New');
@@ -222,19 +213,6 @@ const TableGridView = () => {
     updateOrderStatus(order.id, 'Billed');
   };
 
-  const handleSwitchTable = (newTableId: string) => {
-    if (selectedOrder) {
-      const success = switchTable(selectedOrder.id, newTableId);
-      if (success) {
-        setSwitchTableDialogOpen(false);
-        setSelectedTableId(newTableId);
-      } else {
-        // Here you could show a toast or alert that the table is occupied.
-        alert('Could not switch table. The selected table might be occupied.');
-      }
-    }
-  };
-  
   const needsKotPrint = (order: Order) => {
     return order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New');
   }
@@ -308,14 +286,6 @@ const TableGridView = () => {
                <div className="py-4">
                   <OrderCard order={selectedOrder} tableName={selectedTable.name}>
                     <div className="mt-4 flex flex-col space-y-2">
-                       <Button
-                          variant="secondary"
-                          onClick={() => setSwitchTableDialogOpen(true)}
-                          className="w-full"
-                        >
-                          <ArrowRightLeft className="mr-2 h-4 w-4" />
-                          Switch Table
-                        </Button>
                       {needsKotPrint(selectedOrder) && (
                         <Button
                           variant="outline"
@@ -339,31 +309,6 @@ const TableGridView = () => {
            )}
         </SheetContent>
       </Sheet>
-       <Dialog open={isSwitchTableDialogOpen} onOpenChange={setSwitchTableDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Switch Table</DialogTitle>
-              <DialogDescription>
-                Select a vacant table to move this order to.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 grid grid-cols-3 gap-2">
-              {vacantTables.length > 0 ? (
-                  vacantTables.map(table => (
-                  <Button
-                    key={table.id}
-                    variant="outline"
-                    onClick={() => handleSwitchTable(table.id)}
-                  >
-                    {table.name}
-                  </Button>
-                ))
-              ) : (
-                <p className="col-span-full text-center text-muted-foreground">No vacant tables available.</p>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
     </>
   );
 }
