@@ -88,23 +88,23 @@ export default function KDSView() {
                       {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
                   </span>
                 </CardHeader>
-                <CardContent className="flex-1 -mt-4 p-0">
+                <CardContent className="flex-1 -mt-4">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="px-6">Item</TableHead>
-                          <TableHead className="w-[50px] text-center px-6">Qty</TableHead>
-                          <TableHead className="px-6">Status</TableHead>
-                          <TableHead className="text-right px-6">Action</TableHead>
+                          <TableHead>Item</TableHead>
+                          <TableHead className="w-[50px] text-center">Qty</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {order.items.map((item) => (
                           <TableRow key={item.menuItem.id}>
-                            <TableCell className="font-medium px-6">{item.menuItem.name}</TableCell>
-                            <TableCell className="text-center font-bold px-6">{item.quantity}</TableCell>
-                            <TableCell className="px-6"><ItemStatusBadge status={item.itemStatus} /></TableCell>
-                            <TableCell className="text-right px-6">
+                            <TableCell className="font-medium">{item.menuItem.name}</TableCell>
+                            <TableCell className="text-center font-bold">{item.quantity}</TableCell>
+                            <TableCell><ItemStatusBadge status={item.itemStatus} /></TableCell>
+                            <TableCell className="text-right">
                               {itemStatusActions[item.itemStatus] && (
                                   <Button
                                     size="sm"
