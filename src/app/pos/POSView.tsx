@@ -15,16 +15,18 @@ export default function POSView() {
 
   const handlePrintKOT = (order: Order) => {
     console.log(`Printing KOT for Order #${order.id}`);
+    // In a real app, you'd use window.print() or a library to print a formatted KOT
   };
 
   const handlePrintBill = (order: Order) => {
     console.log(`Printing bill for Table #${order.tableNumber}. Total: ₹${order.total.toFixed(2)}`);
+    // In a real app, you'd use window.print() or a library to print a formatted bill
   };
 
   if (!isHydrated) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <Skeleton key={i} className="h-64 w-full" />
         ))}
       </div>
@@ -46,7 +48,7 @@ export default function POSView() {
             >
               <OrderCard order={order}>
                 <div className="mt-4 flex flex-col space-y-2">
-                  {order.status === 'Confirmed' && (
+                  {(order.status === 'Confirmed' || order.status === 'New') && (
                     <Button
                       variant="outline"
                       onClick={() => handlePrintKOT(order)}
@@ -59,7 +61,7 @@ export default function POSView() {
                   {order.status === 'Served' && (
                     <Button onClick={() => handlePrintBill(order)} className="w-full">
                       <Printer className="mr-2 h-4 w-4" />
-                      Print Bill
+                      Generate & Print Bill
                     </Button>
                   )}
                 </div>

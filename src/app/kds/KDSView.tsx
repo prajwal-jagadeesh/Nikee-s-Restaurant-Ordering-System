@@ -8,14 +8,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
-const KDS_STATUSES: OrderStatus[] = ['New', 'Confirmed', 'Preparing'];
-const KDS_COLUMNS: OrderStatus[] = ['New', 'Confirmed', 'Preparing', 'Ready'];
+const KDS_COLUMNS: OrderStatus[] = ['New', 'Confirmed', 'Preparing', 'Ready', 'Served'];
 
 const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | null> = {
   New: { next: 'Preparing', label: 'Start Preparing' },
   Confirmed: { next: 'Preparing', label: 'Start Preparing' },
   Preparing: { next: 'Ready', label: 'Mark as Ready' },
-  Ready: null,
+  Ready: { next: 'Served', label: 'Mark as Served' },
   Served: null,
   Paid: null,
   Cancelled: null,
@@ -52,10 +51,10 @@ export default function KDSView() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 h-[calc(100vh-12rem)]">
       {KDS_COLUMNS.map((status) => (
-        <div key={status} className="flex-1 flex flex-col bg-muted/50 rounded-lg">
-          <h2 className="p-4 text-lg font-semibold border-b font-headline">{status} ({kdsOrders.filter(o => o.status === status).length})</h2>
+        <div key={status} className="flex-1 flex flex-col bg-muted/50 rounded-lg h-full">
+          <h2 className="p-4 text-lg font-semibold border-b font-headline capitalize">{status} ({kdsOrders.filter(o => o.status === status).length})</h2>
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
               <AnimatePresence>
