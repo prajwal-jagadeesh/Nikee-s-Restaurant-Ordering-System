@@ -21,35 +21,27 @@ let orderCounter = 0;
 
 const updateOverallOrderStatus = (order: Order): Order => {
   const allItemsServed = order.items.every(item => item.itemStatus === 'Served');
-  const allItemsReadyOrServed = order.items.every(item => item.itemStatus === 'Ready' || item.itemStatus === 'Served');
   const anyItemPreparing = order.items.some(item => item.itemStatus === 'Preparing');
-  
+  const allItemsReadyOrServed = order.items.every(item => ['Ready', 'Served'].includes(item.itemStatus));
+
+
   // Don't automatically change from these statuses
-  if (['Billed', 'Paid', 'Cancelled'].includes(order.status)) {
+  if (['Billed', 'Paid', 'Cancelled', 'New'].includes(order.status)) {
     return order;
   }
   
   if (allItemsServed) {
     return { ...order, status: 'Served' };
   }
-  if (allItemsReadyOrServed) {
-    // If some are served and rest are ready, overall is 'Ready' because there's an action for captain
-     if (order.items.some(item => item.itemStatus === 'Ready')) {
+   if (allItemsReadyOrServed) {
+    if (order.items.some(item => item.itemStatus === 'Ready')) {
         return { ...order, status: 'Ready' };
-     }
-     // If all are served, it's handled above. This state is when some are served, but none are ready to be served.
-     // It means the order is partially served. We can keep it 'Preparing' or a more specific status if needed.
+    }
   }
   if (anyItemPreparing) {
     return { ...order, status: 'Preparing' };
   }
   
-  const hasPrintedItems = order.items.some(i => i.kotStatus === 'Printed');
-  if (order.status === 'Confirmed' && hasPrintedItems) {
-     const hasNewItems = order.items.some(i => i.kotStatus === 'New');
-     if (!hasNewItems) return { ...order, status: 'KOT Printed' };
-  }
-
   return order;
 };
 
@@ -74,9 +66,20 @@ export const useOrderStore = create(
       },
       updateOrderStatus: (orderId, status) =>
         set((state) => ({
-          orders: state.orders.map((order) =>
-            order.id === orderId ? { ...order, status } : order
-          ),
+          orders: state.orders.map((order) => {
+            if (order.id !== orderId) return order;
+
+            let updatedOrder = { ...order, status };
+
+            // If an order is being cancelled, all its pending items are cancelled too
+            if (status === 'Cancelled') {
+              updatedOrder.items = updatedOrder.items.map(item => 
+                item.itemStatus === 'Pending' ? { ...item, itemStatus: 'Served' } : item // A bit of a hack to hide from KDS
+              );
+            }
+            
+            return updatedOrder;
+          }),
         })),
        addItemsToOrder: (orderId, newItems) =>
         set((state) => {
@@ -86,12 +89,12 @@ export const useOrderStore = create(
                 const updatedItems = [...order.items];
                 let newTotal = order.total;
 
-                const itemsWithStatus = newItems.map(item => ({...item, itemStatus: 'Pending' as const}))
+                const itemsWithStatus = newItems.map(item => ({...item, itemStatus: 'Pending' as const, kotStatus: 'New' as const}))
 
                 itemsWithStatus.forEach((newItem) => {
-                    // Only merge with an item if it has the same ID and has a status that implies it's not yet in the kitchen flow.
+                    // Only merge with existing items that are also new and pending
                     const existingItemIndex = updatedItems.findIndex(
-                        (i) => i.menuItem.id === newItem.menuItem.id && (i.kotStatus === 'New' && i.itemStatus === 'Pending')
+                        (i) => i.menuItem.id === newItem.menuItem.id && i.itemStatus === 'Pending' && i.kotStatus === 'New'
                     );
                     
                     if (existingItemIndex > -1) {
@@ -102,13 +105,10 @@ export const useOrderStore = create(
                     newTotal += newItem.menuItem.price * newItem.quantity;
                 });
                 
-                // When adding new items, reset status to 'Confirmed' if it was already past that stage,
-                // so KOT can be printed for new items.
-                // But don't reset from Billed/Paid/Cancelled.
                 let newStatus = order.status;
-                const activeKitchenStatuses: OrderStatus[] = ['Preparing', 'Ready', 'Served', 'KOT Printed'];
-                if (activeKitchenStatuses.includes(order.status)) {
-                  newStatus = 'Confirmed';
+                // If order was fully paid or cancelled, adding new items makes it active again.
+                if (order.status === 'Paid' || order.status === 'Cancelled' || order.status === 'Served') {
+                  newStatus = 'New';
                 }
 
                 return { 
@@ -129,23 +129,23 @@ export const useOrderStore = create(
             if (order.id === orderId) {
               const updatedItems = order.items.map((item) => {
                 if (itemIds.includes(item.menuItem.id) && item.kotStatus === 'New') {
-                  return { ...item, kotStatus: 'Printed' as const };
+                  return { ...item, kotStatus: 'Printed' as const, itemStatus: 'Pending' as const };
                 }
                 return item;
               });
-              
-              const hasNewItems = updatedItems.some(i => i.kotStatus === 'New');
 
               let newStatus = order.status;
-              if (order.status === 'Confirmed' && !hasNewItems) {
-                newStatus = 'KOT Printed';
+              if (order.status === 'New') {
+                  newStatus = 'Preparing'; // Set to a generic preparing status
               }
               
-              return { 
+              const updatedOrder = { 
                 ...order, 
                 items: updatedItems,
-                status: newStatus,
+                status: newStatus
               };
+
+              return updateOverallOrderStatus(updatedOrder);
             }
             return order;
           }),
@@ -155,10 +155,8 @@ export const useOrderStore = create(
          set((state) => ({
           orders: state.orders.map((order) => {
             if (order.id === orderId) {
-                // This logic needs to be more specific. If there are multiple entries for the same menu item
-                // (e.g. one is 'Served', one is 'Preparing'), we need to only update the one that is not yet 'Served'.
-                
-                // Find the first item that matches and is not yet in a final state.
+                // Find the specific item instance that is not yet served.
+                // This is important for re-orders.
                 const itemIndexToUpdate = order.items.findIndex(item => 
                     item.menuItem.id === menuItemId && item.itemStatus !== 'Served'
                 );
@@ -174,7 +172,6 @@ export const useOrderStore = create(
                   return updateOverallOrderStatus(updatedOrder);
                 }
 
-                // If no item was found to update (e.g., all are served), return original order
                 return order;
             }
             return order;

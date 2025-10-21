@@ -8,20 +8,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CaptainView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
-  const updateOrderStatusInStore = useOrderStore((state) => state.updateOrderStatus);
+  const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
   
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
   const orders = allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled');
-  
-  const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
-    updateOrderStatusInStore(orderId, newStatus);
-  };
-  
-  const handleConfirm = (orderId: string) => {
-    updateOrderStatus(orderId, 'Confirmed');
-  };
   
   const handleMarkServed = (orderId: string, menuItemId: string) => {
     updateOrderItemStatus(orderId, menuItemId, 'Served');
@@ -33,10 +25,6 @@ export default function CaptainView() {
 
   const handleCancel = (orderId: string) => {
     updateOrderStatus(orderId, 'Cancelled');
-  };
-
-  const needsConfirmation = (order: Order) => {
-    return order.status === 'New' || (order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New'));
   };
 
   if (!isHydrated) {
@@ -64,16 +52,11 @@ export default function CaptainView() {
             >
               <OrderCard order={order} onServeItem={handleMarkServed}>
                 <div className="mt-4 flex flex-col space-y-2">
-                  {needsConfirmation(order) && (
-                    <div className="flex gap-2">
-                      <Button onClick={() => handleConfirm(order.id)} className="w-full">
-                        Confirm Order
-                      </Button>
-                      <Button onClick={() => handleCancel(order.id)} variant="destructive" className="w-full">
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex gap-2">
+                     <Button onClick={() => handleCancel(order.id)} variant="destructive" className="w-full">
+                      Cancel Order
+                    </Button>
+                  </div>
                   {order.status === 'Billed' && (
                      <Button onClick={() => handlePayment(order.id)} className="w-full">
                       Receive Payment

@@ -34,7 +34,7 @@ export default function POSView() {
   };
   
   const needsKotPrint = (order: Order) => {
-    return order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New');
+    return order.items.some(item => item.kotStatus === 'New');
   }
 
   if (!isHydrated) {

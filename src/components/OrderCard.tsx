@@ -2,10 +2,9 @@ import type { Order, OrderItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import OrderStatusBadge from './OrderStatusBadge';
-import { Clock, Asterisk } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import ItemStatusBadge from './ItemStatusBadge';
 import { Button } from './ui/button';
 

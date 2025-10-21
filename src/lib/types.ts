@@ -1,7 +1,5 @@
 export type OrderStatus =
   | 'New'
-  | 'Confirmed'
-  | 'KOT Printed'
   | 'Preparing'
   | 'Ready'
   | 'Served'
