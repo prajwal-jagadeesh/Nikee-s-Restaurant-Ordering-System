@@ -36,7 +36,7 @@ export default function KDSView() {
       }
       
       const kitchenItems = order.items.filter(
-        item => item.kotStatus === 'Printed' && item.itemStatus !== 'Served'
+        item => item.kotStatus === 'Printed'
       );
 
       if (kitchenItems.length > 0) {
@@ -62,8 +62,27 @@ export default function KDSView() {
       return acc;
     }, {} as Record<number, GroupedOrder & { items: (OrderItem & {originalOrderId: string})[] }>);
 
-    return Object.values(activeKitchenItemsByTable)
-                 .sort((a,b) => a.orderTimestamp - b.orderTimestamp);
+    // After grouping, let's combine items from different orders for the same table
+    const combinedOrders = Object.values(activeKitchenItemsByTable).reduce((acc, tableOrder) => {
+      const existingTable = acc.find(t => t.tableNumber === tableOrder.tableNumber);
+      if (existingTable) {
+        // Use the newest timestamp
+        if (tableOrder.orderTimestamp > existingTable.orderTimestamp) {
+          existingTable.orderTimestamp = tableOrder.orderTimestamp;
+        }
+        // Merge items, avoiding duplicates
+        tableOrder.items.forEach(newItem => {
+           if (!existingTable.items.some(existingItem => existingItem.menuItem.id === newItem.menuItem.id && (existingItem as any).originalOrderId === (newItem as any).originalOrderId)) {
+             existingTable.items.push(newItem);
+           }
+        });
+      } else {
+        acc.push(tableOrder);
+      }
+      return acc;
+    }, [] as GroupedOrder[]);
+
+    return combinedOrders.sort((a,b) => a.orderTimestamp - b.orderTimestamp);
 
   }, [allOrders]);
 
