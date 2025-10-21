@@ -27,9 +27,11 @@ const recalculateTotal = (items: OrderItem[]): number => {
 
 const updateOverallOrderStatus = (order: Order): Order => {
   const allItemsServed = order.items.every(item => item.itemStatus === 'Served');
+  const someItemsServed = order.items.some(item => item.itemStatus === 'Served');
   const anyItemPreparing = order.items.some(item => item.itemStatus === 'Preparing');
-  const allItemsReadyOrServed = order.items.every(item => ['Ready', 'Served'].includes(item.itemStatus));
+  const anyItemReady = order.items.some(item => item.itemStatus === 'Ready');
 
+  // If status is manually set or terminal, don't auto-update.
   if (['Billed', 'Paid', 'Cancelled', 'New', 'Confirmed'].includes(order.status)) {
     return order;
   }
@@ -37,13 +39,15 @@ const updateOverallOrderStatus = (order: Order): Order => {
   if (allItemsServed) {
     return { ...order, status: 'Served' };
   }
-   if (allItemsReadyOrServed) {
-    if (order.items.some(item => item.itemStatus === 'Ready')) {
-        return { ...order, status: 'Ready' };
-    }
+  if (anyItemReady) {
+    return { ...order, status: 'Ready' };
   }
-  if (anyItemPreparing) {
+   if (anyItemPreparing) {
     return { ...order, status: 'Preparing' };
+  }
+  // If some items are served and the rest are pending (newly added), consider it 'Served' for billing purposes.
+  if (someItemsServed && !anyItemReady && !anyItemPreparing) {
+    return { ...order, status: 'Served' };
   }
   
   return order;
@@ -101,7 +105,7 @@ export const useOrderStore = create(
                     }
                 });
                 
-                const newStatus: OrderStatus = 'New';
+                const newStatus: OrderStatus = order.status === 'New' ? 'New' : order.status;
 
                 return { 
                   ...order, 
@@ -121,7 +125,7 @@ export const useOrderStore = create(
             if (order.id === orderId) {
               const updatedItems = order.items.map((item) => {
                 if (itemIds.includes(item.menuItem.id) && item.kotStatus === 'New') {
-                  return { ...item, kotStatus: 'Printed' as const };
+                  return { ...item, kotStatus: 'Printed' as const, itemStatus: 'Pending' as const };
                 }
                 return item;
               });
@@ -129,7 +133,6 @@ export const useOrderStore = create(
               const updatedOrder = { 
                 ...order, 
                 items: updatedItems,
-                status: 'Confirmed' as const
               };
 
               return updateOverallOrderStatus(updatedOrder);
