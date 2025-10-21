@@ -5,11 +5,11 @@ import { useTableStore } from '@/lib/tables-store';
 import type { Order, Table } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { Printer, Clock, Plus, Trash2, Pen, Check, PanelLeft, LayoutGrid, Settings } from 'lucide-react';
+import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +35,6 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { groupBy } from 'lodash';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const TableManagement = () => {
     const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
