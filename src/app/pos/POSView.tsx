@@ -46,11 +46,11 @@ const TableManagement = () => {
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
     
     const [tableName, setTableName] = useState('');
-    const [tableSection, setTableSection] = useState('A/C');
+    const tableSections = useMemo(() => Array.from(new Set(tables.map(t => t.section).filter(Boolean))), [tables]);
+    const [tableSection, setTableSection] = useState(tableSections[0] || '');
     
     const [tableToEdit, setTableToEdit] = useState<Table | null>(null);
 
-    const tableSections = useMemo(() => Array.from(new Set(tables.map(t => t.section).filter(Boolean))), [tables]);
     const tablesBySection = useMemo(() => groupBy(tables, (t) => t.section || 'Uncategorized'), [tables]);
     const sections = useMemo(() => Object.keys(tablesBySection).sort(), [tablesBySection]);
 
@@ -59,7 +59,7 @@ const TableManagement = () => {
         if (tableName.trim() && tableSection.trim()) {
             addTable(tableName.trim(), tableSection.trim());
             setTableName('');
-            setTableSection('A/C');
+            setTableSection(tableSections[0] || '');
             setAddDialogOpen(false);
         }
     };
@@ -68,7 +68,7 @@ const TableManagement = () => {
         if (tableToEdit && tableName.trim() && tableSection.trim()) {
             updateTable(tableToEdit.id, tableName.trim(), tableSection.trim());
             setTableName('');
-            setTableSection('A/C');
+            setTableSection(tableSections[0] || '');
             setEditDialogOpen(false);
             setTableToEdit(null);
         }
@@ -77,7 +77,7 @@ const TableManagement = () => {
     const openEditDialog = (table: Table) => {
       setTableToEdit(table);
       setTableName(table.name);
-      setTableSection(table.section || 'A/C');
+      setTableSection(table.section || tableSections[0] || '');
       setEditDialogOpen(true);
     }
 
