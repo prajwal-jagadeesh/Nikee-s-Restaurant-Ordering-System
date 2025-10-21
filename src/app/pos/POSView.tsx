@@ -3,10 +3,10 @@ import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
 import { useMenuStore } from '@/lib/menu-store';
-import type { Order, Table, MenuItem } from '@/lib/types';
+import type { Order, Table, MenuItem, OrderItem } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft } from 'lucide-react';
+import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -39,12 +39,132 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
 
 const naturalSort = (a: Table, b: Table) => {
     const numA = parseInt(a.name.match(/\d+/)?.[0] || '0', 10);
     const numB = parseInt(b.name.match(/\d+/)?.[0] || '0', 10);
     return numA - numB;
+};
+
+const AnalyticsView = () => {
+    const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
+    const paidOrders = useMemo(() => allOrders.filter(o => o.status === 'Paid'), [allOrders]);
+
+    const totalRevenue = useMemo(() => paidOrders.reduce((acc, order) => acc + order.total, 0), [paidOrders]);
+    const totalOrders = paidOrders.length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    const itemSales = useMemo(() => {
+        const sales: Record<string, { name: string; quantity: number; revenue: number }> = {};
+        paidOrders.forEach(order => {
+            order.items.forEach(item => {
+                if (!sales[item.menuItem.id]) {
+                    sales[item.menuItem.id] = { name: item.menuItem.name, quantity: 0, revenue: 0 };
+                }
+                sales[item.menuItem.id].quantity += item.quantity;
+                sales[item.menuItem.id].revenue += item.quantity * item.menuItem.price;
+            });
+        });
+        return Object.values(sales).sort((a, b) => b.quantity - a.quantity);
+    }, [paidOrders]);
+
+    const top5ItemsByRevenue = useMemo(() => {
+        return [...itemSales].sort((a,b) => b.revenue - a.revenue).slice(0, 5);
+    }, [itemSales]);
+    
+    const chartConfig: ChartConfig = {};
+    top5ItemsByRevenue.forEach((item, index) => {
+        chartConfig[item.name] = {
+            label: item.name,
+            color: `hsl(var(--chart-${(index + 1) as 1 | 2 | 3 | 4 | 5}))`,
+        };
+    });
+
+    return (
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Sales Analytics</CardTitle>
+                    <CardDescription>Metrics based on all completed and paid orders.</CardDescription>
+                </CardHeader>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Total Revenue</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold">₹{totalRevenue.toFixed(2)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Total Orders</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold">{totalOrders}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Average Order Value</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-3xl font-bold">₹{averageOrderValue.toFixed(2)}</p>
+                    </CardContent>
+                </Card>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Top Selling Items</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <UiTable>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Item</TableHead>
+                                    <TableHead className="text-right">Quantity Sold</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {itemSales.slice(0,10).map(item => (
+                                    <TableRow key={item.name}>
+                                        <TableCell className="font-medium">{item.name}</TableCell>
+                                        <TableCell className="text-right font-bold">{item.quantity}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </UiTable>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Top 5 Items by Revenue</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                           <BarChart accessibilityLayer data={top5ItemsByRevenue}>
+                             <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
+                              <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                             <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent />} />
+                             <Bar dataKey="revenue" radius={4}>
+                               {top5ItemsByRevenue.map((entry, index) => (
+                                   <rect key={`cell-${index}`} fill={chartConfig[entry.name]?.color} />
+                               ))}
+                             </Bar>
+                           </BarChart>
+                        </ChartContainer>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
 };
 
 const MenuManagement = () => {
@@ -658,6 +778,17 @@ export default function POSView({
                         <Settings className="h-5 w-5" />
                         <span className="ml-4">Table Management</span>
                     </Button>
+                     <Button
+                        variant={activeView === 'analytics' ? 'secondary' : 'ghost'}
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setActiveView('analytics');
+                          setSidebarOpen(false);
+                        }}
+                    >
+                        <BarChart2 className="h-5 w-5" />
+                        <span className="ml-4">Analytics</span>
+                    </Button>
                 </nav>
             </div>
         </SheetContent>
@@ -667,6 +798,7 @@ export default function POSView({
         {activeView === 'orders' && <TableGridView />}
         {activeView === 'menu' && <MenuManagement />}
         {activeView === 'tables' && <TableManagement />}
+        {activeView === 'analytics' && <AnalyticsView />}
       </main>
     </div>
   );
