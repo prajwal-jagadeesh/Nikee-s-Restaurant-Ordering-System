@@ -10,7 +10,7 @@ export type OrderStatus =
   | 'Cancelled';
 
 export type KotStatus = 'New' | 'Printed';
-export type ItemStatus = 'Pending' | 'Preparing' | 'Ready';
+export type ItemStatus = 'Pending' | 'Preparing' | 'Ready' | 'Served';
 
 export interface MenuItem {
   id: string;

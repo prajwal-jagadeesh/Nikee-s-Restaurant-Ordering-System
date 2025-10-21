@@ -10,6 +10,7 @@ interface OrderState {
   addOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   updateOrderItemStatus: (orderId: string, menuItemId: string, newStatus: ItemStatus) => void;
+  updateOrderItemsStatus: (orderId: string, currentItemStatus: ItemStatus, newItemStatus: ItemStatus) => void;
   addItemsToOrder: (orderId: string, items: OrderItem[]) => void;
   updateOrderItemsKotStatus: (orderId: string, itemIds: string[]) => void;
   clearOrders: () => void;
@@ -19,25 +20,36 @@ interface OrderState {
 let orderCounter = 0;
 
 const updateOverallOrderStatus = (order: Order): Order => {
-  const allItemsReady = order.items.every(item => item.itemStatus === 'Ready');
+  const allItemsServed = order.items.every(item => item.itemStatus === 'Served');
+  const allItemsReadyOrServed = order.items.every(item => item.itemStatus === 'Ready' || item.itemStatus === 'Served');
   const anyItemPreparing = order.items.some(item => item.itemStatus === 'Preparing');
-  const allItemsPending = order.items.every(item => item.itemStatus === 'Pending');
-
-  if (order.status === 'Billed' || order.status === 'Served' || order.status === 'Cancelled' || order.status === 'Paid') {
-    // Don't automatically change these statuses
+  
+  // Don't automatically change from these statuses
+  if (['Billed', 'Paid', 'Cancelled'].includes(order.status)) {
     return order;
   }
   
-  if (allItemsReady) {
-    return { ...order, status: 'Ready' };
+  if (allItemsServed) {
+    return { ...order, status: 'Served' };
+  }
+  if (allItemsReadyOrServed) {
+    // If some are served and rest are ready, overall is 'Ready' because there's an action for captain
+     if (order.items.some(item => item.itemStatus === 'Ready')) {
+        return { ...order, status: 'Ready' };
+     }
+     // If all are served, it's handled above. This state is when some are served, but none are ready to be served.
+     // It means the order is partially served. We can keep it 'Preparing' or a more specific status if needed.
   }
   if (anyItemPreparing) {
     return { ...order, status: 'Preparing' };
   }
-  if (allItemsPending && order.status !== 'Confirmed') {
-     const hasPrintedItems = order.items.some(i => i.kotStatus === 'Printed');
-     if(hasPrintedItems) return { ...order, status: 'KOT Printed' };
+  
+  const hasPrintedItems = order.items.some(i => i.kotStatus === 'Printed');
+  if (order.status === 'Confirmed' && hasPrintedItems) {
+     const hasNewItems = order.items.some(i => i.kotStatus === 'New');
+     if (!hasNewItems) return { ...order, status: 'KOT Printed' };
   }
+
   return order;
 };
 
@@ -90,7 +102,7 @@ export const useOrderStore = create(
                 
                 // When adding new items, reset status to 'New' to force re-confirmation
                 // only if it's in a final state like Paid or Cancelled.
-                const shouldResetStatus = ['Paid', 'Cancelled', 'Billed', 'Served'].includes(order.status);
+                const shouldResetStatus = ['Paid', 'Cancelled'].includes(order.status);
                 
                 return { 
                   ...order, 
@@ -118,8 +130,6 @@ export const useOrderStore = create(
               const hasNewItems = updatedItems.some(i => i.kotStatus === 'New');
 
               let newStatus = order.status;
-              // If the order was just confirmed and now has KOT items, move it to KOT Printed.
-              // Don't change the status if there are still other new items that need confirming.
               if (order.status === 'Confirmed' && !hasNewItems) {
                 newStatus = 'KOT Printed';
               }
@@ -139,18 +149,33 @@ export const useOrderStore = create(
           orders: state.orders.map((order) => {
             if (order.id === orderId) {
                 const updatedItems = order.items.map(item => 
-                    item.menuItem.id === menuItemId && item.itemStatus !== 'Ready'
+                    item.menuItem.id === menuItemId && item.itemStatus !== 'Served'
                     ? { ...item, itemStatus: newStatus }
                     : item
                 );
                 const updatedOrder = { ...order, items: updatedItems };
                 
-                // After updating an item, recalculate the overall order status
                 return updateOverallOrderStatus(updatedOrder);
             }
             return order;
           }),
         }));
+      },
+      updateOrderItemsStatus: (orderId, currentItemStatus, newItemStatus) => {
+        set((state) => ({
+          orders: state.orders.map((order) => {
+            if (order.id === orderId) {
+              const updatedItems = order.items.map(item =>
+                item.itemStatus === currentItemStatus
+                  ? { ...item, itemStatus: newItemStatus }
+                  : item
+              );
+              const updatedOrder = { ...order, items: updatedItems };
+              return updateOverallOrderStatus(updatedOrder);
+            }
+            return order;
+          })
+        }))
       },
       clearOrders: () => {
         set({ orders: [] });

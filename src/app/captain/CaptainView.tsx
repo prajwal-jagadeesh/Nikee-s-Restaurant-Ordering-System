@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function CaptainView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const updateOrderStatusInStore = useOrderStore((state) => state.updateOrderStatus);
+  const updateOrderItemsStatus = useOrderStore((state) => state.updateOrderItemsStatus);
   
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
@@ -23,7 +24,8 @@ export default function CaptainView() {
   };
   
   const handleServed = (orderId: string) => {
-    updateOrderStatus(orderId, 'Served');
+    // Mark all 'Ready' items as 'Served'
+    updateOrderItemsStatus(orderId, 'Ready', 'Served');
   };
   
   const handlePayment = (orderId: string) => {
@@ -37,6 +39,10 @@ export default function CaptainView() {
   const needsConfirmation = (order: Order) => {
     return order.status === 'New' || order.items.some(item => item.kotStatus === 'New');
   };
+
+  const hasReadyItems = (order: Order) => {
+    return order.items.some(item => item.itemStatus === 'Ready');
+  }
 
   if (!isHydrated) {
     return (
@@ -73,9 +79,9 @@ export default function CaptainView() {
                       </Button>
                     </div>
                   )}
-                  {order.status === 'Ready' && (
+                  {hasReadyItems(order) && (
                     <Button onClick={() => handleServed(order.id)} className="w-full">
-                      Mark as Served
+                      Mark Ready as Served
                     </Button>
                   )}
                   {order.status === 'Billed' && (

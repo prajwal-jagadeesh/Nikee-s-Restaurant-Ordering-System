@@ -9,8 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { AnimatePresence, motion } from 'framer-motion';
-import OrderStatusBadge from '@/components/OrderStatusBadge';
-
 
 type KitchenItem = OrderItem & {
   orderId: string;
@@ -22,6 +20,7 @@ const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } 
   'Pending': { next: 'Preparing', label: 'Start Preparing' },
   'Preparing': { next: 'Ready', label: 'Mark as Ready' },
   'Ready': null,
+  'Served': null,
 };
 
 const ItemStatusBadge = ({ status }: { status: ItemStatus }) => {
@@ -29,6 +28,7 @@ const ItemStatusBadge = ({ status }: { status: ItemStatus }) => {
     'Pending': 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/40 dark:text-cyan-300 dark:border-cyan-800/60',
     'Preparing': 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-800/60',
     'Ready': 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800/60',
+    'Served': 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800/60',
   }
   return <Badge className={colors[status]}>{status}</Badge>
 }
@@ -47,19 +47,6 @@ export default function KDSView() {
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
-    const kitchenItems = allOrders
-      .filter(o => !['Paid', 'Cancelled', 'New'].includes(o.status))
-      .flatMap(order => 
-        order.items
-          .filter(item => item.kotStatus === 'Printed')
-          .map(item => ({
-            ...item,
-            orderId: order.id,
-            tableNumber: order.tableNumber,
-            orderTimestamp: order.timestamp,
-          }))
-      );
-    
     const grouped = allOrders
       .filter(o => !['Paid', 'Cancelled', 'New'].includes(o.status))
       .map(order => ({
@@ -125,7 +112,6 @@ export default function KDSView() {
                         {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
                     </span>
                   </div>
-                  <OrderStatusBadge status={order.status} />
                 </CardHeader>
                 <CardContent className="flex-1 -mt-2">
                   <Table>
