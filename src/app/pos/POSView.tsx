@@ -5,11 +5,11 @@ import { useTableStore } from '@/lib/tables-store';
 import type { Order, Table } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings } from 'lucide-react';
+import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, ArrowRightLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +35,12 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { groupBy } from 'lodash';
 
+const naturalSort = (a: Table, b: Table) => {
+    const numA = parseInt(a.name.match(/\d+/)?.[0] || '0', 10);
+    const numB = parseInt(b.name.match(/\d+/)?.[0] || '0', 10);
+    return numA - numB;
+};
+
 const TableManagement = () => {
     const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
     const addTable = useTableStore((state) => state.addTable);
@@ -48,8 +54,7 @@ const TableManagement = () => {
     
     const [tableToEdit, setTableToEdit] = useState<Table | null>(null);
 
-    const sortedTables = useMemo(() => [...tables].sort((a,b) => a.name.localeCompare(b.name)), [tables]);
-
+    const sortedTables = useMemo(() => [...tables].sort(naturalSort), [tables]);
 
     const handleAddTable = () => {
         if (tableName.trim()) {
@@ -143,7 +148,7 @@ const TableManagement = () => {
                 </CardContent>
             </Card>
             
-             <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+             <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => !isOpen && setTableToEdit(null)}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>Edit Table</DialogTitle>
@@ -193,7 +198,7 @@ const TableGridView = () => {
     return acc;
   }, {} as Record<string, Order>), [allOrders, tables]);
   
-  const sortedTables = useMemo(() => [...tables].sort((a, b) => a.name.localeCompare(b.name)), [tables]);
+  const sortedTables = useMemo(() => [...tables].sort(naturalSort), [tables]);
 
   const selectedOrder = selectedTableId ? ordersByTable[selectedTableId] : null;
   const selectedTable = selectedTableId ? tables.find(t => t.id === selectedTableId) : null;
