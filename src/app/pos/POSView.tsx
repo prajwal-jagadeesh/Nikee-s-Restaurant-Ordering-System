@@ -220,10 +220,9 @@ const TableGridView = () => {
 
   const canGenerateBill = (order: Order) => {
     const kitchenItems = order.items.filter(item => item.kotStatus === 'Printed');
-    // Allow billing if there are no items sent to kitchen yet.
-    if (kitchenItems.length === 0) return true;
+    // Bill can only be generated if there are items sent to the kitchen and ALL of them are served.
+    if (kitchenItems.length === 0) return false;
     
-    // If there are items in the kitchen, all must be served.
     return kitchenItems.every(item => item.itemStatus === 'Served');
   }
 
