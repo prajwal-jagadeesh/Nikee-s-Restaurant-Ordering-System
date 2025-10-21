@@ -3,6 +3,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Order, OrderStatus, OrderItem, ItemStatus } from './types';
 import { useState, useEffect } from 'react';
+import { useMenuStore } from './menu-store';
+import { useTableStore } from './tables-store';
 
 interface OrderState {
   orders: Order[];
@@ -287,6 +289,7 @@ export const useOrderStore = create(
   )
 );
 
+const stores = [useOrderStore, useMenuStore, useTableStore];
 
 export function useHydratedStore<T, F>(
   store: (callback: (state: T) => unknown) => unknown,
@@ -295,24 +298,31 @@ export function useHydratedStore<T, F>(
 ) {
   const result = store(selector) as F;
   const [data, setData] = useState(defaultState);
-  const hydrated = useOrderStore((state) => state.hydrated);
 
   useEffect(() => {
-    if (hydrated) {
-      setData(result);
-    }
-  }, [hydrated, result]);
+    // This effect runs whenever the result from the store changes
+    setData(result);
+  }, [result]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'order-storage' || e.key === 'table-storage' || e.key === 'menu-storage') {
-        useOrderStore.persist.rehydrate();
+      // If a storage event happens for any of our stores, rehydrate all of them.
+      if (e.key && ['order-storage', 'table-storage', 'menu-storage'].includes(e.key)) {
+        stores.forEach(s => s.persist.rehydrate());
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Hydration check
+  const hydrated = (store as any).getState().hydrated;
+  useEffect(() => {
+    if (hydrated) {
+      setData(result);
+    }
+  }, [hydrated, result]);
 
   return data;
 }
