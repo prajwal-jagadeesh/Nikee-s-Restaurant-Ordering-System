@@ -25,6 +25,7 @@ export interface OrderItem {
   notes?: string;
   kotStatus: KotStatus;
   itemStatus: ItemStatus;
+  kotId?: string; // Unique identifier for the KOT
 }
 
 export interface Order {
@@ -34,4 +35,5 @@ export interface Order {
   status: OrderStatus;
   timestamp: number;
   total: number;
+  kotCounter?: number; // To generate unique KOT IDs
 }

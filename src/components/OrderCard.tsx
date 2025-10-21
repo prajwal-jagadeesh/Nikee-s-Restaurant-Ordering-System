@@ -1,11 +1,13 @@
 import type { Order, OrderItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock } from 'lucide-react';
+import { Clock, ChefHat } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import ItemStatusBadge from './ItemStatusBadge';
 import { Button } from './ui/button';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { groupBy } from 'lodash';
 
 interface OrderCardProps {
   order: Order;
@@ -13,24 +15,27 @@ interface OrderCardProps {
   onServeItem?: (orderId: string, menuItemId: string) => void;
 }
 
-const ItemRow = ({ item }: { item: OrderItem }) => (
+const ItemRow = ({ item, isNew }: { item: OrderItem; isNew: boolean }) => (
   <li className="flex justify-between items-center text-sm py-1">
     <span className="flex items-center">
       {item.quantity} x {item.menuItem.name}
-      {item.kotStatus === 'New' && (
-        <Badge variant="outline" className="ml-2 border-yellow-500 text-yellow-500 text-xs">New</Badge>
-      )}
     </span>
-    <ItemStatusBadge status={item.itemStatus} />
+    {isNew 
+      ? <Badge variant="outline" className="border-yellow-500 text-yellow-500 text-xs">New</Badge> 
+      : <ItemStatusBadge status={item.itemStatus} />
+    }
   </li>
 );
 
 
 export default function OrderCard({ order, children, onServeItem }: OrderCardProps) {
-
-  const itemsForDisplay = order.items.filter(i => i.itemStatus !== 'Ready' || !onServeItem);
+  const newItems = order.items.filter(i => i.kotStatus === 'New');
+  const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
+  
   const readyItems = onServeItem ? order.items.filter(i => i.itemStatus === 'Ready') : [];
+  const itemsForDisplay = printedItems.filter(i => i.itemStatus !== 'Ready' || !onServeItem);
 
+  const groupedPrintedItems = groupBy(itemsForDisplay, 'kotId');
 
   return (
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300">
@@ -43,17 +48,54 @@ export default function OrderCard({ order, children, onServeItem }: OrderCardPro
           <span>{formatDistanceToNow(new Date(order.timestamp), { addSuffix: true })}</span>
         </div>
         <p className="text-sm text-muted-foreground font-semibold">ID: {order.id}</p>
-        <Separator />
-        <ul className="space-y-1 text-sm divide-y">
-          {itemsForDisplay.map((item, index) => (
-            <ItemRow key={`${item.menuItem.id}-${index}`} item={item} />
-          ))}
-        </ul>
+        
+        {/* New Items Section */}
+        {newItems.length > 0 && (
+          <>
+            <Separator />
+            <h4 className="text-sm font-semibold text-center text-muted-foreground pt-2">New Items</h4>
+            <ul className="space-y-1 text-sm divide-y">
+              {newItems.map((item, index) => (
+                <ItemRow key={`${item.menuItem.id}-${index}`} item={item} isNew={true} />
+              ))}
+            </ul>
+          </>
+        )}
+
+        {/* Printed KOTs Section */}
+        {Object.keys(groupedPrintedItems).length > 0 && (
+          <>
+          <Separator />
+          <Accordion type="single" collapsible className="w-full" defaultValue={Object.keys(groupedPrintedItems).length > 0 ? `item-${Object.keys(groupedPrintedItems)[0]}` : undefined}>
+            <AccordionItem value="printed-kots" className="border-none">
+              <AccordionTrigger className="text-sm font-semibold text-center text-muted-foreground justify-center py-2 hover:no-underline">
+                Show Printed KOTs
+              </AccordionTrigger>
+              <AccordionContent>
+                {Object.entries(groupedPrintedItems).map(([kotId, items]) => (
+                  <div key={kotId} className="mb-4">
+                    <div className="flex items-center justify-center text-xs font-semibold text-muted-foreground mb-1">
+                      <ChefHat className="h-3 w-3 mr-1" /> {kotId}
+                    </div>
+                    <ul className="space-y-1 text-sm divide-y border rounded-md p-2">
+                       {items.map((item, index) => (
+                          <ItemRow key={`${item.menuItem.id}-${index}`} item={item} isNew={false}/>
+                       ))}
+                    </ul>
+                  </div>
+                ))}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          </>
+        )}
+
+        {/* Ready to Serve Section */}
         {readyItems.length > 0 && onServeItem && (
           <>
             <Separator />
             <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-center text-muted-foreground">Ready to Serve</h4>
+                <h4 className="text-sm font-semibold text-center text-muted-foreground pt-2">Ready to Serve</h4>
                 <ul className="space-y-2">
                   {readyItems.map(item => (
                     <li key={item.menuItem.id} className="flex justify-between items-center bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
