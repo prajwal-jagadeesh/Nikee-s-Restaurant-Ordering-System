@@ -1,6 +1,6 @@
 'use client';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import type { Order } from '@/lib/types';
+import type { Order, OrderStatus } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function POSView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
+  const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
   const orders = allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled');
@@ -20,7 +21,7 @@ export default function POSView() {
 
   const handlePrintBill = (order: Order) => {
     console.log(`Printing bill for Table #${order.tableNumber}. Total: ₹${order.total.toFixed(2)}`);
-    // In a real app, you'd use window.print() or a library to print a formatted bill
+    updateOrderStatus(order.id, 'Billed');
   };
 
   if (!isHydrated) {

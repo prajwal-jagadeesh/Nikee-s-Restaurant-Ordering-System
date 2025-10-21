@@ -20,8 +20,9 @@ const statusInfo: Record<OrderStatus, { label: string, description: string, prog
   'New': { label: 'Waiting for Confirmation', description: 'Your order has been sent. A captain will confirm it shortly.', progress: 20 },
   'Confirmed': { label: 'Order Confirmed', description: 'The kitchen has received your order and will start preparing it soon.', progress: 40 },
   'Preparing': { label: 'Preparing', description: 'Your dishes are being prepared with care by our chefs.', progress: 60 },
-  'Ready': { label: 'Ready', description: 'Your order is ready to be served.', progress: 80 },
+  'Ready': { label: 'Ready for Serving', description: 'Your order is ready and will be served shortly.', progress: 80 },
   'Served': { label: 'Served', description: 'Enjoy your meal! Your order has been served.', progress: 100 },
+  'Billed': { label: 'Bill Generated', description: 'The bill has been generated. Please proceed to payment with the captain.', progress: 100 },
   'Paid': { label: 'Paid', description: 'Thank you for your visit!', progress: 100 },
   'Cancelled': { label: 'Cancelled', description: 'This order has been cancelled.', progress: 0 },
 }

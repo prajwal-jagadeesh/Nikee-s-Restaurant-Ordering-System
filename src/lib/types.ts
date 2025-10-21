@@ -4,6 +4,7 @@ export type OrderStatus =
   | 'Preparing'
   | 'Ready'
   | 'Served'
+  | 'Billed'
   | 'Paid'
   | 'Cancelled';
 

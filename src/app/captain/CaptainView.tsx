@@ -74,7 +74,7 @@ export default function CaptainView() {
                       Mark as Served
                     </Button>
                   )}
-                  {order.status === 'Served' && (
+                  {order.status === 'Billed' && (
                      <Button onClick={() => handlePayment(order.id)} className="w-full">
                       Receive Payment
                     </Button>
