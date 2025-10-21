@@ -25,7 +25,7 @@ export default function CaptainView() {
   const removeItem = useOrderStore((state) => state.removeItem);
   
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
 
   const orders = allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled');
   
@@ -52,6 +52,8 @@ export default function CaptainView() {
   const hasNewItems = (order: Order) => {
     return order.items.some(item => item.kotStatus === 'New');
   };
+  
+  const editingOrder = orders.find(o => o.id === editingOrderId);
 
   const newItemsForEditing = editingOrder?.items.filter(i => i.kotStatus === 'New');
   const newItemsTotal = newItemsForEditing?.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0) || 0;
@@ -95,7 +97,7 @@ export default function CaptainView() {
                         </Button>
                        )}
                        {hasNewItems(order) && (
-                          <Button variant="outline" onClick={() => setEditingOrder(order)} className="w-full">
+                          <Button variant="outline" onClick={() => setEditingOrderId(order.id)} className="w-full">
                             Edit Items
                           </Button>
                        )}
@@ -112,7 +114,7 @@ export default function CaptainView() {
         </AnimatePresence>
       </div>
 
-      <Sheet open={!!editingOrder} onOpenChange={(isOpen) => !isOpen && setEditingOrder(null)}>
+      <Sheet open={!!editingOrder} onOpenChange={(isOpen) => !isOpen && setEditingOrderId(null)}>
         <SheetContent className="flex flex-col">
           <SheetHeader>
             <SheetTitle>Edit New Items</SheetTitle>
@@ -165,7 +167,7 @@ export default function CaptainView() {
                       <span>Grand Total</span>
                       <span>₹{editingOrder.total.toFixed(2)}</span>
                     </div>
-                    <Button size="lg" className="w-full" onClick={() => setEditingOrder(null)}>
+                    <Button size="lg" className="w-full" onClick={() => setEditingOrderId(null)}>
                       Done
                     </Button>
                 </div>
