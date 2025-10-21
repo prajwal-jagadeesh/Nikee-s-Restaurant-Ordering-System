@@ -46,29 +46,24 @@ const TableManagement = () => {
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
     
     const [tableName, setTableName] = useState('');
-    const tableSections = useMemo(() => Array.from(new Set(tables.map(t => t.section).filter(Boolean))), [tables]);
-    const [tableSection, setTableSection] = useState('');
     
     const [tableToEdit, setTableToEdit] = useState<Table | null>(null);
 
-    const tablesBySection = useMemo(() => groupBy(tables, (t) => t.section || 'Uncategorized'), [tables]);
-    const sections = useMemo(() => Object.keys(tablesBySection).sort(), [tablesBySection]);
+    const sortedTables = useMemo(() => [...tables].sort((a,b) => a.name.localeCompare(b.name)), [tables]);
 
 
     const handleAddTable = () => {
-        if (tableName.trim() && tableSection.trim()) {
-            addTable(tableName.trim(), tableSection.trim());
+        if (tableName.trim()) {
+            addTable(tableName.trim());
             setTableName('');
-            setTableSection('');
             setAddDialogOpen(false);
         }
     };
 
     const handleUpdateTable = () => {
-        if (tableToEdit && tableName.trim() && tableSection.trim()) {
-            updateTable(tableToEdit.id, tableName.trim(), tableSection.trim());
+        if (tableToEdit && tableName.trim()) {
+            updateTable(tableToEdit.id, tableName.trim());
             setTableName('');
-            setTableSection('');
             setEditDialogOpen(false);
             setTableToEdit(null);
         }
@@ -77,13 +72,11 @@ const TableManagement = () => {
     const openEditDialog = (table: Table) => {
       setTableToEdit(table);
       setTableName(table.name);
-      setTableSection(table.section || '');
       setEditDialogOpen(true);
     }
     
     const openAddDialog = () => {
         setTableName('');
-        setTableSection(tableSections[0] || '');
         setAddDialogOpen(true);
     }
 
@@ -108,10 +101,6 @@ const TableManagement = () => {
                                     <Label htmlFor="name" className="text-right">Name</Label>
                                     <Input id="name" value={tableName} onChange={(e) => setTableName(e.target.value)} className="col-span-3" autoFocus />
                                 </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="section" className="text-right">Section</Label>
-                                    <Input id="section" value={tableSection} onChange={(e) => setTableSection(e.target.value)} className="col-span-3" placeholder="e.g. A/C, Non A/C, Rooftop" />
-                                </div>
                             </div>
                             <DialogFooter>
                                 <Button type="submit" onClick={handleAddTable}>Save Table</Button>
@@ -119,46 +108,39 @@ const TableManagement = () => {
                         </DialogContent>
                     </Dialog>
                 </CardHeader>
-                <CardContent className="space-y-8">
-                     {sections.map(section => (
-                        <div key={section}>
-                           <h3 className="text-lg font-semibold mb-3 text-gray-600">{section}</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                                {tablesBySection[section].sort((a,b) => a.name.localeCompare(b.name)).map(table => (
-                                    <Card key={table.id} className="flex flex-col h-28 transition-all duration-300 rounded-lg border-2 shadow-sm">
-                                      <CardHeader className="p-2 pb-0">
-                                        <CardTitle className="text-sm font-semibold">{table.name}</CardTitle>
-                                      </CardHeader>
-                                      <CardContent className="flex flex-col justify-end flex-1 p-2 text-xs text-muted-foreground">
-                                         ({table.section || 'No Section'})
-                                      </CardContent>
-                                      <CardFooter className="p-2 border-t flex gap-2">
-                                          <Button variant="outline" size="icon" className="h-8 w-8 flex-1" onClick={() => openEditDialog(table)}>
-                                            <Pen className="h-4 w-4" />
-                                          </Button>
-                                          <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                              <Button variant="destructive" size="icon" className="h-8 w-8 flex-1">
-                                                <Trash2 className="h-4 w-4" />
-                                              </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>This will permanently delete '{table.name}'. This action cannot be undone.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => deleteTable(table.id)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                          </AlertDialog>
-                                      </CardFooter>
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
-                     ))}
+                <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                        {sortedTables.map(table => (
+                            <Card key={table.id} className="flex flex-col h-28 transition-all duration-300 rounded-lg border-2 shadow-sm">
+                              <CardHeader className="p-2 pb-0">
+                                <CardTitle className="text-sm font-semibold">{table.name}</CardTitle>
+                              </CardHeader>
+                              <CardContent className="flex flex-col justify-end flex-1 p-2 text-xs text-muted-foreground" />
+                              <CardFooter className="p-2 border-t flex gap-2">
+                                  <Button variant="outline" size="icon" className="h-8 w-8 flex-1" onClick={() => openEditDialog(table)}>
+                                    <Pen className="h-4 w-4" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="destructive" size="icon" className="h-8 w-8 flex-1">
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>This will permanently delete '{table.name}'. This action cannot be undone.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => deleteTable(table.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                              </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
                 </CardContent>
             </Card>
             
@@ -172,17 +154,6 @@ const TableManagement = () => {
                        <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="edit-name" className="text-right">Name</Label>
                             <Input id="edit-name" value={tableName} onChange={(e) => setTableName(e.target.value)} className="col-span-3" autoFocus />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-section" className="text-right">Section</Label>
-                             <Select value={tableSection} onValueChange={setTableSection}>
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select a section" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {tableSections.map(sec => <SelectItem key={sec} value={sec}>{sec}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
@@ -223,9 +194,8 @@ const TableGridView = () => {
     return acc;
   }, {} as Record<string, Order>), [allOrders, tables]);
   
-  const tablesBySection = useMemo(() => groupBy(tables, (t) => t.section || 'Uncategorized'), [tables]);
-  const sections = useMemo(() => Object.keys(tablesBySection).sort(), [tablesBySection]);
-  
+  const sortedTables = useMemo(() => [...tables].sort((a, b) => a.name.localeCompare(b.name)), [tables]);
+
   const selectedOrder = selectedTableId ? ordersByTable[selectedTableId] : null;
   const selectedTable = selectedTableId ? tables.find(t => t.id === selectedTableId) : null;
   
@@ -259,62 +229,55 @@ const TableGridView = () => {
 
   return (
     <>
-      <div className="space-y-8">
-        {sections.map(section => (
-          <div key={section}>
-            <h3 className="text-lg font-semibold mb-3 text-gray-600">{section}</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-              <AnimatePresence>
-                {tablesBySection[section].sort((a,b) => a.name.localeCompare(b.name)).map((table) => {
-                    const order = ordersByTable[table.id];
-                    const status = getTableStatus(order);
-                    const styles = tableStatusStyles[status];
-                    
-                    return (
-                      <motion.div
-                        key={table.id}
-                        layout
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                      >
-                        <Card
-                          onClick={() => order && setSelectedTableId(table.id)}
-                          className={cn(
-                            "flex flex-col h-28 transition-all duration-300 rounded-lg border-2",
-                            styles.bg,
-                            styles.border,
-                            order ? 'cursor-pointer hover:shadow-lg' : 'shadow-sm'
-                          )}
-                        >
-                          <CardHeader className="p-2 pb-0">
-                            <CardTitle className={cn("text-sm font-semibold", styles.text)}>{table.name}</CardTitle>
-                          </CardHeader>
-                          <CardContent className="flex flex-col justify-end flex-1 p-2 text-xs">
-                            {order ? (
-                               <div className={cn("font-bold", styles.text)}>
-                                <p className="text-base">₹{order.total.toFixed(0)}</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                  {status === 'Running' && <Clock className="h-3 w-3"/>}
-                                  {status === 'KOT Printed' && <Printer className="h-3 w-3"/>}
-                                  {status === 'Billed' && <Check className="h-4 w-4"/>}
-                                  <span className="text-xs">
-                                     {Math.round((Date.now() - order.timestamp) / 60000)} min
-                                  </span>
-                                </div>
-                               </div>
-                            ) : (
-                              <p className={cn("text-xs font-semibold", styles.text)}>Vacant</p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    )
-                })}
-               </AnimatePresence>
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+        <AnimatePresence>
+          {sortedTables.map((table) => {
+              const order = ordersByTable[table.id];
+              const status = getTableStatus(order);
+              const styles = tableStatusStyles[status];
+              
+              return (
+                <motion.div
+                  key={table.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                >
+                  <Card
+                    onClick={() => order && setSelectedTableId(table.id)}
+                    className={cn(
+                      "flex flex-col h-28 transition-all duration-300 rounded-lg border-2",
+                      styles.bg,
+                      styles.border,
+                      order ? 'cursor-pointer hover:shadow-lg' : 'shadow-sm'
+                    )}
+                  >
+                    <CardHeader className="p-2 pb-0">
+                      <CardTitle className={cn("text-sm font-semibold", styles.text)}>{table.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col justify-end flex-1 p-2 text-xs">
+                      {order ? (
+                         <div className={cn("font-bold", styles.text)}>
+                          <p className="text-base">₹{order.total.toFixed(0)}</p>
+                          <div className="flex items-center gap-1 mt-1">
+                            {status === 'Running' && <Clock className="h-3 w-3"/>}
+                            {status === 'KOT Printed' && <Printer className="h-3 w-3"/>}
+                            {status === 'Billed' && <Check className="h-4 w-4"/>}
+                            <span className="text-xs">
+                               {Math.round((Date.now() - order.timestamp) / 60000)} min
+                            </span>
+                          </div>
+                         </div>
+                      ) : (
+                        <p className={cn("text-xs font-semibold", styles.text)}>Vacant</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )
+          })}
+         </AnimatePresence>
       </div>
       <Sheet open={!!selectedOrder} onOpenChange={(isOpen) => !isOpen && setSelectedTableId(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -369,16 +332,11 @@ export default function POSView({
       <main className="flex-1 p-6">
          <Skeleton className="h-12 w-48 mb-6" />
           <div className="space-y-8">
-            {[...Array(2)].map((_, i) => (
-              <div key={i}>
-                <Skeleton className="h-8 w-32 mb-4" />
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                    {[...Array(8)].map((_, j) => (
-                      <Skeleton key={j} className="h-28 w-full" />
-                    ))}
-                  </div>
-              </div>
-            ))}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                {[...Array(15)].map((_, j) => (
+                  <Skeleton key={j} className="h-28 w-full" />
+                ))}
+            </div>
           </div>
       </main>
     );
