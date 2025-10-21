@@ -6,37 +6,32 @@ import { Clock, Asterisk } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import ItemStatusBadge from './ItemStatusBadge';
+import { Button } from './ui/button';
 
 interface OrderCardProps {
   order: Order;
   children?: React.ReactNode;
+  onServeItem?: (orderId: string, menuItemId: string) => void;
 }
 
 const ItemRow = ({ item }: { item: OrderItem }) => (
-  <li className="flex justify-between items-center">
+  <li className="flex justify-between items-center text-sm py-1">
     <span className="flex items-center">
       {item.quantity} x {item.menuItem.name}
       {item.kotStatus === 'New' && (
-        <Badge variant="outline" className="ml-2 border-yellow-500 text-yellow-500">New</Badge>
+        <Badge variant="outline" className="ml-2 border-yellow-500 text-yellow-500 text-xs">New</Badge>
       )}
     </span>
-    <span>₹{(item.quantity * item.menuItem.price).toFixed(2)}</span>
+    <ItemStatusBadge status={item.itemStatus} />
   </li>
 );
 
 
-export default function OrderCard({ order, children }: OrderCardProps) {
-  const groupedItems = order.items.reduce((acc, item) => {
-    const key = `${item.menuItem.id}-${item.kotStatus}`;
-    if (!acc[key]) {
-      acc[key] = { ...item };
-    } else {
-      acc[key].quantity += item.quantity;
-    }
-    return acc;
-  }, {} as Record<string, OrderItem>);
+export default function OrderCard({ order, children, onServeItem }: OrderCardProps) {
 
-  const itemsForDisplay = Object.values(groupedItems);
+  const itemsForDisplay = order.items.filter(i => i.itemStatus !== 'Ready' || !onServeItem);
+  const readyItems = onServeItem ? order.items.filter(i => i.itemStatus === 'Ready') : [];
 
 
   return (
@@ -52,14 +47,32 @@ export default function OrderCard({ order, children }: OrderCardProps) {
         </div>
         <p className="text-sm text-muted-foreground font-semibold">ID: {order.id}</p>
         <Separator />
-        <ul className="space-y-1 text-sm">
+        <ul className="space-y-1 text-sm divide-y">
           {itemsForDisplay.map((item, index) => (
-            <ItemRow key={index} item={item} />
+            <ItemRow key={`${item.menuItem.id}-${index}`} item={item} />
           ))}
         </ul>
+        {readyItems.length > 0 && onServeItem && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-center text-muted-foreground">Ready to Serve</h4>
+                <ul className="space-y-2">
+                  {readyItems.map(item => (
+                    <li key={item.menuItem.id} className="flex justify-between items-center bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
+                      <span className="font-medium text-sm">{item.quantity} x {item.menuItem.name}</span>
+                      <Button size="sm" onClick={() => onServeItem(order.id, item.menuItem.id)}>
+                        Mark Served
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+            </div>
+          </>
+        )}
       </CardContent>
       <CardFooter className="flex flex-col items-start pt-4 border-t">
-        <div className="w-full flex justify-between font-bold text-md mb-2">
+        <div className="w-full flex justify-between font-bold text-md mb-4">
           <span>Total</span>
           <span>₹{order.total.toFixed(2)}</span>
         </div>

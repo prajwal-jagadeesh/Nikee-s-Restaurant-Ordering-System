@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function CaptainView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const updateOrderStatusInStore = useOrderStore((state) => state.updateOrderStatus);
-  const updateOrderItemsStatus = useOrderStore((state) => state.updateOrderItemsStatus);
+  const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
   
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
@@ -23,9 +23,8 @@ export default function CaptainView() {
     updateOrderStatus(orderId, 'Confirmed');
   };
   
-  const handleServed = (orderId: string) => {
-    // Mark all 'Ready' items as 'Served'
-    updateOrderItemsStatus(orderId, 'Ready', 'Served');
+  const handleMarkServed = (orderId: string, menuItemId: string) => {
+    updateOrderItemStatus(orderId, menuItemId, 'Served');
   };
   
   const handlePayment = (orderId: string) => {
@@ -39,10 +38,6 @@ export default function CaptainView() {
   const needsConfirmation = (order: Order) => {
     return order.status === 'New' || (order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New'));
   };
-
-  const hasReadyItems = (order: Order) => {
-    return order.items.some(item => item.itemStatus === 'Ready');
-  }
 
   if (!isHydrated) {
     return (
@@ -67,7 +62,7 @@ export default function CaptainView() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
             >
-              <OrderCard order={order}>
+              <OrderCard order={order} onServeItem={handleMarkServed}>
                 <div className="mt-4 flex flex-col space-y-2">
                   {needsConfirmation(order) && (
                     <div className="flex gap-2">
@@ -78,11 +73,6 @@ export default function CaptainView() {
                         Cancel
                       </Button>
                     </div>
-                  )}
-                  {hasReadyItems(order) && (
-                    <Button onClick={() => handleServed(order.id)} className="w-full">
-                      Mark Ready as Served
-                    </Button>
                   )}
                   {order.status === 'Billed' && (
                      <Button onClick={() => handlePayment(order.id)} className="w-full">
