@@ -11,7 +11,7 @@ interface OrderState {
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   addItemsToOrder: (orderId: string, items: OrderItem[]) => void;
   clearOrders: () => void;
-  setHydrated: () => void;
+  setHydrated: (hydrated: boolean) => void;
 }
 
 let orderCounter = 0;
@@ -76,13 +76,13 @@ export const useOrderStore = create(
         set({ orders: [] });
         orderCounter = 0;
       },
-      setHydrated: () => set({ hydrated: true }),
+      setHydrated: (hydrated) => set({ hydrated }),
     }),
     {
       name: 'order-storage', 
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
-        if (state) state.setHydrated();
+        if (state) state.setHydrated(true);
       }
     }
   )
@@ -91,6 +91,7 @@ export const useOrderStore = create(
 
 /**
  * A hook that provides a Zustand store that is safe to use with SSR and hydration.
+ * It also includes a listener for storage events to enable real-time updates across tabs.
  * @param selector The selector function to pick data from the store
  * @param defaultState The default state to use before hydration
  * @returns The selected state from the store, or the default state if not hydrated yet.
@@ -101,11 +102,25 @@ export function useHydratedStore<T, F>(
   defaultState: F
 ) {
   const result = store(selector) as F;
-  const [hydrated, setHydrated] = useState(false);
+  const [data, setData] = useState(defaultState);
+  const hydrated = useOrderStore((state) => state.hydrated);
 
   useEffect(() => {
-    setHydrated(true);
+    if (hydrated) {
+      setData(result);
+    }
+  }, [hydrated, result]);
+
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'order-storage') {
+        useOrderStore.persist.rehydrate();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  return hydrated ? result : defaultState;
+  return data;
 }
