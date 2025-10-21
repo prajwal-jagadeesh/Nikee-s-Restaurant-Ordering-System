@@ -174,7 +174,6 @@ const TableManagement = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {tableSections.map(sec => <SelectItem key={sec} value={sec}>{sec}</SelectItem>)}
-                                    <SelectItem value={tableSection} disabled={tableSections.includes(tableSection)}>{tableSection} (current)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
