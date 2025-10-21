@@ -1,3 +1,4 @@
+'use client';
 import type { Order, OrderItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -13,6 +14,7 @@ interface OrderCardProps {
   order: Order;
   children?: React.ReactNode;
   onServeItem?: (orderId: string, menuItemId: string) => void;
+  showKotDetails?: boolean;
 }
 
 const ItemRow = ({ item, isNew }: { item: OrderItem; isNew: boolean }) => (
@@ -28,7 +30,7 @@ const ItemRow = ({ item, isNew }: { item: OrderItem; isNew: boolean }) => (
 );
 
 
-export default function OrderCard({ order, children, onServeItem }: OrderCardProps) {
+export default function OrderCard({ order, children, onServeItem, showKotDetails = true }: OrderCardProps) {
   const newItems = order.items.filter(i => i.kotStatus === 'New');
   const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
   
@@ -63,7 +65,7 @@ export default function OrderCard({ order, children, onServeItem }: OrderCardPro
         )}
 
         {/* Printed KOTs Section */}
-        {Object.keys(groupedPrintedItems).length > 0 && (
+        {showKotDetails && Object.keys(groupedPrintedItems).length > 0 && (
           <>
           <Separator />
           <Accordion type="single" collapsible className="w-full" defaultValue={Object.keys(groupedPrintedItems).length > 0 ? `item-${Object.keys(groupedPrintedItems)[0]}` : undefined}>

@@ -83,7 +83,7 @@ export default function CaptainView() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
               >
-                <OrderCard order={order} onServeItem={handleMarkServed}>
+                <OrderCard order={order} onServeItem={handleMarkServed} showKotDetails={false}>
                   <div className="mt-4 flex flex-col space-y-2">
                     {hasNewItems(order) && (
                        <Button onClick={() => handleConfirmOrder(order.id)} className="w-full">
