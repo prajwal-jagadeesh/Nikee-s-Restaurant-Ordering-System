@@ -1,99 +1,118 @@
 'use client';
+import { useMemo } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import type { Order, OrderStatus } from '@/lib/types';
-import OrderCard from '@/components/OrderCard';
+import type { Order, OrderItem, ItemStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import OrderStatusBadge from '@/components/OrderStatusBadge';
+import { formatDistanceToNow } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
-
-const KDS_COLUMNS: OrderStatus[] = ['KOT Printed', 'Preparing', 'Ready', 'Served'];
-
-const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | null> = {
-  New: null,
-  Confirmed: null,
-  'KOT Printed': { next: 'Preparing', label: 'Start Preparing' },
-  Preparing: { next: 'Ready', label: 'Mark as Ready' },
-  Ready: null,
-  Served: null,
-  Billed: null,
-  Paid: null,
-  Cancelled: null,
+type KitchenItem = OrderItem & {
+  orderId: string;
+  tableNumber: number;
+  orderTimestamp: number;
 };
+
+const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } | null> = {
+  'Pending': { next: 'Preparing', label: 'Start Preparing' },
+  'Preparing': { next: 'Ready', label: 'Mark as Ready' },
+  'Ready': null,
+};
+
+const ItemStatusBadge = ({ status }: { status: ItemStatus }) => {
+  const colors: Record<ItemStatus, string> = {
+    'Pending': 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/40 dark:text-cyan-300 dark:border-cyan-800/60',
+    'Preparing': 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-800/60',
+    'Ready': 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800/60',
+  }
+  return <Badge className={colors[status]}>{status}</Badge>
+}
+
 
 export default function KDSView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
-  const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
+  const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
-  const kdsOrders = allOrders.filter(o => {
-    // An order is relevant for KDS if it's not paid/cancelled AND it has items that are not yet served.
-    // This keeps orders with new additions visible.
-    const isKitchenRelevant = o.items.some(item => item.kotStatus === 'Printed');
-    return !['Paid', 'Cancelled'].includes(o.status) && (KDS_COLUMNS.includes(o.status) || isKitchenRelevant);
-  });
+  const kitchenItems = useMemo((): KitchenItem[] => {
+    return allOrders
+      .filter(o => !['Paid', 'Cancelled', 'New', 'Confirmed'].includes(o.status))
+      .flatMap(order => 
+        order.items
+          .filter(item => item.kotStatus === 'Printed' && item.itemStatus !== 'Ready')
+          .map(item => ({
+            ...item,
+            orderId: order.id,
+            tableNumber: order.tableNumber,
+            orderTimestamp: order.timestamp,
+          }))
+      )
+      .sort((a, b) => a.orderTimestamp - b.orderTimestamp);
+  }, [allOrders]);
 
-  const handleAction = (orderId: string, currentStatus: OrderStatus) => {
-    const action = statusActions[currentStatus];
+  const handleAction = (orderId: string, menuItemId: string, currentStatus: ItemStatus) => {
+    const action = itemStatusActions[currentStatus];
     if (action) {
-      updateOrderStatus(orderId, action.next);
+      updateOrderItemStatus(orderId, menuItemId, action.next);
     }
   };
 
   if (!isHydrated) {
     return (
-      <div className="flex h-[calc(100vh-12rem)] gap-4">
-        {KDS_COLUMNS.map((status) => (
-          <div key={status} className="flex-1 flex flex-col bg-muted/50 rounded-lg">
-            <h2 className="p-4 text-lg font-semibold border-b font-headline">{status}</h2>
-            <div className="p-4 space-y-4">
-               <Skeleton className="h-48 w-full" />
-               <Skeleton className="h-48 w-full" />
-            </div>
-          </div>
-        ))}
+      <div className="border rounded-lg">
+        <Skeleton className="h-[600px] w-full" />
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-[calc(100vh-12rem)]">
-      {KDS_COLUMNS.map((status) => (
-        <div key={status} className="flex-1 flex flex-col bg-muted/50 rounded-lg h-full">
-          <h2 className="p-4 text-lg font-semibold border-b font-headline capitalize">{status} ({kdsOrders.filter(o => o.status === status).length})</h2>
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              <AnimatePresence>
-                {kdsOrders
-                  .filter((order) => order.status === status)
-                  .sort((a,b) => a.timestamp - b.timestamp)
-                  .map((order) => (
-                    <motion.div
-                      key={order.id}
-                      layout
-                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                    >
-                      <OrderCard order={order}>
-                        {statusActions[order.status] && (
-                          <Button
-                            onClick={() => handleAction(order.id, order.status)}
-                            className="w-full mt-4"
-                          >
-                            {statusActions[order.status]?.label}
-                          </Button>
-                        )}
-                      </OrderCard>
-                    </motion.div>
-                  ))}
-              </AnimatePresence>
-            </div>
-          </ScrollArea>
-        </div>
-      ))}
+    <div className="border bg-card rounded-lg shadow-sm">
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Table</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead className="text-center">Qty</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {kitchenItems.length === 0 ? (
+                    <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                            No active items in the kitchen.
+                        </TableCell>
+                    </TableRow>
+                ) : (
+                    kitchenItems.map((item) => (
+                        <TableRow key={`${item.orderId}-${item.menuItem.id}`}>
+                            <TableCell className="font-medium">
+                                <div className="font-bold text-lg">{item.tableNumber}</div>
+                                <div className="text-xs text-muted-foreground">{item.orderId}</div>
+                            </TableCell>
+                            <TableCell>{formatDistanceToNow(new Date(item.orderTimestamp), { addSuffix: true })}</TableCell>
+                            <TableCell>{item.menuItem.name}</TableCell>
+                            <TableCell className="text-center font-bold text-lg">{item.quantity}</TableCell>
+                            <TableCell><ItemStatusBadge status={item.itemStatus} /></TableCell>
+                            <TableCell className="text-right">
+                                {itemStatusActions[item.itemStatus] && (
+                                    <Button
+                                        size="sm"
+                                        onClick={() => handleAction(item.orderId, item.menuItem.id, item.itemStatus)}
+                                    >
+                                        {itemStatusActions[item.itemStatus]?.label}
+                                    </Button>
+                                )}
+                            </TableCell>
+                        </TableRow>
+                    ))
+                )}
+            </TableBody>
+        </Table>
     </div>
   );
 }

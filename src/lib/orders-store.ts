@@ -1,7 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Order, OrderStatus, OrderItem, MenuItem } from './types';
+import type { Order, OrderStatus, OrderItem, ItemStatus } from './types';
 import { useState, useEffect } from 'react';
 
 interface OrderState {
@@ -9,6 +9,7 @@ interface OrderState {
   hydrated: boolean;
   addOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  updateOrderItemStatus: (orderId: string, menuItemId: string, newStatus: ItemStatus) => void;
   addItemsToOrder: (orderId: string, items: OrderItem[]) => void;
   updateOrderItemsKotStatus: (orderId: string, itemIds: string[]) => void;
   clearOrders: () => void;
@@ -16,6 +17,29 @@ interface OrderState {
 }
 
 let orderCounter = 0;
+
+const updateOverallOrderStatus = (order: Order): Order => {
+  const allItemsReady = order.items.every(item => item.itemStatus === 'Ready');
+  const anyItemPreparing = order.items.some(item => item.itemStatus === 'Preparing');
+  const allItemsPending = order.items.every(item => item.itemStatus === 'Pending');
+
+  if (order.status === 'Billed' || order.status === 'Served' || order.status === 'Cancelled' || order.status === 'Paid') {
+    // Don't automatically change these statuses
+    return order;
+  }
+  
+  if (allItemsReady) {
+    return { ...order, status: 'Ready' };
+  }
+  if (anyItemPreparing) {
+    return { ...order, status: 'Preparing' };
+  }
+  if (allItemsPending && order.status !== 'Confirmed') {
+     const hasPrintedItems = order.items.some(i => i.kotStatus === 'Printed');
+     if(hasPrintedItems) return { ...order, status: 'KOT Printed' };
+  }
+  return order;
+};
 
 export const useOrderStore = create(
   persist<OrderState>(
@@ -32,6 +56,7 @@ export const useOrderStore = create(
         const newOrder: Order = {
           ...order,
           id: `ORD${String(orderCounter).padStart(3, '0')}`,
+          items: order.items.map(i => ({...i, itemStatus: 'Pending'})),
         };
         set((state) => ({ orders: [...state.orders, newOrder] }));
       },
@@ -49,7 +74,9 @@ export const useOrderStore = create(
                 const updatedItems = [...order.items];
                 let newTotal = order.total;
 
-                newItems.forEach((newItem) => {
+                const itemsWithStatus = newItems.map(item => ({...item, itemStatus: 'Pending' as const}))
+
+                itemsWithStatus.forEach((newItem) => {
                     const existingItemIndex = updatedItems.findIndex(
                         (i) => i.menuItem.id === newItem.menuItem.id && i.kotStatus === 'New'
                     );
@@ -63,7 +90,7 @@ export const useOrderStore = create(
                 
                 // When adding new items, reset status to 'New' to force re-confirmation
                 // only if it's in a final state like Paid or Cancelled.
-                const shouldResetStatus = ['Paid', 'Cancelled'].includes(order.status);
+                const shouldResetStatus = ['Paid', 'Cancelled', 'Billed', 'Served'].includes(order.status);
                 
                 return { 
                   ...order, 
@@ -88,12 +115,11 @@ export const useOrderStore = create(
                 return item;
               });
               
-              const allItemsPrinted = updatedItems.every(i => i.kotStatus === 'Printed');
               const hasNewItems = updatedItems.some(i => i.kotStatus === 'New');
 
               let newStatus = order.status;
-              // If the order was just confirmed and now all items have a KOT, move it to KOT Printed.
-              // Don't change the status if there are still other new items.
+              // If the order was just confirmed and now has KOT items, move it to KOT Printed.
+              // Don't change the status if there are still other new items that need confirming.
               if (order.status === 'Confirmed' && !hasNewItems) {
                 newStatus = 'KOT Printed';
               }
@@ -103,6 +129,24 @@ export const useOrderStore = create(
                 items: updatedItems,
                 status: newStatus,
               };
+            }
+            return order;
+          }),
+        }));
+      },
+      updateOrderItemStatus: (orderId, menuItemId, newStatus) => {
+         set((state) => ({
+          orders: state.orders.map((order) => {
+            if (order.id === orderId) {
+                const updatedItems = order.items.map(item => 
+                    item.menuItem.id === menuItemId && item.itemStatus !== 'Ready'
+                    ? { ...item, itemStatus: newStatus }
+                    : item
+                );
+                const updatedOrder = { ...order, items: updatedItems };
+                
+                // After updating an item, recalculate the overall order status
+                return updateOverallOrderStatus(updatedOrder);
             }
             return order;
           }),

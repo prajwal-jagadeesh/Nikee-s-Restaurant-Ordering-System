@@ -72,7 +72,7 @@ export default function POSView() {
                       Print KOT
                     </Button>
                   )}
-                  {order.status === 'Served' && (
+                  {(order.status === 'Served' || order.status === 'Ready') && (
                     <Button onClick={() => handlePrintBill(order)} className="w-full">
                       <Printer className="mr-2 h-4 w-4" />
                       Generate & Print Bill

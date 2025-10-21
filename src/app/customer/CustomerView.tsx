@@ -36,7 +36,7 @@ export default function CustomerView() {
   const addOrder = useOrderStore((state) => state.addOrder);
   const addItemsToOrder = useOrderStore((state) => state.addItemsToOrder);
   
-  const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus'>[]>([]);
+  const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -79,7 +79,7 @@ export default function CustomerView() {
   const placeOrUpdateOrder = () => {
     if (cart.length === 0) return;
 
-    const itemsWithKotStatus: OrderItem[] = cart.map(item => ({ ...item, kotStatus: 'New' }));
+    const itemsWithKotStatus: OrderItem[] = cart.map(item => ({ ...item, kotStatus: 'New', itemStatus: 'Pending' }));
     
     if (activeOrder) {
       addItemsToOrder(activeOrder.id, itemsWithKotStatus);
