@@ -103,46 +103,44 @@ export default function KDSView() {
               exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
             >
               <Card className="h-full flex flex-col">
-                <CardHeader className="flex flex-row items-start justify-between">
-                  <div>
-                    <CardTitle className="flex justify-between items-center mb-1">
-                      <span>Table {order.tableNumber}</span>
-                    </CardTitle>
-                    <span className="text-xs font-normal text-muted-foreground">
-                        {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
-                    </span>
-                  </div>
+                <CardHeader>
+                  <CardTitle>Table {order.tableNumber}</CardTitle>
+                  <span className="text-xs font-normal text-muted-foreground -mt-1">
+                      {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
+                  </span>
                 </CardHeader>
-                <CardContent className="flex-1 -mt-2">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="text-center w-[50px]">Qty</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {order.items.map((item) => (
-                        <TableRow key={item.menuItem.id}>
-                          <TableCell>{item.menuItem.name}</TableCell>
-                          <TableCell className="text-center font-bold">{item.quantity}</TableCell>
-                          <TableCell><ItemStatusBadge status={item.itemStatus} /></TableCell>
-                          <TableCell className="text-right">
-                             {itemStatusActions[item.itemStatus] && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleAction(item.orderId, item.menuItem.id, item.itemStatus)}
-                                >
-                                  {itemStatusActions[item.itemStatus]?.label}
-                                </Button>
-                              )}
-                          </TableCell>
+                <CardContent className="flex-1 -mt-4">
+                  <div className="relative overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item</TableHead>
+                          <TableHead className="w-[50px] text-center">Qty</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {order.items.map((item) => (
+                          <TableRow key={item.menuItem.id}>
+                            <TableCell className="font-medium">{item.menuItem.name}</TableCell>
+                            <TableCell className="text-center font-bold">{item.quantity}</TableCell>
+                            <TableCell><ItemStatusBadge status={item.itemStatus} /></TableCell>
+                            <TableCell className="text-right">
+                              {itemStatusActions[item.itemStatus] && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAction(item.orderId, item.menuItem.id, item.itemStatus)}
+                                  >
+                                    {itemStatusActions[item.itemStatus]?.label}
+                                  </Button>
+                                )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
