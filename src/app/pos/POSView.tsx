@@ -207,7 +207,7 @@ const TableGridView = () => {
     return acc;
   }, {} as Record<string, Order>), [allOrders, tables]);
   
-  const tablesBySection = useMemo(() => groupBy(tables.filter(t => t.section), 'section'), [tables]);
+  const tablesBySection = useMemo(() => groupBy(tables, 'section'), [tables]);
   const sections = useMemo(() => Object.keys(tablesBySection).sort(), [tablesBySection]);
   
   const selectedOrder = selectedTableId ? ordersByTable[selectedTableId] : null;
@@ -234,16 +234,11 @@ const TableGridView = () => {
 
   const canGenerateBill = (order: Order) => {
     const kitchenItems = order.items.filter(item => item.kotStatus === 'Printed');
-    if (kitchenItems.length > 0 && kitchenItems.every(item => item.itemStatus === 'Served')) {
-        return true;
-    }
-    // Allow billing if there are only new items that have not been sent to kitchen
-    if (kitchenItems.length === 0 && order.items.some(i => i.kotStatus === 'New')) return true;
+    // Allow billing if there are no items sent to kitchen yet.
+    if (kitchenItems.length === 0) return true;
     
-    // Allow billing if ALL items are served.
-    if (order.items.every(i => i.itemStatus === 'Served')) return true;
-    
-    return false;
+    // If there are items in the kitchen, all must be served.
+    return kitchenItems.every(item => item.itemStatus === 'Served');
   }
 
   return (
