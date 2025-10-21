@@ -36,11 +36,15 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
   
   const readyItems = onServeItem ? printedItems.filter(i => i.itemStatus === 'Ready') : [];
   
-  // When not showing KOT details (Captain view), we need to separate "Ready" items from others.
-  // The rest of the printed items will be in `itemsForDisplay`.
-  const itemsForDisplay = printedItems.filter(i => !readyItems.some(readyItem => readyItem.menuItem.id === i.menuItem.id));
-
+  // In Captain view (!showKotDetails), we separate "Ready" items.
+  // The rest (Pending, Preparing, Served) will go under a general "Order Details" list.
+  const itemsForDisplay = !showKotDetails 
+    ? printedItems.filter(i => i.itemStatus !== 'Ready') 
+    : printedItems;
+  
   const groupedPrintedItems = groupBy(itemsForDisplay, 'kotId');
+
+  const showOrderDetailsHeader = !showKotDetails && itemsForDisplay.length > 0;
 
   return (
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300">
@@ -96,10 +100,10 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
         )}
         
         {/* Captain View: Show non-ready printed items */}
-        {!showKotDetails && itemsForDisplay.length > 0 && (
+        {showOrderDetailsHeader && (
             <>
                 <Separator />
-                <h4 className="text-sm font-semibold text-center text-muted-foreground pt-2">Sent to Kitchen</h4>
+                <h4 className="text-sm font-semibold text-center text-muted-foreground pt-2">Order Details</h4>
                 <ul className="space-y-1 text-sm divide-y">
                     {itemsForDisplay.map((item, index) => (
                         <ItemRow key={`${item.menuItem.id}-${index}`} item={item} isNew={false} />
