@@ -15,7 +15,7 @@ import {
   SheetFooter,
   SheetDescription
 } from '@/components/ui/sheet';
-import { Plus, Minus, Trash2, ArrowRightLeft } from 'lucide-react';
+import { Plus, Minus, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
@@ -125,7 +125,15 @@ export default function CaptainView() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
               >
-                <OrderCard order={order} tableName={tableMap.get(order.tableId)} onServeItem={handleMarkServed} showKotDetails={false}>
+                <OrderCard 
+                  order={order} 
+                  tableName={tableMap.get(order.tableId)} 
+                  onServeItem={handleMarkServed} 
+                  showKotDetails={false}
+                  onSwitchTable={() => setSwitchingOrder(order)}
+                  onEditItems={hasNewItems(order) ? () => setEditingOrderId(order.id) : undefined}
+                  onCancelOrder={canCancelOrder(order) ? () => handleCancel(order.id) : undefined}
+                >
                   <div className="mt-4 flex flex-col space-y-2">
                     {hasNewItems(order) && order.status === 'New' && (
                        <Button onClick={() => handleConfirmOrder(order.id)} className="w-full">
@@ -133,23 +141,6 @@ export default function CaptainView() {
                       </Button>
                     )}
                     
-                    <Button variant="secondary" onClick={() => setSwitchingOrder(order)} className="w-full">
-                      <ArrowRightLeft className="mr-2 h-4 w-4"/>
-                      Switch Table
-                    </Button>
-
-                    <div className="flex gap-2">
-                       {canCancelOrder(order) && (
-                         <Button onClick={() => handleCancel(order.id)} variant="destructive" className="w-full">
-                          Cancel Order
-                        </Button>
-                       )}
-                       {hasNewItems(order) && (
-                          <Button variant="outline" onClick={() => setEditingOrderId(order.id)} className="w-full">
-                            Edit Items
-                          </Button>
-                       )}
-                    </div>
                     {order.status === 'Billed' && (
                        <Button onClick={() => handlePayment(order.id)} className="w-full">
                         Receive Payment

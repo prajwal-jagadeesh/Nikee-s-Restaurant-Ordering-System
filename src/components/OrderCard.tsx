@@ -2,13 +2,14 @@
 import type { Order, OrderItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, ChefHat } from 'lucide-react';
+import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import ItemStatusBadge from './ItemStatusBadge';
 import { Button } from './ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { groupBy } from 'lodash';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface OrderCardProps {
   order: Order;
@@ -16,6 +17,9 @@ interface OrderCardProps {
   onServeItem?: (orderId: string, menuItemId: string) => void;
   showKotDetails?: boolean;
   tableName?: string;
+  onSwitchTable?: () => void;
+  onEditItems?: () => void;
+  onCancelOrder?: () => void;
 }
 
 const ItemRow = ({ item, isNew }: { item: OrderItem; isNew: boolean }) => (
@@ -31,7 +35,16 @@ const ItemRow = ({ item, isNew }: { item: OrderItem; isNew: boolean }) => (
 );
 
 
-export default function OrderCard({ order, children, onServeItem, showKotDetails = true, tableName }: OrderCardProps) {
+export default function OrderCard({ 
+    order, 
+    children, 
+    onServeItem, 
+    showKotDetails = true, 
+    tableName,
+    onSwitchTable,
+    onEditItems,
+    onCancelOrder
+}: OrderCardProps) {
   const newItems = order.items.filter(i => i.kotStatus === 'New');
   const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
   
@@ -44,20 +57,49 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
   const groupedPrintedItems = groupBy(itemsForDisplay, 'kotId');
 
   const showOrderDetailsHeader = !showKotDetails && itemsForDisplay.length > 0;
-  const displayName = tableName || `Table ${order.tableNumber}`;
+  const displayName = tableName || `Table ${order.tableId}`;
 
   return (
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-headline">{displayName}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-2">
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Clock className="h-4 w-4 mr-1.5" />
-          <span>{formatDistanceToNow(new Date(order.timestamp), { addSuffix: true })}</span>
+      <CardHeader className="flex flex-row items-start justify-between pb-2">
+        <div>
+            <CardTitle className="text-lg font-headline">{displayName}</CardTitle>
+             <div className="flex items-center text-sm text-muted-foreground mt-1">
+                <Clock className="h-4 w-4 mr-1.5" />
+                <span>{formatDistanceToNow(new Date(order.timestamp), { addSuffix: true })}</span>
+            </div>
+            <p className="text-xs text-muted-foreground font-semibold mt-1">ID: {order.id}</p>
         </div>
-        <p className="text-sm text-muted-foreground font-semibold">ID: {order.id}</p>
-        
+        <div className="flex gap-1">
+          <TooltipProvider>
+            {onSwitchTable && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onSwitchTable}><ArrowRightLeft className="h-4 w-4"/></Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Switch Table</p></TooltipContent>
+              </Tooltip>
+            )}
+             {onEditItems && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEditItems}><Pen className="h-4 w-4"/></Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Edit New Items</p></TooltipContent>
+              </Tooltip>
+            )}
+             {onCancelOrder && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onCancelOrder}><Trash2 className="h-4 w-4"/></Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Cancel Order</p></TooltipContent>
+              </Tooltip>
+            )}
+          </TooltipProvider>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 space-y-2 pt-2">
         {newItems.length > 0 && (
           <>
             <Separator />
