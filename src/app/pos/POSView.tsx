@@ -50,12 +50,10 @@ export default function POSView() {
   }
 
   const canGenerateBill = (order: Order) => {
-    // Bill can be generated if the order is Served, Ready, or if all items have been served.
-    if (order.status === 'Served' || order.status === 'Ready') {
-      return true;
-    }
-    // This catches the case where all items are served but the overall status hasn't updated yet.
-    return order.items.every(item => item.itemStatus === 'Served');
+    // Bill can only be generated if every item that has been sent to the kitchen is marked as 'Served'.
+    const kitchenItems = order.items.filter(item => item.kotStatus === 'Printed');
+    if (kitchenItems.length === 0) return false; // Can't bill if nothing has been sent to kitchen
+    return kitchenItems.every(item => item.itemStatus === 'Served');
   }
 
   if (!isHydrated) {
