@@ -19,6 +19,7 @@ import OrderStatusBadge from '@/components/OrderStatusBadge';
 const statusInfo: Record<OrderStatus, { label: string, description: string, progress: number }> = {
   'New': { label: 'Waiting for Confirmation', description: 'Your order has been sent. A captain will confirm it shortly.', progress: 20 },
   'Confirmed': { label: 'Order Confirmed', description: 'The kitchen has received your order and will start preparing it soon.', progress: 40 },
+  'KOT Printed': { label: 'Order Confirmed', description: 'The kitchen has received your order and will start preparing it soon.', progress: 40 },
   'Preparing': { label: 'Preparing', description: 'Your dishes are being prepared with care by our chefs.', progress: 60 },
   'Ready': { label: 'Ready for Serving', description: 'Your order is ready and will be served shortly.', progress: 80 },
   'Served': { label: 'Served', description: 'Enjoy your meal! Your order has been served.', progress: 100 },

@@ -60,7 +60,7 @@ export const useOrderStore = create(
                     newTotal += newItem.menuItem.price * newItem.quantity;
                 });
                 
-                const shouldResetStatus = ['Confirmed', 'Ready', 'Served'].includes(order.status);
+                const shouldResetStatus = ['KOT Printed', 'Preparing', 'Ready', 'Served', 'Billed'].includes(order.status);
                 
                 return { 
                   ...order, 

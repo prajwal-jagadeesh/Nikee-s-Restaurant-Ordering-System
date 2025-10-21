@@ -16,7 +16,7 @@ export default function POSView() {
 
   const handlePrintKOT = (order: Order) => {
     console.log(`Printing KOT for Order #${order.id}`);
-    // In a real app, you'd use window.print() or a library to print a formatted KOT
+    updateOrderStatus(order.id, 'KOT Printed');
   };
 
   const handlePrintBill = (order: Order) => {

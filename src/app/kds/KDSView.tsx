@@ -8,13 +8,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
-const KDS_COLUMNS: OrderStatus[] = ['Confirmed', 'Preparing', 'Ready'];
+const KDS_COLUMNS: OrderStatus[] = ['KOT Printed', 'Preparing', 'Ready', 'Served'];
 
 const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | null> = {
   New: null,
-  Confirmed: { next: 'Preparing', label: 'Start Preparing' },
+  Confirmed: null,
+  'KOT Printed': { next: 'Preparing', label: 'Start Preparing' },
   Preparing: { next: 'Ready', label: 'Mark as Ready' },
-  Ready: null, // Captain will mark as served
+  Ready: null,
   Served: null,
   Billed: null,
   Paid: null,
@@ -52,7 +53,7 @@ export default function KDSView() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 h-[calc(100vh-12rem)]">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-[calc(100vh-12rem)]">
       {KDS_COLUMNS.map((status) => (
         <div key={status} className="flex-1 flex flex-col bg-muted/50 rounded-lg h-full">
           <h2 className="p-4 text-lg font-semibold border-b font-headline capitalize">{status} ({kdsOrders.filter(o => o.status === status).length})</h2>
