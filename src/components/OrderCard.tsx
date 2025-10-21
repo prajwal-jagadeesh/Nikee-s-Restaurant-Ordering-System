@@ -34,13 +34,11 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
   const newItems = order.items.filter(i => i.kotStatus === 'New');
   const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
   
-  const readyItems = onServeItem ? order.items.filter(i => i.itemStatus === 'Ready') : [];
+  const readyItems = onServeItem ? printedItems.filter(i => i.itemStatus === 'Ready') : [];
   
-  // When showing KOT details (POS), filter out ready items because they have their own section.
-  // When not showing KOT details (Captain), show all printed items.
-  const itemsForDisplay = showKotDetails 
-    ? printedItems.filter(i => !readyItems.some(readyItem => readyItem.menuItem.id === i.menuItem.id))
-    : printedItems;
+  // When not showing KOT details (Captain view), we need to separate "Ready" items from others.
+  // The rest of the printed items will be in `itemsForDisplay`.
+  const itemsForDisplay = printedItems.filter(i => !readyItems.some(readyItem => readyItem.menuItem.id === i.menuItem.id));
 
   const groupedPrintedItems = groupBy(itemsForDisplay, 'kotId');
 
@@ -69,7 +67,7 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
           </>
         )}
 
-        {/* Printed KOTs Section */}
+        {/* Printed KOTs Section for POS */}
         {showKotDetails && Object.keys(groupedPrintedItems).length > 0 && (
           <>
           <Separator />
@@ -97,7 +95,7 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
           </>
         )}
         
-        {/* Captain View: Show all printed items in a simple list */}
+        {/* Captain View: Show non-ready printed items */}
         {!showKotDetails && itemsForDisplay.length > 0 && (
             <>
                 <Separator />
