@@ -18,6 +18,8 @@ const statusColors: Record<OrderStatus, string> = {
 };
 
 export default function OrderStatusBadge({ status, className }: OrderStatusBadgeProps) {
+  if (!statusColors[status]) return null;
+
   return (
     <Badge className={cn('hover:bg-none font-semibold', statusColors[status], className)}>
       {status}

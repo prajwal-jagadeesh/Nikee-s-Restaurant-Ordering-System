@@ -19,8 +19,6 @@ import ItemStatusBadge from '@/components/ItemStatusBadge';
 
 const statusInfo: Record<OrderStatus, { label: string, description: string, progress: number }> = {
   'New': { label: 'Waiting for Confirmation', description: 'Your order has been sent. A captain will confirm it shortly.', progress: 20 },
-  'Confirmed': { label: 'Order Confirmed', description: 'The kitchen has received your order and will start preparing it soon.', progress: 40 },
-  'KOT Printed': { label: 'Order Confirmed', description: 'The kitchen has received your order and will start preparing it soon.', progress: 40 },
   'Preparing': { label: 'Preparing', description: 'Your dishes are being prepared with care by our chefs.', progress: 60 },
   'Ready': { label: 'Ready for Serving', description: 'Your order is ready and will be served shortly.', progress: 80 },
   'Served': { label: 'Served', description: 'Enjoy your meal! Your order has been served.', progress: 100 },
@@ -205,7 +203,7 @@ export default function CustomerView() {
               {activeOrder ? `Order for Table ${tableNumber}` : `New Order (Table ${tableNumber})`}
             </SheetTitle>
              <SheetDescription>
-                {activeOrder ? statusInfo[activeOrder.status].description : "Review your items before placing the order."}
+                {activeOrder ? statusInfo[activeOrder.status]?.description ?? 'Your order is being processed.' : "Review your items before placing the order."}
               </SheetDescription>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto -mx-6 px-6 divide-y">
@@ -213,7 +211,7 @@ export default function CustomerView() {
               <div className="py-4">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="font-semibold text-lg">Your Active Order</h3>
-                    <OrderStatusBadge status={activeOrder.status} />
+                    {/* <OrderStatusBadge status={activeOrder.status} /> */}
                   </div>
                   <div className="space-y-2">
                       {activeOrder.items.map((item, index) => (

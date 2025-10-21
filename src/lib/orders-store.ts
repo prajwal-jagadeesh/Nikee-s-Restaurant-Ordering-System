@@ -92,7 +92,6 @@ export const useOrderStore = create(
                 const itemsWithStatus = newItems.map(item => ({...item, itemStatus: 'Pending' as const, kotStatus: 'New' as const}))
 
                 itemsWithStatus.forEach((newItem) => {
-                    // Only merge with existing items that are also new and pending
                     const existingItemIndex = updatedItems.findIndex(
                         (i) => i.menuItem.id === newItem.menuItem.id && i.itemStatus === 'Pending' && i.kotStatus === 'New'
                     );
@@ -106,7 +105,6 @@ export const useOrderStore = create(
                 });
                 
                 let newStatus = order.status;
-                // If order was fully paid or cancelled, adding new items makes it active again.
                 if (order.status === 'Paid' || order.status === 'Cancelled' || order.status === 'Served') {
                   newStatus = 'New';
                 }
@@ -136,7 +134,7 @@ export const useOrderStore = create(
 
               let newStatus = order.status;
               if (order.status === 'New') {
-                  newStatus = 'Preparing'; // Set to a generic preparing status
+                  newStatus = 'Preparing'; 
               }
               
               const updatedOrder = { 
@@ -155,8 +153,6 @@ export const useOrderStore = create(
          set((state) => ({
           orders: state.orders.map((order) => {
             if (order.id === orderId) {
-                // Find the specific item instance that is not yet served.
-                // This is important for re-orders.
                 const itemIndexToUpdate = order.items.findIndex(item => 
                     item.menuItem.id === menuItemId && item.itemStatus !== 'Served'
                 );

@@ -1,7 +1,6 @@
 import type { Order, OrderItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import OrderStatusBadge from './OrderStatusBadge';
 import { Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +36,6 @@ export default function OrderCard({ order, children, onServeItem }: OrderCardPro
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-headline">Table {order.tableNumber}</CardTitle>
-        <OrderStatusBadge status={order.status} />
       </CardHeader>
       <CardContent className="flex-1 space-y-2">
         <div className="flex items-center text-sm text-muted-foreground">
