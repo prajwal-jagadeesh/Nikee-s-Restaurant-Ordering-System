@@ -18,6 +18,13 @@ interface NewOrderSheetProps {
     onOpenChange: (isOpen: boolean) => void;
 }
 
+const naturalSort = (a: Table, b: Table) => {
+    const numA = parseInt(a.name.match(/\d+/)?.[0] || '0', 10);
+    const numB = parseInt(b.name.match(/\d+/)?.[0] || '0', 10);
+    return numA - numB;
+};
+
+
 export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetProps) {
     const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
     const tables = useHydratedStore(useTableStore, state => state.tables, []);
@@ -39,7 +46,7 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
         }
     }, [isOpen, menuCategories]);
 
-    const sortedTables = useMemo(() => [...tables].sort((a,b) => a.name.localeCompare(b.name)), [tables]);
+    const sortedTables = useMemo(() => [...tables].sort(naturalSort), [tables]);
     const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
 
     const occupiedTableIds = useMemo(() => {
