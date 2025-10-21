@@ -51,7 +51,7 @@ const TableManagement = () => {
     
     const [tableToEdit, setTableToEdit] = useState<Table | null>(null);
 
-    const tableSections = useMemo(() => Array.from(new Set(tables.map(t => t.section))), [tables]);
+    const tableSections = useMemo(() => Array.from(new Set(tables.map(t => t.section).filter(Boolean))), [tables]);
 
     const handleAddTable = () => {
         if (tableName.trim() && tableSection.trim()) {
@@ -75,7 +75,7 @@ const TableManagement = () => {
     const openEditDialog = (table: Table) => {
       setTableToEdit(table);
       setTableName(table.name);
-      setTableSection(table.section);
+      setTableSection(table.section || 'A/C');
       setEditDialogOpen(true);
     }
 
@@ -112,11 +112,11 @@ const TableManagement = () => {
                 </CardHeader>
                 <CardContent>
                     <ul className="divide-y">
-                        {tables.sort((a,b) => a.section.localeCompare(b.section) || a.name.localeCompare(b.name)).map(table => (
+                        {tables.sort((a,b) => (a.section || '').localeCompare(b.section || '') || a.name.localeCompare(b.name)).map(table => (
                             <li key={table.id} className="flex items-center justify-between py-3">
                                <div>
                                  <span className="font-medium">{table.name}</span>
-                                 <span className="text-sm text-muted-foreground ml-2">({table.section})</span>
+                                 <span className="text-sm text-muted-foreground ml-2">({table.section || 'No Section'})</span>
                                </div>
                                 <div className="flex items-center gap-2">
                                   <Button variant="outline" size="icon" onClick={() => openEditDialog(table)}>
@@ -212,7 +212,7 @@ export default function POSView() {
     return acc;
   }, {} as Record<string, Order>), [allOrders, tables]);
   
-  const tablesBySection = useMemo(() => groupBy(tables, 'section'), [tables]);
+  const tablesBySection = useMemo(() => groupBy(tables.filter(t => t.section), 'section'), [tables]);
   const sections = useMemo(() => Object.keys(tablesBySection).sort(), [tablesBySection]);
   
   const selectedOrder = selectedTableId ? ordersByTable[selectedTableId] : null;
@@ -236,8 +236,11 @@ export default function POSView() {
 
   const canGenerateBill = (order: Order) => {
     const kitchenItems = order.items.filter(item => item.kotStatus === 'Printed');
-    if (kitchenItems.length === 0 && !order.items.some(i => i.kotStatus === 'New')) return true;
-    return kitchenItems.every(item => item.itemStatus === 'Served');
+    if (kitchenItems.length === 0 && !order.items.some(i => i.kotStatus === 'New')) return true; // Can bill if no items were ever sent to kitchen
+    if (kitchenItems.length > 0 && kitchenItems.every(item => item.itemStatus === 'Served')) {
+        return true;
+    }
+    return false;
   }
 
   if (!isHydrated) {
@@ -376,3 +379,5 @@ export default function POSView() {
     </Tabs>
   );
 }
+
+    
