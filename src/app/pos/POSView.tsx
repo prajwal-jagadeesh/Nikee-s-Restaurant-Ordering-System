@@ -26,12 +26,6 @@ export default function POSView() {
     
     const newItemIds = newItems.map(item => item.menuItem.id);
     updateOrderItemsKotStatus(order.id, newItemIds);
-    
-    // If all items have KOT printed, move status to KOT Printed
-    const allPrinted = order.items.every(item => newItemIds.includes(item.menuItem.id) ? true : item.kotStatus === 'Printed');
-    if (allPrinted) {
-        updateOrderStatus(order.id, 'KOT Printed');
-    }
   };
 
   const handlePrintBill = (order: Order) => {

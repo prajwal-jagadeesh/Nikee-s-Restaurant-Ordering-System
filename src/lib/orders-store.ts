@@ -51,27 +51,19 @@ export const useOrderStore = create(
 
                 newItems.forEach((newItem) => {
                     const existingItemIndex = updatedItems.findIndex(
-                        (i) => i.menuItem.id === newItem.menuItem.id
+                        (i) => i.menuItem.id === newItem.menuItem.id && i.kotStatus === 'New'
                     );
                     if (existingItemIndex > -1) {
-                        // This assumes we are adding to existing quantity, but we should handle kotStatus
-                        // For simplicity, let's assume we add as new lines if we want kotStatus to be distinct.
-                        // Or, we update existing but the logic gets more complex.
-                        // Current logic: just add quantity. Let's create new entry instead.
-                        const existingItem = updatedItems[existingItemIndex];
-                        if (existingItem.kotStatus === 'Printed') {
-                             updatedItems.push({ ...newItem, kotStatus: 'New'});
-                        } else {
-                             updatedItems[existingItemIndex].quantity += newItem.quantity;
-                        }
+                         updatedItems[existingItemIndex].quantity += newItem.quantity;
                     } else {
                         updatedItems.push(newItem);
                     }
                     newTotal += newItem.menuItem.price * newItem.quantity;
                 });
                 
-                // Any modification that adds items should require re-confirmation.
-                const shouldResetStatus = order.status !== 'New';
+                // When adding new items, reset status to 'New' to force re-confirmation
+                // only if it's in a state where re-confirmation is logical.
+                const shouldResetStatus = ['Served', 'Billed', 'Ready', 'Paid', 'Cancelled'].includes(order.status);
                 
                 return { 
                   ...order, 
@@ -90,12 +82,20 @@ export const useOrderStore = create(
           orders: state.orders.map((order) => {
             if (order.id === orderId) {
               const updatedItems = order.items.map((item) => {
-                if (itemIds.includes(item.menuItem.id)) {
+                if (itemIds.includes(item.menuItem.id) && item.kotStatus === 'New') {
                   return { ...item, kotStatus: 'Printed' as const };
                 }
                 return item;
               });
-              return { ...order, items: updatedItems };
+              
+              const allItemsPrinted = updatedItems.every(i => i.kotStatus === 'Printed');
+
+              return { 
+                ...order, 
+                items: updatedItems,
+                // Only move to KOT Printed if the order was previously just confirmed
+                status: order.status === 'Confirmed' && allItemsPrinted ? 'KOT Printed' : order.status,
+              };
             }
             return order;
           }),
