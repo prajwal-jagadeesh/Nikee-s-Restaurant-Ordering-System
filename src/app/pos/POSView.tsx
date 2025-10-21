@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   AlertDialog,
@@ -51,6 +51,9 @@ const TableManagement = () => {
     const [tableToEdit, setTableToEdit] = useState<Table | null>(null);
 
     const tableSections = useMemo(() => Array.from(new Set(tables.map(t => t.section).filter(Boolean))), [tables]);
+    const tablesBySection = useMemo(() => groupBy(tables, (t) => t.section || 'Uncategorized'), [tables]);
+    const sections = useMemo(() => Object.keys(tablesBySection).sort(), [tablesBySection]);
+
 
     const handleAddTable = () => {
         if (tableName.trim() && tableSection.trim()) {
@@ -109,39 +112,46 @@ const TableManagement = () => {
                         </DialogContent>
                     </Dialog>
                 </CardHeader>
-                <CardContent>
-                    <ul className="divide-y">
-                        {tables.sort((a,b) => (a.section || '').localeCompare(b.section || '') || a.name.localeCompare(b.name)).map(table => (
-                            <li key={table.id} className="flex items-center justify-between py-3">
-                               <div>
-                                 <span className="font-medium">{table.name}</span>
-                                 <span className="text-sm text-muted-foreground ml-2">({table.section || 'No Section'})</span>
-                               </div>
-                                <div className="flex items-center gap-2">
-                                  <Button variant="outline" size="icon" onClick={() => openEditDialog(table)}>
-                                    <Pen className="h-4 w-4" />
-                                  </Button>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button variant="destructive" size="icon">
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>This will permanently delete '{table.name}'. This action cannot be undone.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => deleteTable(table.id)}>Delete</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                <CardContent className="space-y-8">
+                     {sections.map(section => (
+                        <div key={section}>
+                           <h3 className="text-lg font-semibold mb-3 text-gray-600">{section}</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                {tablesBySection[section].sort((a,b) => a.name.localeCompare(b.name)).map(table => (
+                                    <Card key={table.id} className="flex flex-col h-28 transition-all duration-300 rounded-lg border-2 shadow-sm">
+                                      <CardHeader className="p-2 pb-0">
+                                        <CardTitle className="text-sm font-semibold">{table.name}</CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="flex flex-col justify-end flex-1 p-2 text-xs text-muted-foreground">
+                                         ({table.section || 'No Section'})
+                                      </CardContent>
+                                      <CardFooter className="p-2 border-t flex gap-2">
+                                          <Button variant="outline" size="icon" className="h-8 w-8 flex-1" onClick={() => openEditDialog(table)}>
+                                            <Pen className="h-4 w-4" />
+                                          </Button>
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <Button variant="destructive" size="icon" className="h-8 w-8 flex-1">
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete '{table.name}'. This action cannot be undone.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => deleteTable(table.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
+                                      </CardFooter>
+                                    </Card>
+                                ))}
+                            </div>
+                        </div>
+                     ))}
                 </CardContent>
             </Card>
             
@@ -207,7 +217,7 @@ const TableGridView = () => {
     return acc;
   }, {} as Record<string, Order>), [allOrders, tables]);
   
-  const tablesBySection = useMemo(() => groupBy(tables, 'section'), [tables]);
+  const tablesBySection = useMemo(() => groupBy(tables, (t) => t.section || 'Uncategorized'), [tables]);
   const sections = useMemo(() => Object.keys(tablesBySection).sort(), [tablesBySection]);
   
   const selectedOrder = selectedTableId ? ordersByTable[selectedTableId] : null;
