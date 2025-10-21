@@ -47,7 +47,7 @@ const TableManagement = () => {
     
     const [tableName, setTableName] = useState('');
     const tableSections = useMemo(() => Array.from(new Set(tables.map(t => t.section).filter(Boolean))), [tables]);
-    const [tableSection, setTableSection] = useState(tableSections[0] || '');
+    const [tableSection, setTableSection] = useState('');
     
     const [tableToEdit, setTableToEdit] = useState<Table | null>(null);
 
@@ -59,7 +59,7 @@ const TableManagement = () => {
         if (tableName.trim() && tableSection.trim()) {
             addTable(tableName.trim(), tableSection.trim());
             setTableName('');
-            setTableSection(tableSections[0] || '');
+            setTableSection('');
             setAddDialogOpen(false);
         }
     };
@@ -68,7 +68,7 @@ const TableManagement = () => {
         if (tableToEdit && tableName.trim() && tableSection.trim()) {
             updateTable(tableToEdit.id, tableName.trim(), tableSection.trim());
             setTableName('');
-            setTableSection(tableSections[0] || '');
+            setTableSection('');
             setEditDialogOpen(false);
             setTableToEdit(null);
         }
@@ -77,9 +77,16 @@ const TableManagement = () => {
     const openEditDialog = (table: Table) => {
       setTableToEdit(table);
       setTableName(table.name);
-      setTableSection(table.section || tableSections[0] || '');
+      setTableSection(table.section || '');
       setEditDialogOpen(true);
     }
+    
+    const openAddDialog = () => {
+        setTableName('');
+        setTableSection(tableSections[0] || '');
+        setAddDialogOpen(true);
+    }
+
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -88,7 +95,7 @@ const TableManagement = () => {
                     <CardTitle>Manage Tables</CardTitle>
                     <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button>
+                            <Button onClick={openAddDialog}>
                                 <Plus className="mr-2 h-4 w-4" /> Add Table
                             </Button>
                         </DialogTrigger>
