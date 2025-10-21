@@ -95,7 +95,6 @@ export default function CustomerView() {
       }
       return [...prev, { menuItem: item, quantity }];
     });
-    setIsCartOpen(true);
   };
 
   const updateQuantity = (itemId: string, quantity: number) => {
@@ -129,7 +128,6 @@ export default function CustomerView() {
       });
     }
     setCart([]);
-    setIsCartOpen(false);
   };
 
   const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab, menuItems]);
@@ -144,6 +142,7 @@ export default function CustomerView() {
     const handleReorder = () => {
       addToCart(item, quantity);
       setIsOpen(false);
+      setIsCartOpen(true);
     }
 
     return (
