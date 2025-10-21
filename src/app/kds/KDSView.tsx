@@ -14,7 +14,7 @@ const statusActions: Record<OrderStatus, { next: OrderStatus; label: string } | 
   New: null,
   Confirmed: { next: 'Preparing', label: 'Start Preparing' },
   Preparing: { next: 'Ready', label: 'Mark as Ready' },
-  Ready: { next: 'Served', label: 'Mark as Served' },
+  Ready: null, // Captain will mark as served
   Served: null,
   Paid: null,
   Cancelled: null,
