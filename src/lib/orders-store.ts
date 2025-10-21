@@ -15,6 +15,7 @@ interface OrderState {
   updateOrderItemsKotStatus: (orderId: string, itemIds: string[]) => void;
   updateItemQuantity: (orderId: string, menuItemId: string, quantity: number) => void;
   removeItem: (orderId: string, menuItemId: string) => void;
+  switchTable: (orderId: string, newTableId: string) => boolean;
   clearOrders: () => void;
   setHydrated: (hydrated: boolean) => void;
 }
@@ -239,6 +240,22 @@ export const useOrderStore = create(
             };
           }),
         }));
+      },
+      switchTable: (orderId, newTableId) => {
+        const orders = get().orders;
+        const targetTableIsOccupied = orders.some(o => o.tableId === newTableId && o.status !== 'Paid' && o.status !== 'Cancelled');
+        
+        if (targetTableIsOccupied) {
+          console.error("Target table is already occupied.");
+          return false;
+        }
+
+        set((state) => ({
+          orders: state.orders.map((order) =>
+            order.id === orderId ? { ...order, tableId: newTableId } : order
+          ),
+        }));
+        return true;
       },
       clearOrders: () => {
         set({ orders: [] });
