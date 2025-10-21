@@ -34,6 +34,10 @@ export default function CaptainView() {
     updateOrderStatus(orderId, 'Cancelled');
   };
 
+  const needsConfirmation = (order: Order) => {
+    return order.status === 'New' || order.items.some(item => item.kotStatus === 'New');
+  };
+
   if (!isHydrated) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -59,7 +63,7 @@ export default function CaptainView() {
             >
               <OrderCard order={order}>
                 <div className="mt-4 flex flex-col space-y-2">
-                  {order.status === 'New' && (
+                  {needsConfirmation(order) && (
                     <div className="flex gap-2">
                       <Button onClick={() => handleConfirm(order.id)} className="w-full">
                         Confirm Order
