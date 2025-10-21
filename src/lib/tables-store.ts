@@ -12,11 +12,19 @@ interface TableState {
   setHydrated: (hydrated: boolean) => void;
 }
 
-const initialTables: Table[] = Array.from({ length: 15 }, (_, i) => ({
-  id: `T${i + 1}`,
-  name: `Table ${i + 1}`,
-  section: i < 8 ? 'A/C' : 'Non A/C'
-}));
+const initialTables: Table[] = Array.from({ length: 15 }, (_, i) => {
+    let section = 'Outdoor';
+    if (i < 5) {
+        section = 'Indoor(Counter)';
+    } else if (i < 10) {
+        section = 'Indoor(TV)';
+    }
+    return {
+        id: `T${i + 1}`,
+        name: `Table ${i + 1}`,
+        section: section,
+    };
+});
 
 export const useTableStore = create(
   persist<TableState>(
