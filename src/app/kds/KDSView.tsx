@@ -39,7 +39,7 @@ export default function KDSView() {
         orderTimestamp: order.timestamp,
         status: order.status,
         items: order.items
-          .filter(item => item.kotStatus === 'Printed')
+          .filter(item => item.kotStatus === 'Printed' && item.itemStatus !== 'Served')
       }))
       .filter(order => order.items.length > 0);
 

@@ -127,7 +127,7 @@ export const useOrderStore = create(
             if (order.id === orderId) {
               const updatedItems = order.items.map((item) => {
                 if (itemIds.includes(item.menuItem.id) && item.kotStatus === 'New') {
-                  return { ...item, kotStatus: 'Printed' as const, itemStatus: 'Pending' as const };
+                  return { ...item, kotStatus: 'Printed' as const };
                 }
                 return item;
               });
