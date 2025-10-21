@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { AnimatePresence, motion } from 'framer-motion';
+import OrderStatusBadge from '@/components/OrderStatusBadge';
 
 
 type KitchenItem = OrderItem & {
@@ -37,6 +38,7 @@ type GroupedOrder = {
   tableNumber: number;
   orderTimestamp: number;
   items: KitchenItem[];
+  status: Order['status'];
 }
 
 export default function KDSView() {
@@ -58,20 +60,25 @@ export default function KDSView() {
           }))
       );
     
-    const grouped = kitchenItems.reduce((acc, item) => {
-      if (!acc[item.orderId]) {
-        acc[item.orderId] = {
-          orderId: item.orderId,
-          tableNumber: item.tableNumber,
-          orderTimestamp: item.orderTimestamp,
-          items: []
-        };
-      }
-      acc[item.orderId].items.push(item);
-      return acc;
-    }, {} as Record<string, GroupedOrder>);
+    const grouped = allOrders
+      .filter(o => !['Paid', 'Cancelled', 'New'].includes(o.status))
+      .map(order => ({
+        orderId: order.id,
+        tableNumber: order.tableNumber,
+        orderTimestamp: order.timestamp,
+        status: order.status,
+        items: order.items
+          .filter(item => item.kotStatus === 'Printed')
+          .map(item => ({
+            ...item,
+            orderId: order.id,
+            tableNumber: order.tableNumber,
+            orderTimestamp: order.timestamp,
+          }))
+      }))
+      .filter(order => order.items.length > 0);
 
-    return Object.values(grouped).sort((a,b) => a.orderTimestamp - b.orderTimestamp);
+    return grouped.sort((a,b) => a.orderTimestamp - b.orderTimestamp);
 
   }, [allOrders]);
 
@@ -109,13 +116,16 @@ export default function KDSView() {
               exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
             >
               <Card className="h-full flex flex-col">
-                <CardHeader>
-                  <CardTitle className="flex justify-between items-center">
-                    <span>Table {order.tableNumber}</span>
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
+                <CardHeader className="flex flex-row items-start justify-between">
+                  <div>
+                    <CardTitle className="flex justify-between items-center mb-1">
+                      <span>Table {order.tableNumber}</span>
+                    </CardTitle>
+                    <span className="text-xs font-normal text-muted-foreground">
+                        {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
                     </span>
-                  </CardTitle>
+                  </div>
+                  <OrderStatusBadge status={order.status} />
                 </CardHeader>
                 <CardContent className="flex-1 -mt-2">
                   <Table>
