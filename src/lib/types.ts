@@ -30,10 +30,16 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  tableNumber: number;
+  tableNumber: number; // Legacy, will be phased out
+  tableId: string;
   items: OrderItem[];
   status: OrderStatus;
   timestamp: number;
   total: number;
   kotCounter?: number; // To generate unique KOT IDs
+}
+
+export interface Table {
+  id: string;
+  name: string;
 }

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import POSView from './POSView';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function POSPage() {
   return (

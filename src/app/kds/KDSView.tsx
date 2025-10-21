@@ -1,14 +1,14 @@
 'use client';
 import { useMemo } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import type { OrderItem, ItemStatus, Order, OrderStatus } from '@/lib/types';
+import { useTableStore } from '@/lib/tables-store';
+import type { OrderItem, ItemStatus, Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
 import ItemStatusBadge from '@/components/ItemStatusBadge';
-
 
 const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } | null> = {
   'Pending': { next: 'Preparing', label: 'Start Preparing' },
@@ -19,19 +19,22 @@ const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } 
 
 type GroupedOrder = {
   orderId: string;
-  tableNumber: number;
+  tableId: string;
+  tableName: string;
   orderTimestamp: number;
-  items: (OrderItem & {originalOrderId: string})[];
+  items: (OrderItem & { originalOrderId: string })[];
 }
 
 export default function KDSView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
+  const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
+  const tableMap = useMemo(() => new Map(tables.map(t => [t.id, t.name])), [tables]);
+  
   const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
     const activeKitchenItemsByTable = allOrders.reduce((acc, order) => {
-      // Only consider orders that are not yet Paid or Cancelled
       if (['Paid', 'Cancelled'].includes(order.status)) {
         return acc;
       }
@@ -41,43 +44,35 @@ export default function KDSView() {
       );
 
       if (kitchenItems.length > 0) {
-        if (!acc[order.tableNumber]) {
-          acc[order.tableNumber] = {
+        if (!acc[order.tableId]) {
+          acc[order.tableId] = {
             orderId: order.id,
-            tableNumber: order.tableNumber,
+            tableId: order.tableId,
+            tableName: tableMap.get(order.tableId) || `Table ${order.tableNumber}`,
             orderTimestamp: order.timestamp,
             items: []
           };
         }
         
-        // Use the latest timestamp for the card
-        if(order.timestamp > acc[order.tableNumber].orderTimestamp){
-            acc[order.tableNumber].orderTimestamp = order.timestamp;
+        if(order.timestamp > acc[order.tableId].orderTimestamp){
+            acc[order.tableId].orderTimestamp = order.timestamp;
         }
-
-        // Add items with their original orderId for status updates
-        const itemsWithOrderId = kitchenItems.map(item => ({...item, originalOrderId: order.id}));
-
-        acc[order.tableNumber].items.push(...itemsWithOrderId);
       }
       
       return acc;
-    }, {} as Record<number, GroupedOrder>);
+    }, {} as Record<string, GroupedOrder>);
 
-    // Combine all items for a table from different orders into one view
      const combinedOrders = Object.values(activeKitchenItemsByTable).map(tableOrder => {
-        // Flatten all items from different orders for the same table
         const allTableItems = allOrders
-            .filter(o => o.tableNumber === tableOrder.tableNumber && !['Paid', 'Cancelled'].includes(o.status))
+            .filter(o => o.tableId === tableOrder.tableId && !['Paid', 'Cancelled'].includes(o.status))
             .flatMap(o => 
                 o.items
                  .filter(item => item.kotStatus === 'Printed')
                  .map(item => ({ ...item, originalOrderId: o.id }))
             );
         
-        // Deduplicate items based on original order ID and menu item ID
         const uniqueItems = allTableItems.reduce((acc, current) => {
-            const x = acc.find(item => item.originalOrderId === current.originalOrderId && item.menuItem.id === current.menuItem.id);
+            const x = acc.find(item => item.originalOrderId === current.originalOrderId && item.menuItem.id === current.menuItem.id && item.kotId === current.kotId);
             if (!x) {
                 return acc.concat([current]);
             } else {
@@ -93,7 +88,7 @@ export default function KDSView() {
 
     return combinedOrders.sort((a,b) => a.orderTimestamp - b.orderTimestamp);
 
-  }, [allOrders]);
+  }, [allOrders, tableMap]);
 
   const handleAction = (orderId: string, menuItemId: string, currentStatus: ItemStatus) => {
     const action = itemStatusActions[currentStatus];
@@ -122,7 +117,7 @@ export default function KDSView() {
         ) : (
           kdsOrders.map((order) => (
              <motion.div
-              key={order.tableNumber}
+              key={order.tableId}
               layout
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -130,7 +125,7 @@ export default function KDSView() {
             >
               <Card className="h-full flex flex-col">
                 <CardHeader>
-                  <CardTitle>Table {order.tableNumber}</CardTitle>
+                  <CardTitle>{order.tableName}</CardTitle>
                   <span className="text-xs font-normal text-muted-foreground -mt-1">
                       {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
                   </span>
@@ -149,7 +144,7 @@ export default function KDSView() {
                         {order.items
                         .sort((a, b) => a.menuItem.name.localeCompare(b.menuItem.name))
                         .map((item) => (
-                          <li key={`${item.originalOrderId}-${item.menuItem.id}`} className="flex items-center py-3">
+                          <li key={`${item.originalOrderId}-${item.menuItem.id}-${item.kotId}`} className="flex items-center py-3">
                             <div className="flex-1 font-medium">{item.menuItem.name}</div>
                             <div className="w-12 text-center font-bold">{item.quantity}</div>
                             <div className="w-28 flex justify-center">

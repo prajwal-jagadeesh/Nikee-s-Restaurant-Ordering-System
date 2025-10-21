@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
+import { useTableStore } from '@/lib/tables-store';
 import type { Order, OrderItem } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,8 @@ import { Separator } from '@/components/ui/separator';
 
 export default function CaptainView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
+  const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
+  
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
   const updateItemQuantity = useOrderStore((state) => state.updateItemQuantity);
@@ -46,7 +49,7 @@ export default function CaptainView() {
   };
 
   const canCancelOrder = (order: Order) => {
-    return !order.items.some(item => item.itemStatus === 'Served');
+    return !order.items.some(item => item.kotStatus === 'Printed');
   };
 
   const hasNewItems = (order: Order) => {
@@ -54,6 +57,8 @@ export default function CaptainView() {
   };
   
   const editingOrder = orders.find(o => o.id === editingOrderId);
+  
+  const tableMap = useMemo(() => new Map(tables.map(t => [t.id, t.name])), [tables]);
 
   const newItemsForEditing = editingOrder?.items.filter(i => i.kotStatus === 'New');
   const newItemsTotal = newItemsForEditing?.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0) || 0;
@@ -83,9 +88,9 @@ export default function CaptainView() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
               >
-                <OrderCard order={order} onServeItem={handleMarkServed} showKotDetails={false}>
+                <OrderCard order={order} tableName={tableMap.get(order.tableId)} onServeItem={handleMarkServed} showKotDetails={false}>
                   <div className="mt-4 flex flex-col space-y-2">
-                    {hasNewItems(order) && (
+                    {hasNewItems(order) && order.status === 'New' && (
                        <Button onClick={() => handleConfirmOrder(order.id)} className="w-full">
                          Confirm Order
                       </Button>

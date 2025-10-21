@@ -11,6 +11,7 @@ import { Plus, Minus, ShoppingCart, Trash2, RotateCcw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
+import { useTableStore } from '@/lib/tables-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
@@ -19,6 +20,7 @@ import ItemStatusBadge from '@/components/ItemStatusBadge';
 
 const statusInfo: Record<OrderStatus, { label: string, description: string, progress: number }> = {
   'New': { label: 'Waiting for Confirmation', description: 'Your order has been sent. A captain will confirm it shortly.', progress: 20 },
+  'Confirmed': { label: 'Order Confirmed', description: 'Your order has been confirmed and will be sent to the kitchen.', progress: 40 },
   'Preparing': { label: 'Preparing', description: 'Your dishes are being prepared with care by our chefs.', progress: 60 },
   'Ready': { label: 'Ready for Serving', description: 'Your order is ready and will be served shortly.', progress: 80 },
   'Served': { label: 'Served', description: 'Enjoy your meal! Your order has been served.', progress: 100 },
@@ -29,7 +31,10 @@ const statusInfo: Record<OrderStatus, { label: string, description: string, prog
 
 export default function CustomerView() {
   const searchParams = useSearchParams();
-  const tableNumber = searchParams.get('table') || '5';
+  const tableNumberParam = searchParams.get('table') || '1';
+  
+  const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
+  const table = useMemo(() => tables.find(t => t.name.toLowerCase().replace(' ', '') === `table${tableNumberParam}`) || tables[0], [tables, tableNumberParam]);
 
   const orders = useHydratedStore(useOrderStore, state => state.orders, []);
   const addOrder = useOrderStore((state) => state.addOrder);
@@ -40,8 +45,9 @@ export default function CustomerView() {
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   const activeOrder = useMemo(() => {
-    return orders.find(o => o.tableNumber === parseInt(tableNumber) && o.status !== 'Paid' && o.status !== 'Cancelled');
-  }, [orders, tableNumber]);
+    if (!table) return undefined;
+    return orders.find(o => o.tableId === table.id && o.status !== 'Paid' && o.status !== 'Cancelled');
+  }, [orders, table]);
 
   const addToCart = (item: MenuItem, quantity = 1) => {
     setCart((prev) => {
@@ -76,20 +82,15 @@ export default function CustomerView() {
   }, [cart]);
   
   const placeOrUpdateOrder = () => {
-    if (cart.length === 0) return;
-
-    const itemsWithKotStatus: OrderItem[] = cart.map(item => ({ ...item, kotStatus: 'New', itemStatus: 'Pending' }));
+    if (cart.length === 0 || !table) return;
     
     if (activeOrder) {
-      addItemsToOrder(activeOrder.id, itemsWithKotStatus);
+      addItemsToOrder(activeOrder.id, cart);
     } else {
       addOrder({
-        id: '', // Will be set by the store
-        tableNumber: parseInt(tableNumber),
-        items: itemsWithKotStatus,
-        status: 'New',
-        timestamp: Date.now(),
-        total: newItemsTotal,
+        tableId: table.id,
+        tableNumber: parseInt(table.name.replace('Table ', '')), // for legacy
+        items: cart,
       });
     }
     setCart([]);
@@ -140,12 +141,20 @@ export default function CustomerView() {
       </Popover>
     )
   }
+  
+  if (!table) {
+    return <div className="text-center py-10">
+      <h1 className="text-2xl font-bold">Table not found</h1>
+      <p>The requested table number does not exist.</p>
+    </div>
+  }
+
 
   return (
     <>
       <div className="text-center mb-6">
         <h1 className="text-4xl font-bold font-headline">Welcome to Nikee's Zara</h1>
-        <p className="text-lg text-muted-foreground">You are ordering for Table {tableNumber}</p>
+        <p className="text-lg text-muted-foreground">You are ordering for {table.name}</p>
       </div>
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -200,10 +209,10 @@ export default function CustomerView() {
         <SheetContent className="flex flex-col">
           <SheetHeader>
             <SheetTitle>
-              {activeOrder ? `Order for Table ${tableNumber}` : `New Order (Table ${tableNumber})`}
+              {activeOrder ? `Order for ${table.name}` : `New Order (${table.name})`}
             </SheetTitle>
              <SheetDescription>
-                {activeOrder ? statusInfo[activeOrder.status]?.description ?? 'Your order is being processed.' : "Review your items before placing the order."}
+                {activeOrder && statusInfo[activeOrder.status] ? statusInfo[activeOrder.status].description : "Review your items before placing the order."}
               </SheetDescription>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto -mx-6 px-6 divide-y">

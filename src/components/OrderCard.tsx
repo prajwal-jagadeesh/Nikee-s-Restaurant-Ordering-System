@@ -15,6 +15,7 @@ interface OrderCardProps {
   children?: React.ReactNode;
   onServeItem?: (orderId: string, menuItemId: string) => void;
   showKotDetails?: boolean;
+  tableName?: string;
 }
 
 const ItemRow = ({ item, isNew }: { item: OrderItem; isNew: boolean }) => (
@@ -30,14 +31,12 @@ const ItemRow = ({ item, isNew }: { item: OrderItem; isNew: boolean }) => (
 );
 
 
-export default function OrderCard({ order, children, onServeItem, showKotDetails = true }: OrderCardProps) {
+export default function OrderCard({ order, children, onServeItem, showKotDetails = true, tableName }: OrderCardProps) {
   const newItems = order.items.filter(i => i.kotStatus === 'New');
   const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
   
   const readyItems = onServeItem ? printedItems.filter(i => i.itemStatus === 'Ready') : [];
   
-  // In Captain view (!showKotDetails), we separate "Ready" items.
-  // The rest (Pending, Preparing, Served) will go under a general "Order Details" list.
   const itemsForDisplay = !showKotDetails 
     ? printedItems.filter(i => i.itemStatus !== 'Ready') 
     : printedItems;
@@ -45,11 +44,12 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
   const groupedPrintedItems = groupBy(itemsForDisplay, 'kotId');
 
   const showOrderDetailsHeader = !showKotDetails && itemsForDisplay.length > 0;
+  const displayName = tableName || `Table ${order.tableNumber}`;
 
   return (
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-headline">Table {order.tableNumber}</CardTitle>
+        <CardTitle className="text-lg font-headline">{displayName}</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 space-y-2">
         <div className="flex items-center text-sm text-muted-foreground">
@@ -58,7 +58,6 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
         </div>
         <p className="text-sm text-muted-foreground font-semibold">ID: {order.id}</p>
         
-        {/* New Items Section */}
         {newItems.length > 0 && (
           <>
             <Separator />
@@ -71,7 +70,6 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
           </>
         )}
 
-        {/* Printed KOTs Section for POS */}
         {showKotDetails && Object.keys(groupedPrintedItems).length > 0 && (
           <>
           <Separator />
@@ -99,7 +97,6 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
           </>
         )}
         
-        {/* Captain View: Show non-ready printed items */}
         {showOrderDetailsHeader && (
             <>
                 <Separator />
@@ -112,8 +109,6 @@ export default function OrderCard({ order, children, onServeItem, showKotDetails
             </>
         )}
 
-
-        {/* Ready to Serve Section */}
         {readyItems.length > 0 && onServeItem && (
           <>
             <Separator />
