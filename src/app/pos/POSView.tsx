@@ -45,8 +45,8 @@ export default function POSView() {
   };
   
   const needsKotPrint = (order: Order) => {
-    // KOT can be printed if the order is confirmed, or if there are new items added.
-    return order.status === 'Confirmed' || order.items.some(item => item.kotStatus === 'New');
+    // KOT can be printed only if the order is confirmed and there are new items.
+    return order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New');
   }
 
   const canGenerateBill = (order: Order) => {
