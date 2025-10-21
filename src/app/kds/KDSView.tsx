@@ -1,13 +1,15 @@
 'use client';
 import { useMemo } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import type { Order, OrderItem, ItemStatus } from '@/lib/types';
+import type { OrderItem, ItemStatus, Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import OrderStatusBadge from '@/components/OrderStatusBadge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { AnimatePresence, motion } from 'framer-motion';
+
 
 type KitchenItem = OrderItem & {
   orderId: string;
@@ -30,15 +32,21 @@ const ItemStatusBadge = ({ status }: { status: ItemStatus }) => {
   return <Badge className={colors[status]}>{status}</Badge>
 }
 
+type GroupedOrder = {
+  orderId: string;
+  tableNumber: number;
+  orderTimestamp: number;
+  items: KitchenItem[];
+}
 
 export default function KDSView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
-  const kitchenItems = useMemo((): KitchenItem[] => {
-    return allOrders
-      .filter(o => !['Paid', 'Cancelled', 'New', 'Confirmed'].includes(o.status))
+  const kdsOrders = useMemo((): GroupedOrder[] => {
+    const kitchenItems = allOrders
+      .filter(o => !['Paid', 'Cancelled', 'New'].includes(o.status))
       .flatMap(order => 
         order.items
           .filter(item => item.kotStatus === 'Printed' && item.itemStatus !== 'Ready')
@@ -48,8 +56,23 @@ export default function KDSView() {
             tableNumber: order.tableNumber,
             orderTimestamp: order.timestamp,
           }))
-      )
-      .sort((a, b) => a.orderTimestamp - b.orderTimestamp);
+      );
+    
+    const grouped = kitchenItems.reduce((acc, item) => {
+      if (!acc[item.orderId]) {
+        acc[item.orderId] = {
+          orderId: item.orderId,
+          tableNumber: item.tableNumber,
+          orderTimestamp: item.orderTimestamp,
+          items: []
+        };
+      }
+      acc[item.orderId].items.push(item);
+      return acc;
+    }, {} as Record<string, GroupedOrder>);
+
+    return Object.values(grouped).sort((a,b) => a.orderTimestamp - b.orderTimestamp);
+
   }, [allOrders]);
 
   const handleAction = (orderId: string, menuItemId: string, currentStatus: ItemStatus) => {
@@ -61,58 +84,75 @@ export default function KDSView() {
 
   if (!isHydrated) {
     return (
-      <div className="border rounded-lg">
-        <Skeleton className="h-[600px] w-full" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-[400px] w-full" />
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="border bg-card rounded-lg shadow-sm">
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Table</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-center">Qty</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {kitchenItems.length === 0 ? (
-                    <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                            No active items in the kitchen.
-                        </TableCell>
-                    </TableRow>
-                ) : (
-                    kitchenItems.map((item) => (
-                        <TableRow key={`${item.orderId}-${item.menuItem.id}`}>
-                            <TableCell className="font-medium">
-                                <div className="font-bold text-lg">{item.tableNumber}</div>
-                                <div className="text-xs text-muted-foreground">{item.orderId}</div>
-                            </TableCell>
-                            <TableCell>{formatDistanceToNow(new Date(item.orderTimestamp), { addSuffix: true })}</TableCell>
-                            <TableCell>{item.menuItem.name}</TableCell>
-                            <TableCell className="text-center font-bold text-lg">{item.quantity}</TableCell>
-                            <TableCell><ItemStatusBadge status={item.itemStatus} /></TableCell>
-                            <TableCell className="text-right">
-                                {itemStatusActions[item.itemStatus] && (
-                                    <Button
-                                        size="sm"
-                                        onClick={() => handleAction(item.orderId, item.menuItem.id, item.itemStatus)}
-                                    >
-                                        {itemStatusActions[item.itemStatus]?.label}
-                                    </Button>
-                                )}
-                            </TableCell>
+     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <AnimatePresence>
+        {kdsOrders.length === 0 ? (
+          <div className="col-span-full text-center py-24">
+            <p className="text-muted-foreground text-lg">No active items in the kitchen.</p>
+          </div>
+        ) : (
+          kdsOrders.map((order) => (
+             <motion.div
+              key={order.orderId}
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
+            >
+              <Card className="h-full flex flex-col">
+                <CardHeader>
+                  <CardTitle className="flex justify-between items-center">
+                    <span>Table {order.tableNumber}</span>
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 -mt-2">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="text-center w-[50px]">Qty</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {order.items.map((item) => (
+                        <TableRow key={item.menuItem.id}>
+                          <TableCell>{item.menuItem.name}</TableCell>
+                          <TableCell className="text-center font-bold">{item.quantity}</TableCell>
+                          <TableCell><ItemStatusBadge status={item.itemStatus} /></TableCell>
+                          <TableCell className="text-right">
+                             {itemStatusActions[item.itemStatus] && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleAction(item.orderId, item.menuItem.id, item.itemStatus)}
+                                >
+                                  {itemStatusActions[item.itemStatus]?.label}
+                                </Button>
+                              )}
+                          </TableCell>
                         </TableRow>
-                    ))
-                )}
-            </TableBody>
-        </Table>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))
+        )}
+       </AnimatePresence>
     </div>
   );
 }
