@@ -7,14 +7,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
 import { AnimatePresence, motion } from 'framer-motion';
+import ItemStatusBadge from '@/components/ItemStatusBadge';
 
-type KitchenItem = OrderItem & {
-  orderId: string;
-  tableNumber: number;
-  orderTimestamp: number;
-};
 
 const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } | null> = {
   'Pending': { next: 'Preparing', label: 'Start Preparing' },
@@ -23,21 +18,11 @@ const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } 
   'Served': null,
 };
 
-const ItemStatusBadge = ({ status }: { status: ItemStatus }) => {
-  const colors: Record<ItemStatus, string> = {
-    'Pending': 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/40 dark:text-cyan-300 dark:border-cyan-800/60',
-    'Preparing': 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-800/60',
-    'Ready': 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800/60',
-    'Served': 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800/60',
-  }
-  return <Badge className={colors[status]}>{status}</Badge>
-}
-
 type GroupedOrder = {
   orderId: string;
   tableNumber: number;
   orderTimestamp: number;
-  items: KitchenItem[];
+  items: OrderItem[];
   status: Order['status'];
 }
 
@@ -56,12 +41,6 @@ export default function KDSView() {
         status: order.status,
         items: order.items
           .filter(item => item.kotStatus === 'Printed')
-          .map(item => ({
-            ...item,
-            orderId: order.id,
-            tableNumber: order.tableNumber,
-            orderTimestamp: order.timestamp,
-          }))
       }))
       .filter(order => order.items.length > 0);
 
@@ -109,28 +88,27 @@ export default function KDSView() {
                       {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
                   </span>
                 </CardHeader>
-                <CardContent className="flex-1 -mt-4">
-                  <div className="relative overflow-x-auto">
+                <CardContent className="flex-1 -mt-4 p-0">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead className="w-[50px] text-center">Qty</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
+                          <TableHead className="px-6">Item</TableHead>
+                          <TableHead className="w-[50px] text-center px-6">Qty</TableHead>
+                          <TableHead className="px-6">Status</TableHead>
+                          <TableHead className="text-right px-6">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {order.items.map((item) => (
                           <TableRow key={item.menuItem.id}>
-                            <TableCell className="font-medium">{item.menuItem.name}</TableCell>
-                            <TableCell className="text-center font-bold">{item.quantity}</TableCell>
-                            <TableCell><ItemStatusBadge status={item.itemStatus} /></TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="font-medium px-6">{item.menuItem.name}</TableCell>
+                            <TableCell className="text-center font-bold px-6">{item.quantity}</TableCell>
+                            <TableCell className="px-6"><ItemStatusBadge status={item.itemStatus} /></TableCell>
+                            <TableCell className="text-right px-6">
                               {itemStatusActions[item.itemStatus] && (
                                   <Button
                                     size="sm"
-                                    onClick={() => handleAction(item.orderId, item.menuItem.id, item.itemStatus)}
+                                    onClick={() => handleAction(order.orderId, item.menuItem.id, item.itemStatus)}
                                   >
                                     {itemStatusActions[item.itemStatus]?.label}
                                   </Button>
@@ -140,7 +118,6 @@ export default function KDSView() {
                         ))}
                       </TableBody>
                     </Table>
-                  </div>
                 </CardContent>
               </Card>
             </motion.div>
