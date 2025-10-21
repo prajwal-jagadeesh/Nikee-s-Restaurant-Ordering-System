@@ -1,8 +1,8 @@
 'use client';
-import { useState, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { menuItems, menuCategories } from '@/lib/data';
-import type { MenuItem, OrderItem, Order, OrderStatus } from '@/lib/types';
+import type { MenuItem, OrderItem, Order, OrderStatus, Table } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,8 +29,32 @@ const statusInfo: Record<OrderStatus, { label: string, description: string, prog
   'Cancelled': { label: 'Cancelled', description: 'This order has been cancelled.', progress: 0 },
 }
 
+const useRedirectIfSwitched = (currentTable: Table | undefined) => {
+    const router = useRouter();
+    const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
+    const allTables = useHydratedStore(useTableStore, state => state.tables, []);
+    const clearSwitchedFrom = useOrderStore(state => state.clearSwitchedFrom);
+
+    useEffect(() => {
+        if (!currentTable) return;
+
+        const switchedOrder = allOrders.find(o => o.switchedFrom === currentTable.id);
+        
+        if (switchedOrder) {
+            const newTable = allTables.find(t => t.id === switchedOrder.tableId);
+            if (newTable) {
+                const newTableNumber = newTable.name.replace(/\D/g, '');
+                clearSwitchedFrom(switchedOrder.id);
+                router.replace(`/customer?table=${newTableNumber}`);
+            }
+        }
+    }, [allOrders, currentTable, allTables, router, clearSwitchedFrom]);
+};
+
+
 export default function CustomerView() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const tableNumberParam = searchParams.get('table') || '1';
   
   const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
@@ -43,6 +67,8 @@ export default function CustomerView() {
   const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useRedirectIfSwitched(table);
 
   const activeOrder = useMemo(() => {
     if (!table) return undefined;
@@ -89,7 +115,6 @@ export default function CustomerView() {
     } else {
       addOrder({
         tableId: table.id,
-        tableNumber: parseInt(table.name.replace('Table ', '')), // for legacy
         items: cart,
       });
     }
@@ -293,3 +318,5 @@ export default function CustomerView() {
     </>
   );
 }
+
+    

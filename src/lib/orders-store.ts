@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 interface OrderState {
   orders: Order[];
   hydrated: boolean;
-  addOrder: (order: Omit<Order, 'id' | 'total' | 'timestamp' | 'status'> & Partial<Pick<Order, 'status'>>) => void;
+  addOrder: (order: Omit<Order, 'id' | 'total' | 'timestamp' | 'status' | 'tableNumber'>) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   updateOrderItemStatus: (orderId: string, menuItemId: string, newStatus: ItemStatus) => void;
   updateOrderItemsStatus: (orderId: string, currentItemStatus: ItemStatus, newItemStatus: ItemStatus) => void;
@@ -16,6 +16,7 @@ interface OrderState {
   updateItemQuantity: (orderId: string, menuItemId: string, quantity: number) => void;
   removeItem: (orderId: string, menuItemId: string) => void;
   switchTable: (orderId: string, newTableId: string) => boolean;
+  clearSwitchedFrom: (orderId: string) => void;
   clearOrders: () => void;
   setHydrated: (hydrated: boolean) => void;
 }
@@ -79,7 +80,7 @@ export const useOrderStore = create(
           ...order,
           id: `ORD${String(orderCounter).padStart(3, '0')}`,
           items: itemsWithStatus,
-          status: order.status || 'New',
+          status: 'New',
           timestamp: Date.now(),
           total: recalculateTotal(itemsWithStatus),
           kotCounter: 0,
@@ -252,10 +253,21 @@ export const useOrderStore = create(
 
         set((state) => ({
           orders: state.orders.map((order) =>
-            order.id === orderId ? { ...order, tableId: newTableId } : order
+            order.id === orderId ? { ...order, switchedFrom: order.tableId, tableId: newTableId } : order
           ),
         }));
         return true;
+      },
+      clearSwitchedFrom: (orderId) => {
+        set((state) => ({
+          orders: state.orders.map((order) => {
+            if (order.id === orderId && order.switchedFrom) {
+              const { switchedFrom, ...rest } = order;
+              return rest;
+            }
+            return order;
+          }),
+        }));
       },
       clearOrders: () => {
         set({ orders: [] });
@@ -304,3 +316,5 @@ export function useHydratedStore<T, F>(
 
   return data;
 }
+
+    
