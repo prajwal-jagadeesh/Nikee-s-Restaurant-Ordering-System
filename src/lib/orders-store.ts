@@ -65,6 +65,7 @@ export const useOrderStore = create(
           ...order,
           id: `ORD${String(orderCounter).padStart(3, '0')}`,
           items: order.items.map(i => ({...i, itemStatus: 'Pending'})),
+          status: 'New',
         };
         set((state) => ({ orders: [...state.orders, newOrder] }));
       },
@@ -74,24 +75,6 @@ export const useOrderStore = create(
             if (order.id !== orderId) return order;
 
             let updatedOrder = { ...order, status };
-
-            if (status === 'Cancelled') {
-              updatedOrder.items = updatedOrder.items.map(item => 
-                item.itemStatus === 'Pending' ? { ...item, itemStatus: 'Served' } : item 
-              );
-            }
-             if (status === 'Confirmed') {
-               let hasNewItems = false;
-               updatedOrder.items = updatedOrder.items.map(item => {
-                 if (item.kotStatus === 'New') {
-                   hasNewItems = true;
-                 }
-                 return item;
-               });
-               if (!hasNewItems) {
-                 return order; 
-               }
-            }
             
             return updatedOrder;
           }),
@@ -108,7 +91,7 @@ export const useOrderStore = create(
 
                 itemsWithStatus.forEach((newItem) => {
                     const existingItemIndex = updatedItems.findIndex(
-                        (i) => i.menuItem.id === newItem.menuItem.id && i.itemStatus === 'Pending' && i.kotStatus === 'New'
+                        (i) => i.menuItem.id === newItem.menuItem.id && i.kotStatus === 'New'
                     );
                     
                     if (existingItemIndex > -1) {
@@ -116,15 +99,14 @@ export const useOrderStore = create(
                     } else {
                         updatedItems.push(newItem);
                     }
-                    newTotal += newItem.menuItem.price * newItem.quantity;
                 });
                 
-                let newStatus: OrderStatus = 'Confirmed';
+                const newStatus: OrderStatus = 'New';
 
                 return { 
                   ...order, 
                   items: updatedItems,
-                  total: newTotal,
+                  total: recalculateTotal(updatedItems),
                   status: newStatus,
                   timestamp: Date.now() 
                 };
@@ -143,18 +125,11 @@ export const useOrderStore = create(
                 }
                 return item;
               });
-
-              let newStatus: OrderStatus = order.status;
-              const hasPrintedItems = updatedItems.some(i => i.kotStatus === 'Printed');
-              
-              if (hasPrintedItems && order.status !== 'Preparing' && order.status !== 'Ready' && order.status !== 'Served') {
-                  newStatus = 'Preparing'; 
-              }
               
               const updatedOrder = { 
                 ...order, 
                 items: updatedItems,
-                status: newStatus
+                status: 'Confirmed' as const
               };
 
               return updateOverallOrderStatus(updatedOrder);
@@ -209,23 +184,16 @@ export const useOrderStore = create(
           orders: state.orders.map((order) => {
             if (order.id !== orderId) return order;
 
-            if (quantity <= 0) {
-              const updatedItems = order.items.filter(
-                (item) => !(item.menuItem.id === menuItemId && item.kotStatus === 'New')
-              );
-              return {
-                ...order,
-                items: updatedItems,
-                total: recalculateTotal(updatedItems),
-              };
-            }
+            const updatedItems = order.items
+              .map((item) => {
+                if (item.menuItem.id === menuItemId && item.kotStatus === 'New') {
+                  if (quantity <= 0) return null; // Mark for removal
+                  return { ...item, quantity };
+                }
+                return item;
+              })
+              .filter(Boolean) as OrderItem[]; // Filter out nulls
 
-            const updatedItems = order.items.map((item) => {
-              if (item.menuItem.id === menuItemId && item.kotStatus === 'New') {
-                return { ...item, quantity };
-              }
-              return item;
-            });
             return {
               ...order,
               items: updatedItems,
@@ -238,9 +206,11 @@ export const useOrderStore = create(
         set((state) => ({
           orders: state.orders.map((order) => {
             if (order.id !== orderId) return order;
+            
             const updatedItems = order.items.filter(
               (item) => !(item.menuItem.id === menuItemId && item.kotStatus === 'New')
             );
+            
             return {
               ...order,
               items: updatedItems,
