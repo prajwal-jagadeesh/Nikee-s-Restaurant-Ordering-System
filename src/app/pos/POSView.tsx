@@ -7,7 +7,7 @@ import { useMenuStore } from '@/lib/menu-store';
 import type { Order, Table, MenuItem, OrderItem } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2 } from 'lucide-react';
+import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -42,6 +42,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { addDays, format, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 
 const naturalSort = (a: Table, b: Table) => {
@@ -52,7 +56,20 @@ const naturalSort = (a: Table, b: Table) => {
 
 const AnalyticsView = () => {
     const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
-    const paidOrders = useMemo(() => allOrders.filter(o => o.status === 'Paid'), [allOrders]);
+    
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: subDays(new Date(), 6),
+        to: new Date(),
+    });
+
+    const paidOrders = useMemo(() => allOrders.filter(o => {
+        if (o.status !== 'Paid') return false;
+        if (!dateRange?.from) return true; // No start date, include all
+        const orderDate = new Date(o.timestamp);
+        const from = startOfDay(dateRange.from);
+        const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+        return orderDate >= from && orderDate <= to;
+    }), [allOrders, dateRange]);
 
     const totalRevenue = useMemo(() => paidOrders.reduce((acc, order) => acc + order.total, 0), [paidOrders]);
     const totalOrders = paidOrders.length;
@@ -89,8 +106,53 @@ const AnalyticsView = () => {
             <Card>
                 <CardHeader>
                     <CardTitle>Sales Analytics</CardTitle>
-                    <CardDescription>Metrics based on all completed and paid orders.</CardDescription>
+                    <CardDescription>Metrics based on completed and paid orders within the selected date range.</CardDescription>
                 </CardHeader>
+                <CardContent>
+                   <div className="flex flex-wrap items-center gap-4">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={"outline"}
+                                className={cn(
+                                "w-[300px] justify-start text-left font-normal",
+                                !dateRange && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? (
+                                dateRange.to ? (
+                                    <>
+                                    {format(dateRange.from, "LLL dd, y")} -{" "}
+                                    {format(dateRange.to, "LLL dd, y")}
+                                    </>
+                                ) : (
+                                    format(dateRange.from, "LLL dd, y")
+                                )
+                                ) : (
+                                <span>Pick a date</span>
+                                )}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateRange?.from}
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={2}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                         <div className="flex items-center gap-2">
+                            <Button variant="outline" onClick={() => setDateRange({ from: new Date(), to: new Date() })}>Today</Button>
+                            <Button variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 6), to: new Date() })}>Last 7 Days</Button>
+                            <Button variant="outline" onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}>This Month</Button>
+                        </div>
+                   </div>
+                </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -124,6 +186,7 @@ const AnalyticsView = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Top Selling Items</CardTitle>
+                         <CardDescription>By quantity sold in the selected period.</CardDescription>
                     </CardHeader>
                     <CardContent>
                          <UiTable>
@@ -147,6 +210,7 @@ const AnalyticsView = () => {
                  <Card>
                     <CardHeader>
                         <CardTitle>Top 5 Items by Revenue</CardTitle>
+                         <CardDescription>By revenue generated in the selected period.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
@@ -804,6 +868,8 @@ export default function POSView({
     </div>
   );
 }
+
+    
 
     
 
