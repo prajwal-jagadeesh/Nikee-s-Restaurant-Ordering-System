@@ -38,6 +38,8 @@ import { groupBy } from 'lodash';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 
 const naturalSort = (a: Table, b: Table) => {
     const numA = parseInt(a.name.match(/\d+/)?.[0] || '0', 10);
@@ -92,50 +94,66 @@ const MenuManagement = () => {
                         {menuCategories.map(category => (
                             <div key={category}>
                                 <h3 className="text-xl font-semibold mb-4 font-headline">{category}</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {(groupedItems[category] || []).map(item => (
-                                    <Card key={item.id} className="flex flex-col">
-                                        <CardHeader>
-                                            <CardTitle className="text-base">{item.name}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="flex-1">
-                                            <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
-                                            <p className="font-bold mt-2">₹{item.price.toFixed(2)}</p>
-                                        </CardContent>
-                                        <CardFooter className="flex justify-between items-center border-t pt-4">
-                                            <div className="flex items-center space-x-2">
-                                                <Switch 
-                                                    id={`available-${item.id}`} 
-                                                    checked={item.available}
-                                                    onCheckedChange={() => toggleMenuItemAvailability(item.id)}
-                                                />
-                                                <Label htmlFor={`available-${item.id}`} className="text-sm">Available</Label>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEditForm(item)}>
-                                                    <Pen className="h-4 w-4"/>
-                                                </Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="destructive" size="icon" className="h-8 w-8">
-                                                            <Trash2 className="h-4 w-4"/>
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                            <AlertDialogDescription>This will permanently delete '{item.name}'. This action cannot be undone.</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => deleteMenuItem(item.id)}>Delete</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
-                                        </CardFooter>
-                                    </Card>
-                                ))}
+                                <div className="border rounded-lg">
+                                  <UiTable>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[40%]">Item</TableHead>
+                                            <TableHead className="w-[15%]">Price</TableHead>
+                                            <TableHead className="w-[20%]">Availability</TableHead>
+                                            <TableHead className="text-right w-[25%]">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                     {(groupedItems[category] || []).map(item => (
+                                        <TableRow key={item.id}>
+                                            <TableCell>
+                                                <div className="font-medium">{item.name}</div>
+                                                <div className="text-xs text-muted-foreground line-clamp-1">{item.description}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="font-mono">₹{item.price.toFixed(2)}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center space-x-2">
+                                                    <Switch 
+                                                        id={`available-${item.id}`} 
+                                                        checked={item.available}
+                                                        onCheckedChange={() => toggleMenuItemAvailability(item.id)}
+                                                    />
+                                                    <Label htmlFor={`available-${item.id}`} className="text-sm">
+                                                        {item.available ? 'Available' : 'Unavailable'}
+                                                    </Label>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex gap-2 justify-end">
+                                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEditForm(item)}>
+                                                        <Pen className="h-4 w-4"/>
+                                                    </Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="destructive" size="icon" className="h-8 w-8">
+                                                                <Trash2 className="h-4 w-4"/>
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                <AlertDialogDescription>This will permanently delete '{item.name}'. This action cannot be undone.</AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => deleteMenuItem(item.id)}>Delete</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                     ))}
+                                    </TableBody>
+                                  </UiTable>
                                 </div>
                             </div>
                         ))}
@@ -178,7 +196,7 @@ const MenuItemForm = ({ isOpen, onOpenChange, onSubmit, item, categories }: {
       setPrice(0);
       setCategory(categories[0] || '');
     }
-  }, [item, categories]);
+  }, [item, categories, isOpen]);
 
   const handleFormSubmit = () => {
     if (name && category && price > 0) {
@@ -379,6 +397,7 @@ const TableGridView = () => {
   const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
   
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [switchingOrder, setSwitchingOrder] = useState<Order | null>(null);
 
   const ordersByTable = useMemo(() => allOrders.reduce((acc, order) => {
     const table = tables.find(t => t.id === order.tableId);
@@ -395,6 +414,7 @@ const TableGridView = () => {
   
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
+  const switchTable = useOrderStore((state) => state.switchTable);
 
   const handlePrintKOT = (order: Order) => {
     const newItems = order.items.filter(item => item.kotStatus === 'New');
@@ -414,10 +434,38 @@ const TableGridView = () => {
 
   const canGenerateBill = (order: Order) => {
      if (order.status === 'Billed') return false;
-     const kitchenItems = order.items.filter(item => item.kotStatus === 'Printed');
-     if (kitchenItems.length === 0) return false;
-     return kitchenItems.every(item => item.itemStatus === 'Served');
+     const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
+     if (printedItems.length === 0) return false;
+     return printedItems.every(item => item.itemStatus === 'Served');
   }
+
+  const occupiedTableIds = useMemo(() => {
+    const occupiedIds = new Set<string>();
+    allOrders.forEach(order => {
+        if (switchingOrder && order.id === switchingOrder.id) return;
+        if (order.status !== 'Paid' && order.status !== 'Cancelled') {
+          occupiedIds.add(order.tableId);
+        }
+    });
+    return occupiedIds;
+  }, [allOrders, switchingOrder]);
+
+  const vacantTables = useMemo(() => {
+    return sortedTables.filter(t => !occupiedTableIds.has(t.id));
+  }, [sortedTables, occupiedTableIds]);
+
+  const handleSwitchTable = (newTableId: string) => {
+    if (switchingOrder) {
+      const success = switchTable(switchingOrder.id, newTableId);
+      if (success) {
+        setSwitchingOrder(null);
+        setSelectedTableId(null);
+      } else {
+        alert('Could not switch table. The selected table might be occupied.');
+      }
+    }
+  };
+
 
   return (
     <>
@@ -481,6 +529,14 @@ const TableGridView = () => {
                <div className="py-4">
                   <OrderCard order={selectedOrder} tableName={selectedTable.name}>
                     <div className="mt-4 flex flex-col space-y-2">
+                       <Button
+                          variant="outline"
+                          onClick={() => setSwitchingOrder(selectedOrder)}
+                          className="w-full"
+                        >
+                          <ArrowRightLeft className="mr-2 h-4 w-4" />
+                          Switch Table
+                        </Button>
                       {needsKotPrint(selectedOrder) && (
                         <Button
                           variant="outline"
@@ -504,6 +560,32 @@ const TableGridView = () => {
            )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={!!switchingOrder} onOpenChange={(isOpen) => !isOpen && setSwitchingOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Switch from {switchingOrder ? tables.find(t => t.id === switchingOrder.tableId)?.name : ''}</DialogTitle>
+            <DialogDescription>
+              Select a vacant table to move this order to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+            {vacantTables.length > 0 ? (
+                vacantTables.map(table => (
+                <Button
+                  key={table.id}
+                  variant="outline"
+                  onClick={() => handleSwitchTable(table.id)}
+                >
+                  {table.name}
+                </Button>
+              ))
+            ) : (
+              <p className="col-span-full text-center text-muted-foreground">No vacant tables available.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
