@@ -4,7 +4,6 @@ import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import type { OrderItem, ItemStatus, Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -88,36 +87,39 @@ export default function KDSView() {
                       {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
                   </span>
                 </CardHeader>
-                <CardContent className="flex-1 -mt-4">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead className="w-[50px] text-center">Qty</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                <CardContent className="flex-1">
+                    <div className="text-sm">
+                      {/* Header */}
+                      <div className="flex items-center font-semibold text-muted-foreground border-b pb-2">
+                          <div className="flex-1">Item</div>
+                          <div className="w-12 text-center">Qty</div>
+                          <div className="w-28 text-center">Status</div>
+                          <div className="w-32 text-right">Action</div>
+                      </div>
+                      {/* Items */}
+                      <ul className="divide-y">
                         {order.items.map((item) => (
-                          <TableRow key={item.menuItem.id}>
-                            <TableCell className="font-medium">{item.menuItem.name}</TableCell>
-                            <TableCell className="text-center font-bold">{item.quantity}</TableCell>
-                            <TableCell><ItemStatusBadge status={item.itemStatus} /></TableCell>
-                            <TableCell className="text-right">
+                          <li key={item.menuItem.id} className="flex items-center py-3">
+                            <div className="flex-1 font-medium">{item.menuItem.name}</div>
+                            <div className="w-12 text-center font-bold">{item.quantity}</div>
+                            <div className="w-28 flex justify-center">
+                              <ItemStatusBadge status={item.itemStatus} />
+                            </div>
+                            <div className="w-32 text-right">
                               {itemStatusActions[item.itemStatus] && (
                                   <Button
                                     size="sm"
                                     onClick={() => handleAction(order.orderId, item.menuItem.id, item.itemStatus)}
+                                    className="w-full"
                                   >
                                     {itemStatusActions[item.itemStatus]?.label}
                                   </Button>
                                 )}
-                            </TableCell>
-                          </TableRow>
+                            </div>
+                          </li>
                         ))}
-                      </TableBody>
-                    </Table>
+                      </ul>
+                    </div>
                 </CardContent>
               </Card>
             </motion.div>
