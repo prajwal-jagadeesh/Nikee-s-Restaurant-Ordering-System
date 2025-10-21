@@ -9,7 +9,7 @@ import { Printer, Clock, Plus, Trash2, Pen, Check, PanelLeft, LayoutGrid, Settin
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -344,89 +344,76 @@ const TableGridView = () => {
 }
 
 
-export default function POSView() {
+export default function POSView({
+  isSidebarOpen,
+  setSidebarOpen,
+}: {
+  isSidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}) {
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
   const [activeView, setActiveView] = useState('orders');
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
 
   if (!isHydrated) {
     return (
-      <div className="flex h-full">
-        <aside className="w-64 p-4 border-r">
-          <Skeleton className="h-10 w-full mb-4" />
-          <Skeleton className="h-8 w-full mb-2" />
-          <Skeleton className="h-8 w-full" />
-        </aside>
-        <main className="flex-1 p-6">
-           <Skeleton className="h-12 w-48 mb-6" />
-            <div className="space-y-8">
-              {[...Array(2)].map((_, i) => (
-                <div key={i}>
-                  <Skeleton className="h-8 w-32 mb-4" />
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                      {[...Array(8)].map((_, j) => (
-                        <Skeleton key={j} className="h-28 w-full" />
-                      ))}
-                    </div>
-                </div>
-              ))}
-            </div>
-        </main>
-      </div>
+      <main className="flex-1 p-6">
+         <Skeleton className="h-12 w-48 mb-6" />
+          <div className="space-y-8">
+            {[...Array(2)].map((_, i) => (
+              <div key={i}>
+                <Skeleton className="h-8 w-32 mb-4" />
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                    {[...Array(8)].map((_, j) => (
+                      <Skeleton key={j} className="h-28 w-full" />
+                    ))}
+                  </div>
+              </div>
+            ))}
+          </div>
+      </main>
     );
   }
 
   return (
-    <TooltipProvider>
-      <div className="flex min-h-[calc(100vh-theme(height.16))]">
-        <aside className={cn(
-            "border-r transition-all duration-300 ease-in-out",
-            isSidebarOpen ? "w-60" : "w-20"
-        )}>
+    <div className="flex min-h-[calc(100vh-theme(height.16))]">
+      <Sheet open={isSidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent side="left" className="w-60 p-0 pt-8">
             <div className="flex h-full flex-col gap-4 py-4">
-                <div className={cn("grid items-start gap-2 px-4", isSidebarOpen ? "grid" : "hidden")}>
+                <div className="grid items-start gap-2 px-4">
                     <h2 className="text-lg font-semibold">Navigation</h2>
                 </div>
                 <nav className="grid gap-2 px-4">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant={activeView === 'orders' ? 'secondary' : 'ghost'}
-                                className="w-full justify-start"
-                                onClick={() => setActiveView('orders')}
-                            >
-                                <LayoutGrid className="h-5 w-5" />
-                                {isSidebarOpen && <span className="ml-4">Active Orders</span>}
-                            </Button>
-                        </TooltipTrigger>
-                        {!isSidebarOpen && <TooltipContent side="right">Active Orders</TooltipContent>}
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant={activeView === 'management' ? 'secondary' : 'ghost'}
-                                className="w-full justify-start"
-                                onClick={() => setActiveView('management')}
-                            >
-                                <Settings className="h-5 w-5" />
-                                {isSidebarOpen && <span className="ml-4">Table Management</span>}
-                            </Button>
-                        </TooltipTrigger>
-                         {!isSidebarOpen && <TooltipContent side="right">Table Management</TooltipContent>}
-                    </Tooltip>
-                </nav>
-                 <div className="mt-auto grid gap-2 p-4">
-                    <Button variant="ghost" onClick={() => setSidebarOpen(!isSidebarOpen)} className="w-full justify-start">
-                        <PanelLeft className={cn("h-5 w-5 transition-transform", isSidebarOpen && "rotate-180")} />
-                        {isSidebarOpen && <span className="ml-4">Collapse</span>}
+                    <Button
+                        variant={activeView === 'orders' ? 'secondary' : 'ghost'}
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setActiveView('orders');
+                          setSidebarOpen(false);
+                        }}
+                    >
+                        <LayoutGrid className="h-5 w-5" />
+                        <span className="ml-4">Active Orders</span>
                     </Button>
-                </div>
+
+                    <Button
+                        variant={activeView === 'management' ? 'secondary' : 'ghost'}
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setActiveView('management');
+                          setSidebarOpen(false);
+                        }}
+                    >
+                        <Settings className="h-5 w-5" />
+                        <span className="ml-4">Table Management</span>
+                    </Button>
+                </nav>
             </div>
-        </aside>
-        <main className="flex-1 p-6">
-          {activeView === 'orders' ? <TableGridView /> : <TableManagement />}
-        </main>
-      </div>
-    </TooltipProvider>
+        </SheetContent>
+      </Sheet>
+
+      <main className="flex-1 p-6">
+        {activeView === 'orders' ? <TableGridView /> : <TableManagement />}
+      </main>
+    </div>
   );
 }
