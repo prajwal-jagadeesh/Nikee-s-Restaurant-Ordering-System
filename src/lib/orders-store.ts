@@ -13,19 +13,23 @@ interface OrderState {
   updateOrderItemsStatus: (orderId: string, currentItemStatus: ItemStatus, newItemStatus: ItemStatus) => void;
   addItemsToOrder: (orderId: string, items: OrderItem[]) => void;
   updateOrderItemsKotStatus: (orderId: string, itemIds: string[]) => void;
+  updateItemQuantity: (orderId: string, menuItemId: string, quantity: number) => void;
+  removeItem: (orderId: string, menuItemId: string) => void;
   clearOrders: () => void;
   setHydrated: (hydrated: boolean) => void;
 }
 
 let orderCounter = 0;
 
+const recalculateTotal = (items: OrderItem[]): number => {
+  return items.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
+};
+
 const updateOverallOrderStatus = (order: Order): Order => {
   const allItemsServed = order.items.every(item => item.itemStatus === 'Served');
   const anyItemPreparing = order.items.some(item => item.itemStatus === 'Preparing');
   const allItemsReadyOrServed = order.items.every(item => ['Ready', 'Served'].includes(item.itemStatus));
 
-
-  // Don't automatically change from these statuses
   if (['Billed', 'Paid', 'Cancelled', 'New', 'Confirmed'].includes(order.status)) {
     return order;
   }
@@ -71,11 +75,22 @@ export const useOrderStore = create(
 
             let updatedOrder = { ...order, status };
 
-            // If an order is being cancelled, all its pending items are cancelled too
             if (status === 'Cancelled') {
               updatedOrder.items = updatedOrder.items.map(item => 
-                item.itemStatus === 'Pending' ? { ...item, itemStatus: 'Served' } : item // A bit of a hack to hide from KDS
+                item.itemStatus === 'Pending' ? { ...item, itemStatus: 'Served' } : item 
               );
+            }
+             if (status === 'Confirmed') {
+               let hasNewItems = false;
+               updatedOrder.items = updatedOrder.items.map(item => {
+                 if (item.kotStatus === 'New') {
+                   hasNewItems = true;
+                 }
+                 return item;
+               });
+               if (!hasNewItems) {
+                 return order; 
+               }
             }
             
             return updatedOrder;
@@ -104,10 +119,7 @@ export const useOrderStore = create(
                     newTotal += newItem.menuItem.price * newItem.quantity;
                 });
                 
-                let newStatus: OrderStatus = order.status;
-                if (order.status === 'Paid' || order.status === 'Cancelled' || order.status === 'Served' || order.status === 'Billed' || order.status === 'Ready' || order.status === 'Preparing') {
-                  newStatus = 'Confirmed';
-                }
+                let newStatus: OrderStatus = 'Confirmed';
 
                 return { 
                   ...order, 
@@ -133,7 +145,9 @@ export const useOrderStore = create(
               });
 
               let newStatus: OrderStatus = order.status;
-              if (order.status === 'Confirmed') {
+              const hasPrintedItems = updatedItems.some(i => i.kotStatus === 'Printed');
+              
+              if (hasPrintedItems && order.status !== 'Preparing' && order.status !== 'Ready' && order.status !== 'Served') {
                   newStatus = 'Preparing'; 
               }
               
@@ -190,6 +204,51 @@ export const useOrderStore = create(
           })
         }))
       },
+      updateItemQuantity: (orderId, menuItemId, quantity) => {
+        set((state) => ({
+          orders: state.orders.map((order) => {
+            if (order.id !== orderId) return order;
+
+            if (quantity <= 0) {
+              const updatedItems = order.items.filter(
+                (item) => !(item.menuItem.id === menuItemId && item.kotStatus === 'New')
+              );
+              return {
+                ...order,
+                items: updatedItems,
+                total: recalculateTotal(updatedItems),
+              };
+            }
+
+            const updatedItems = order.items.map((item) => {
+              if (item.menuItem.id === menuItemId && item.kotStatus === 'New') {
+                return { ...item, quantity };
+              }
+              return item;
+            });
+            return {
+              ...order,
+              items: updatedItems,
+              total: recalculateTotal(updatedItems),
+            };
+          }),
+        }));
+      },
+      removeItem: (orderId, menuItemId) => {
+        set((state) => ({
+          orders: state.orders.map((order) => {
+            if (order.id !== orderId) return order;
+            const updatedItems = order.items.filter(
+              (item) => !(item.menuItem.id === menuItemId && item.kotStatus === 'New')
+            );
+            return {
+              ...order,
+              items: updatedItems,
+              total: recalculateTotal(updatedItems),
+            };
+          }),
+        }));
+      },
       clearOrders: () => {
         set({ orders: [] });
         orderCounter = 0;
@@ -209,13 +268,6 @@ export const useOrderStore = create(
 );
 
 
-/**
- * A hook that provides a Zustand store that is safe to use with SSR and hydration.
- * It also includes a listener for storage events to enable real-time updates across tabs.
- * @param selector The selector function to pick data from the store
- * @param defaultState The default state to use before hydration
- * @returns The selected state from the store, or the default state if not hydrated yet.
- */
 export function useHydratedStore<T, F>(
   store: (callback: (state: T) => unknown) => unknown,
   selector: (state: T) => F,
