@@ -42,4 +42,5 @@ export interface Order {
 export interface Table {
   id: string;
   name: string;
+  section: string;
 }
