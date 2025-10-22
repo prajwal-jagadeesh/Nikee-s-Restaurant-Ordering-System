@@ -39,13 +39,15 @@ export default function KDSView() {
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
     const activeKitchenOrders = allOrders.filter(order => {
-        return !['Paid', 'Cancelled', 'Delivered', 'New', 'Accepted'].includes(order.status) &&
-               order.items.some(item => item.kotStatus === 'Printed');
+        // KDS should show Confirmed (for dine-in) and Preparing (for online) orders
+        return ['Confirmed', 'Preparing'].includes(order.status) &&
+               order.items.some(item => ['Printed', 'New'].includes(item.kotStatus));
     });
 
     const combinedOrders = activeKitchenOrders.map(order => {
         const kitchenItems = order.items
-            .filter(item => item.kotStatus === 'Printed')
+            // For dine-in, we still respect the KOT status. For online, all items are sent to kitchen at once.
+            .filter(item => order.orderType === 'online' || item.kotStatus === 'Printed')
             .map(item => ({ ...item, originalOrderId: order.id }));
         
         return {
@@ -60,7 +62,7 @@ export default function KDSView() {
         };
     });
 
-    return combinedOrders.sort((a,b) => a.orderTimestamp - b.orderTimestamp);
+    return combinedOrders.filter(o => o.items.length > 0).sort((a,b) => a.orderTimestamp - b.orderTimestamp);
 
   }, [allOrders, tableMap]);
 

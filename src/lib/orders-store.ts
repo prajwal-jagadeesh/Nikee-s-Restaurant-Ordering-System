@@ -31,7 +31,7 @@ const recalculateTotal = (items: OrderItem[]): number => {
 };
 
 const updateOverallOrderStatus = (order: Order): Order => {
-  if (order.orderType === 'online' || ['Billed', 'Paid', 'Cancelled'].includes(order.status)) {
+  if (order.orderType === 'online' || ['Billed', 'Paid', 'Cancelled', 'Delivered', 'New', 'Accepted', 'Food Ready', 'Out for Delivery'].includes(order.status)) {
     return order;
   }
 
@@ -105,7 +105,7 @@ export const useOrderStore = create(
           orderType: 'online',
           id: `ORD${String(orderCounter).padStart(3, '0')}`,
           items: itemsWithStatus,
-          status: 'Accepted',
+          status: 'New', // Online orders start as 'New' until accepted
           timestamp: Date.now(),
           total: recalculateTotal(itemsWithStatus),
           kotCounter: 0,
@@ -119,6 +119,14 @@ export const useOrderStore = create(
             // For online orders, when they are marked as ready, we move them to 'Food Ready'
             if(order.orderType === 'online' && status === 'Ready') {
               return { ...order, status: 'Food Ready' };
+            }
+             // For online orders, when they are accepted, all items are marked as pending for the kitchen
+            if (order.orderType === 'online' && status === 'Preparing') {
+                 const updatedItems = order.items.map(item => ({
+                    ...item,
+                    itemStatus: 'Pending' as const,
+                }));
+                return { ...order, status, items: updatedItems };
             }
             return { ...order, status };
           }),
@@ -177,7 +185,7 @@ export const useOrderStore = create(
                 return item;
               });
               
-              const newStatus: OrderStatus = order.orderType === 'online' ? 'Preparing' : 'Confirmed';
+              const newStatus: OrderStatus = order.orderType === 'online' ? order.status : 'Confirmed';
 
               const updatedOrder = { 
                 ...order, 
@@ -211,7 +219,7 @@ export const useOrderStore = create(
                   
                   if(order.orderType === 'online') {
                     const allItemsReady = updatedItems.every(i => i.itemStatus === 'Ready' || i.itemStatus === 'Served');
-                    if (allItemsReady) {
+                    if (allItemsReady && updatedOrder.status !== 'Food Ready') {
                       updatedOrder.status = 'Food Ready';
                     }
                   } else {
@@ -240,7 +248,7 @@ export const useOrderStore = create(
 
               if(order.orderType === 'online') {
                   const allItemsReady = updatedItems.every(i => i.itemStatus === 'Ready' || i.itemStatus === 'Served');
-                  if (allItemsReady) {
+                  if (allItemsReady && updatedOrder.status !== 'Food Ready') {
                     updatedOrder.status = 'Food Ready';
                   }
               } else {

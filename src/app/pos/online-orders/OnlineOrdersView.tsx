@@ -1,16 +1,63 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Utensils, Zap, ShoppingBag, Truck } from 'lucide-react';
+import { Utensils, Zap, ShoppingBag, Truck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHydratedStore, useOrderStore } from '@/lib/orders-store';
 import type { Order, OnlinePlatform } from '@/lib/types';
-import NewOnlineOrderSheet from './NewOnlineOrderSheet';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
+import { menuItems } from '@/lib/data';
+
+const getRandomItems = (): { menuItem: any; quantity: number }[] => {
+    const items = [];
+    const numItems = Math.floor(Math.random() * 3) + 1; // 1 to 3 items
+    const shuffled = [...menuItems].sort(() => 0.5 - Math.random());
+    for (let i = 0; i < numItems; i++) {
+        items.push({
+            menuItem: shuffled[i],
+            quantity: Math.floor(Math.random() * 2) + 1, // 1 or 2 quantity
+        });
+    }
+    return items;
+};
+
+const useMockOrderGenerator = (platform: OnlinePlatform, isEnabled: boolean) => {
+    const addOnlineOrder = useOrderStore(state => state.addOnlineOrder);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (!isEnabled) return;
+
+        const generateOrder = () => {
+            const platformOrderId = `${platform.slice(0,1)}${Math.floor(1000 + Math.random() * 9000)}`;
+            const newOrder = {
+                onlinePlatform: platform,
+                platformOrderId: platformOrderId,
+                customerDetails: {
+                    name: 'Random Customer',
+                    phone: '9876543210',
+                    address: '123, Mock Address, City'
+                },
+                items: getRandomItems(),
+            };
+            addOnlineOrder(newOrder);
+            toast({
+                title: 'New Online Order!',
+                description: `Order #${platformOrderId} from ${platform} has arrived.`,
+            });
+        };
+
+        const interval = setInterval(generateOrder, Math.random() * 20000 + 15000); // 15-35 seconds
+
+        return () => clearInterval(interval);
+    }, [platform, addOnlineOrder, toast, isEnabled]);
+};
+
 
 const OnlineOrderCard = ({ order }: { order: Order }) => {
     const updateOrderStatus = useOrderStore(state => state.updateOrderStatus);
@@ -31,7 +78,7 @@ const OnlineOrderCard = ({ order }: { order: Order }) => {
 
     const nextActionLabel = () => {
         switch (order.status) {
-            case 'Accepted': return 'Start Preparing';
+            case 'Accepted': return 'Mark as Preparing';
             case 'Food Ready': return 'Dispatch';
             case 'Out for Delivery': return 'Mark as Delivered';
             default: return null;
@@ -77,8 +124,14 @@ const OnlineOrderCard = ({ order }: { order: Order }) => {
                         <span>Total</span>
                         <span>₹{order.total.toFixed(2)}</span>
                     </div>
+                    {order.status === 'New' && (
+                        <Button onClick={() => updateOrderStatus(order.id, 'Accepted')}>Accept Order</Button>
+                    )}
                     {actionLabel && (
                         <Button onClick={handleNextAction}>{actionLabel}</Button>
+                    )}
+                     {order.status !== 'New' && (
+                        <Button variant="destructive" className="mt-2" onClick={() => updateOrderStatus(order.id, 'Cancelled')}>Cancel Order</Button>
                     )}
                 </CardFooter>
             </Card>
@@ -87,8 +140,10 @@ const OnlineOrderCard = ({ order }: { order: Order }) => {
 };
 
 
-const PlatformTabContent = ({ platform }: { platform: OnlinePlatform }) => {
+const PlatformTabContent = ({ platform, isLive }: { platform: OnlinePlatform, isLive: boolean }) => {
     const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
+    useMockOrderGenerator(platform, isLive);
+
     const onlineOrders = useMemo(() => {
         return allOrders.filter(o => 
             o.orderType === 'online' && 
@@ -106,7 +161,7 @@ const PlatformTabContent = ({ platform }: { platform: OnlinePlatform }) => {
                 </div>
             ) : (
                 <div className="text-center py-20">
-                    <p className="text-muted-foreground">No active orders from {platform}.</p>
+                    <p className="text-muted-foreground">Listening for new orders from {platform}...</p>
                 </div>
             )}
         </AnimatePresence>
@@ -114,16 +169,20 @@ const PlatformTabContent = ({ platform }: { platform: OnlinePlatform }) => {
 }
 
 export default function OnlineOrdersView() {
-    const [isSheetOpen, setSheetOpen] = useState(false);
+    const [isLive, setIsLive] = useState(false);
 
     return (
         <>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-bold font-headline">Online Orders</h2>
-                <Button onClick={() => setSheetOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    New Online Order
-                </Button>
+                 <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-muted-foreground">
+                        {isLive ? "Receiving Live Orders" : "Simulation Paused"}
+                    </span>
+                    <Button onClick={() => setIsLive(prev => !prev)} variant={isLive ? "destructive" : "default"}>
+                        {isLive ? "Stop Live Orders" : "Start Receiving Orders"}
+                    </Button>
+                </div>
             </div>
             
             <Tabs defaultValue="Zomato" className="w-full">
@@ -133,17 +192,15 @@ export default function OnlineOrdersView() {
                     <TabsTrigger value="Others"><Utensils className="mr-2 h-4 w-4" />Others</TabsTrigger>
                 </TabsList>
                 <TabsContent value="Zomato" className="mt-6">
-                   <PlatformTabContent platform="Zomato" />
+                   <PlatformTabContent platform="Zomato" isLive={isLive} />
                 </TabsContent>
                 <TabsContent value="Swiggy" className="mt-6">
-                   <PlatformTabContent platform="Swiggy" />
+                   <PlatformTabContent platform="Swiggy" isLive={isLive} />
                 </TabsContent>
                 <TabsContent value="Others" className="mt-6">
-                    <PlatformTabContent platform="Others" />
+                    <PlatformTabContent platform="Others" isLive={isLive} />
                 </TabsContent>
             </Tabs>
-
-            <NewOnlineOrderSheet isOpen={isSheetOpen} onOpenChange={setSheetOpen} />
         </>
     )
 }
