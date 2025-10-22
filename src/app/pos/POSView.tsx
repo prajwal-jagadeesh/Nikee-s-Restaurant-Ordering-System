@@ -583,7 +583,7 @@ const useElapsedTime = (timestamp: number) => {
     return elapsed;
 };
 
-const TableCard = ({ table, order, onSelect }: { table: Table; order?: Order; onSelect: (tableId: string) => void; }) => {
+const TableCard = ({ table, order, onSelect, onSwitch }: { table: Table; order?: Order; onSelect: () => void; onSwitch: () => void; }) => {
     const elapsed = useElapsedTime(order?.timestamp || 0);
 
     const getStatus = () => {
@@ -604,26 +604,40 @@ const TableCard = ({ table, order, onSelect }: { table: Table; order?: Order; on
 
     return (
         <Card
-            onClick={() => order && onSelect(table.id)}
             className={cn(
-                "flex flex-col h-28 w-28 justify-between transition-all duration-300 rounded-lg border-2 shadow-sm",
+                "flex flex-col h-28 w-28 justify-between transition-all duration-300 rounded-lg border-2 shadow-sm relative",
                 order ? 'cursor-pointer hover:shadow-lg' : 'cursor-default',
                 statusStyles[status]
             )}
         >
-            <CardHeader className="p-2 text-center">
-                <CardTitle className="text-base font-bold">{table.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-2 flex-1 flex flex-col justify-end text-center">
-                {status === 'Billed' && <p className="font-bold text-sm">Billed</p>}
-                {(status === 'Running' || status === 'KOT Printed') && (
-                     <p className="text-xs font-semibold">{elapsed}</p>
-                )}
-                 {order && <p className="text-sm font-bold mt-1">₹{order.total.toFixed(0)}</p>}
-            </CardContent>
-            <CardFooter className="p-1 flex justify-center items-center h-6">
-                {status === 'KOT Printed' && <Printer className="h-4 w-4 text-muted-foreground" />}
-            </CardFooter>
+            {order && (
+                 <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute top-0 right-0 h-7 w-7 text-muted-foreground z-10"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onSwitch();
+                    }}
+                >
+                    <ArrowRightLeft className="h-4 w-4" />
+                </Button>
+            )}
+            <div onClick={onSelect} className="flex flex-col flex-1 h-full w-full">
+              <CardHeader className="p-2 text-center flex-initial">
+                  <CardTitle className="text-base font-bold">{table.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-2 flex-1 flex flex-col justify-end text-center">
+                  {status === 'Billed' && <p className="font-bold text-sm">Billed</p>}
+                  {(status === 'Running' || status === 'KOT Printed') && (
+                       <p className="text-xs font-semibold">{elapsed}</p>
+                  )}
+                   {order && <p className="text-sm font-bold mt-1">₹{order.total.toFixed(0)}</p>}
+              </CardContent>
+              <CardFooter className="p-1 flex justify-center items-center h-6">
+                  {status === 'KOT Printed' && <Printer className="h-4 w-4 text-muted-foreground" />}
+              </CardFooter>
+            </div>
         </Card>
     );
 };
@@ -708,7 +722,9 @@ const TableGridView = () => {
     <>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-11 gap-4">
         <AnimatePresence>
-          {sortedTables.map((table) => (
+          {sortedTables.map((table) => {
+            const order = ordersByTable[table.id];
+            return (
               <motion.div
                 key={table.id}
                 layout
@@ -716,9 +732,15 @@ const TableGridView = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
               >
-               <TableCard table={table} order={ordersByTable[table.id]} onSelect={setSelectedTableId} />
+               <TableCard 
+                  table={table} 
+                  order={order} 
+                  onSelect={() => order && setSelectedTableId(table.id)}
+                  onSwitch={() => order && setSwitchingOrder(order)}
+               />
               </motion.div>
-            ))}
+            )
+          })}
          </AnimatePresence>
       </div>
       <Sheet open={!!selectedOrder} onOpenChange={(isOpen) => !isOpen && setSelectedTableId(null)}>
@@ -731,14 +753,6 @@ const TableGridView = () => {
                <div className="py-4">
                   <OrderCard order={selectedOrder} tableName={selectedTable.name}>
                     <div className="mt-4 flex flex-col space-y-2">
-                       <Button
-                          variant="outline"
-                          onClick={() => setSwitchingOrder(selectedOrder)}
-                          className="w-full"
-                        >
-                          <ArrowRightLeft className="mr-2 h-4 w-4" />
-                          Switch Table
-                        </Button>
                       {needsKotPrint(selectedOrder) && (
                         <Button
                           variant="outline"
