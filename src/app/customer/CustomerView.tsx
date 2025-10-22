@@ -121,7 +121,12 @@ export default function CustomerView() {
         const distance = getDistance(userLat, userLon, parseFloat(restaurantLocation.latitude!), parseFloat(restaurantLocation.longitude!));
         
         if (distance <= 50) {
-           setLocationState({ status: 'ok', message: '' });
+           setLocationState({ status: 'ok', message: 'Location verified.' });
+           toast({
+               title: "Location Verified",
+               description: "You're cleared to place an order.",
+               duration: 3000,
+           });
         } else {
           setLocationState({ status: 'error', message: 'You are too far from the restaurant to place an order.' });
         }
@@ -413,3 +418,5 @@ export default function CustomerView() {
     </>
   );
 }
+
+    
