@@ -1,5 +1,3 @@
-
-
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -11,7 +9,7 @@ import OrderCard from '@/components/OrderCard';
 import KOTPreviewSheet from './KOTPreviewSheet';
 import BillPreviewSheet from './BillPreviewSheet';
 import { Button } from '@/components/ui/button';
-import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock, Truck, LocateFixed } from 'lucide-react';
+import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock, Truck, LocateFixed, IndianRupee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -840,7 +838,7 @@ const TableCard = ({
                 statusStyles[status]
             )}
         >
-             <div className="absolute top-1 right-1 z-10">
+             <div className="absolute top-1 right-1 z-10 flex flex-col items-center gap-1">
                 {order && (
                      <Button 
                         variant="ghost" 
@@ -854,6 +852,11 @@ const TableCard = ({
                         <ArrowRightLeft className="h-4 w-4" />
                     </Button>
                 )}
+                 {order?.paymentRequested && (
+                    <div className="h-7 w-7 flex items-center justify-center bg-green-500 text-white rounded-full">
+                        <IndianRupee className="h-4 w-4" />
+                    </div>
+                 )}
             </div>
             <div onClick={onSelect} className="flex flex-col flex-1 h-full w-full p-2">
               <CardHeader className="p-0 text-center flex-initial">
@@ -921,6 +924,7 @@ const TableGridView = () => {
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
   const switchTable = useOrderStore((state) => state.switchTable);
+  const requestPayment = useOrderStore((state) => state.requestPayment);
 
   const handlePrintKOT = (order: Order) => {
     const newItems = order.items.filter(item => item.kotStatus === 'New');
@@ -932,6 +936,10 @@ const TableGridView = () => {
 
   const handlePrintBill = (orderId: string) => {
     updateOrderStatus(orderId, 'Billed');
+    const order = allOrders.find(o => o.id === orderId);
+    if(order?.paymentRequested) {
+        requestPayment(orderId, false);
+    }
   };
 
   const needsKotPrint = (order: Order) => {
@@ -940,6 +948,10 @@ const TableGridView = () => {
 
   const canGenerateBill = (order: Order) => {
      if (order.status === 'Billed') return false;
+     
+     // Allow generating bill if payment is requested, regardless of item status
+     if (order.paymentRequested) return true;
+
      const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
      if (printedItems.length === 0) return false;
      return printedItems.every(item => item.itemStatus === 'Served');

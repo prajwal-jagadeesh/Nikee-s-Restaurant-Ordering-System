@@ -54,6 +54,8 @@ export interface Order {
   total: number;
   kotCounter?: number; // To generate unique KOT IDs
   switchedFrom?: string; // To track table switches
+  assistanceRequested?: boolean;
+  paymentRequested?: boolean;
 }
 
 export interface Table {

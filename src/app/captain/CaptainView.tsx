@@ -34,6 +34,7 @@ export default function CaptainView() {
   const updateItemQuantity = useOrderStore((state) => state.updateItemQuantity);
   const removeItem = useOrderStore((state) => state.removeItem);
   const switchTable = useOrderStore((state) => state.switchTable);
+  const requestAssistance = useOrderStore((state) => state.requestAssistance);
   
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
@@ -76,7 +77,7 @@ export default function CaptainView() {
     orders.forEach(order => {
         // The order being switched is not considered "occupied" for the purpose of finding a new table
         if (switchingOrder && order.id === switchingOrder.id) return;
-        occupiedIds.add(order.tableId);
+        occupiedIds.add(order.tableId!);
     });
     return occupiedIds;
   }, [orders, switchingOrder]);
@@ -127,12 +128,13 @@ export default function CaptainView() {
               >
                 <OrderCard 
                   order={order} 
-                  tableName={tableMap.get(order.tableId)} 
+                  tableName={tableMap.get(order.tableId!)} 
                   onServeItem={handleMarkServed} 
                   showKotDetails={false}
                   onSwitchTable={() => setSwitchingOrder(order)}
                   onEditItems={hasNewItems(order) ? () => setEditingOrderId(order.id) : undefined}
                   onCancelOrder={canCancelOrder(order) ? () => handleCancel(order.id) : undefined}
+                  onAcknowledgeAssistance={() => requestAssistance(order.id, false)}
                 >
                   <div className="mt-4 flex flex-col space-y-2">
                     {hasNewItems(order) && order.status === 'New' && (
@@ -218,7 +220,7 @@ export default function CaptainView() {
       <Dialog open={!!switchingOrder} onOpenChange={(isOpen) => !isOpen && setSwitchingOrder(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Switch from {switchingOrder ? tableMap.get(switchingOrder.tableId) : ''}</DialogTitle>
+            <DialogTitle>Switch from {switchingOrder ? tableMap.get(switchingOrder.tableId!) : ''}</DialogTitle>
             <DialogDescription>
               Select a vacant table to move this order to.
             </DialogDescription>
