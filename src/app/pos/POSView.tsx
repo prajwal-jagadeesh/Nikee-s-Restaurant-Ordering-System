@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -739,7 +740,7 @@ const TableCard = ({
     return (
         <Card
             className={cn(
-                "flex flex-col h-28 w-28 transition-all duration-300 rounded-lg border-2 shadow-sm relative",
+                "flex flex-col h-32 w-32 transition-all duration-300 rounded-lg border-2 shadow-sm relative",
                 order ? 'cursor-pointer hover:shadow-lg' : 'cursor-default',
                 statusStyles[status]
             )}
@@ -759,18 +760,19 @@ const TableCard = ({
                     </Button>
                 )}
             </div>
-            <div onClick={onSelect} className="flex flex-col flex-1 h-full w-full">
-              <CardHeader className="p-2 text-center flex-initial">
+            <div onClick={onSelect} className="flex flex-col flex-1 h-full w-full p-2">
+              <CardHeader className="p-0 text-center flex-initial">
                   <CardTitle className="text-base font-bold">{table.name}</CardTitle>
               </CardHeader>
-              <CardContent className="p-2 flex-1 flex flex-col justify-end text-center">
+              <CardContent className="p-0 flex-1 flex flex-col justify-center items-center text-center">
                   {status === 'Billed' && <p className="font-bold text-sm">Billed</p>}
                   {(status === 'Running' || status === 'KOT Printed') && (
                        <p className="text-xs font-semibold">{elapsed}</p>
                   )}
                    {order && <p className="text-sm font-bold mt-1">₹{order.total.toFixed(0)}</p>}
+                   {!order && <div className="flex-1" />}
               </CardContent>
-              <CardFooter className="p-1 flex justify-end items-center h-7">
+              <CardFooter className="p-0 flex justify-end items-center h-7">
                   {onPrintAction ? (
                     <Button 
                         variant="ghost" 
@@ -784,7 +786,7 @@ const TableCard = ({
                         <Printer className="h-4 w-4" />
                     </Button>
                   ) : (
-                    hasPrintedKot && <Printer className="h-4 w-4 text-muted-foreground" />
+                    hasPrintedKot && status !== 'Billed' && <Printer className="h-4 w-4 text-muted-foreground" />
                   )}
               </CardFooter>
             </div>
@@ -886,7 +888,7 @@ const TableGridView = () => {
 
   return (
     <>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-11 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-6">
         <AnimatePresence>
           {sortedTables.map((table) => {
             const order = ordersByTable[table.id];
