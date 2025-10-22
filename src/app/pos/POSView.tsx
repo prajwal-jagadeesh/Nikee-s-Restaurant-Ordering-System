@@ -1,9 +1,4 @@
 
-
-
-
-
-
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -55,6 +50,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from "@/hooks/use-toast";
 import OnlineOrdersView from './online-orders/OnlineOrdersView';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 const naturalSort = (a: Table, b: Table) => {
@@ -67,116 +63,128 @@ const SettingsManagement = () => {
     const { toast } = useToast();
     return (
         <div className="max-w-4xl mx-auto space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Printer Settings</CardTitle>
-                    <CardDescription>Configure the default printer and page settings for KOTs and Bills.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="printer-select">Default Printer</Label>
-                        <Select defaultValue="tvs-rp-3230">
-                            <SelectTrigger id="printer-select" className="w-[300px]">
-                                <SelectValue placeholder="Select a printer" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="tvs-rp-3230">TVS RP 3230 Thermal Printer</SelectItem>
-                                <SelectItem value="generic-80mm">Generic 80mm Thermal Printer</SelectItem>
-                                <SelectItem value="system">System Print Dialog</SelectItem>
-                            </SelectContent>
-                        </Select>
+            <h2 className="text-3xl font-bold font-headline">Settings</h2>
+            <Tabs defaultValue="general" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="general">General Settings</TabsTrigger>
+                    <TabsTrigger value="printer">Printer Settings</TabsTrigger>
+                </TabsList>
+                <TabsContent value="general" className="mt-6">
+                    <div className="space-y-6">
+                         <Card>
+                            <CardHeader>
+                                <CardTitle>Bill Customization</CardTitle>
+                                <CardDescription>Customize the header, footer, and other elements of your printed bill.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="restaurant-name">Restaurant Name</Label>
+                                    <Input id="restaurant-name" placeholder="e.g. Nikee's Zara" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bill-header">Header Content</Label>
+                                    <Textarea id="bill-header" placeholder="e.g. Address Line 1&#x0a;Phone: 123-456-7890" rows={3} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bill-footer">Footer Content</Label>
+                                    <Textarea id="bill-footer" placeholder="e.g. Thank you for visiting!&#x0a;WiFi: YourNetwork" rows={3} />
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="show-gst">Show GST Number</Label>
+                                            <CardDescription>Display your GSTIN on the bill.</CardDescription>
+                                        </div>
+                                        <Switch id="show-gst" />
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <Label htmlFor="show-fssai">Show FSSAI Number</Label>
+                                            <CardDescription>Display your FSSAI license number.</CardDescription>
+                                        </div>
+                                        <Switch id="show-fssai" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                            <CardFooter>
+                                <Button onClick={() => {
+                                    toast({
+                                        title: "Settings Saved",
+                                        description: "Your bill customization settings have been updated.",
+                                    })
+                                }}>Save Bill Settings</Button>
+                            </CardFooter>
+                        </Card>
+                         <Card>
+                            <CardHeader>
+                                <CardTitle>Template Design</CardTitle>
+                                <CardDescription>Customize the look and feel of your printed KOTs and Bills. (Future Feature)</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                            <div className="text-muted-foreground text-center py-8">
+                                    Template customization options will be available here in a future update.
+                            </div>
+                            </CardContent>
+                        </Card>
                     </div>
-                    <div className="space-y-2">
-                        <Label>Page Settings</Label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-md">
+                </TabsContent>
+                <TabsContent value="printer" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Printer Settings</CardTitle>
+                            <CardDescription>Configure the default printer and page settings for KOTs and Bills.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="paper-width">Paper Width</Label>
-                                <Input id="paper-width" defaultValue="80mm" />
+                                <Label htmlFor="printer-select">Default Printer</Label>
+                                <Select defaultValue="tvs-rp-3230">
+                                    <SelectTrigger id="printer-select" className="w-[300px]">
+                                        <SelectValue placeholder="Select a printer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="tvs-rp-3230">TVS RP 3230 Thermal Printer</SelectItem>
+                                        <SelectItem value="generic-80mm">Generic 80mm Thermal Printer</SelectItem>
+                                        <SelectItem value="system">System Print Dialog</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="margin-top">Margin Top</Label>
-                                <Input id="margin-top" defaultValue="5mm" />
+                                <Label>Page Settings</Label>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-md">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="paper-width">Paper Width</Label>
+                                        <Input id="paper-width" defaultValue="80mm" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="margin-top">Margin Top</Label>
+                                        <Input id="margin-top" defaultValue="5mm" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="margin-bottom">Margin Bottom</Label>
+                                        <Input id="margin-bottom" defaultValue="5mm" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="margin-sides">Margin Sides</Label>
+                                        <Input id="margin-sides" defaultValue="3mm" />
+                                    </div>
+                                </div>
                             </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="margin-bottom">Margin Bottom</Label>
-                                <Input id="margin-bottom" defaultValue="5mm" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="margin-sides">Margin Sides</Label>
-                                <Input id="margin-sides" defaultValue="3mm" />
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-                 <CardFooter>
-                    <Button onClick={() => {
-                        toast({
-                            title: "Settings Saved",
-                            description: "Your printer settings have been updated.",
-                        })
-                    }}>Save Printer Settings</Button>
-                </CardFooter>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Bill Customization</CardTitle>
-                    <CardDescription>Customize the header, footer, and other elements of your printed bill.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                     <div className="space-y-2">
-                        <Label htmlFor="restaurant-name">Restaurant Name</Label>
-                        <Input id="restaurant-name" placeholder="e.g. Nikee's Zara" />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="bill-header">Header Content</Label>
-                        <Textarea id="bill-header" placeholder="e.g. Address Line 1&#x0a;Phone: 123-456-7890" rows={3} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="bill-footer">Footer Content</Label>
-                        <Textarea id="bill-footer" placeholder="e.g. Thank you for visiting!&#x0a;WiFi: YourNetwork" rows={3} />
-                    </div>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="show-gst">Show GST Number</Label>
-                                <CardDescription>Display your GSTIN on the bill.</CardDescription>
-                            </div>
-                            <Switch id="show-gst" />
-                        </div>
-                        <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="show-fssai">Show FSSAI Number</Label>
-                                <CardDescription>Display your FSSAI license number.</CardDescription>
-                            </div>
-                            <Switch id="show-fssai" />
-                        </div>
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button onClick={() => {
-                        toast({
-                            title: "Settings Saved",
-                            description: "Your bill customization settings have been updated.",
-                        })
-                    }}>Save Bill Settings</Button>
-                </CardFooter>
-            </Card>
-
-             <Card>
-                <CardHeader>
-                    <CardTitle>Template Design</CardTitle>
-                    <CardDescription>Customize the look and feel of your printed KOTs and Bills. (Future Feature)</CardDescription>
-                </CardHeader>
-                <CardContent>
-                   <div className="text-muted-foreground text-center py-8">
-                        Template customization options will be available here in a future update.
-                   </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                        <CardFooter>
+                            <Button onClick={() => {
+                                toast({
+                                    title: "Settings Saved",
+                                    description: "Your printer settings have been updated.",
+                                })
+                            }}>Save Printer Settings</Button>
+                        </CardFooter>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 };
+
 
 const AnalyticsView = () => {
     const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
@@ -1101,7 +1109,7 @@ export default function POSView({
                         }}
                     >
                         <Printer className="h-5 w-5" />
-                        <span className="ml-4">Printer Settings</span>
+                        <span className="ml-4">Settings</span>
                     </Button>
                 </nav>
             </div>
