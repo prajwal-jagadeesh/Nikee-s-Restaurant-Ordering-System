@@ -620,27 +620,12 @@ const TableCard = ({
     return (
         <Card
             className={cn(
-                "flex flex-col h-28 w-28 justify-between transition-all duration-300 rounded-lg border-2 shadow-sm relative",
+                "flex flex-col h-28 w-28 transition-all duration-300 rounded-lg border-2 shadow-sm relative",
                 order ? 'cursor-pointer hover:shadow-lg' : 'cursor-default',
                 statusStyles[status]
             )}
         >
-            <div 
-                className="absolute top-0 right-0 z-10 flex gap-0.5"
-            >
-                {onPrintAction && (
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7 text-muted-foreground"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onPrintAction();
-                        }}
-                    >
-                        <Printer className="h-4 w-4" />
-                    </Button>
-                )}
+             <div className="absolute top-1 right-1 z-10">
                 {order && (
                      <Button 
                         variant="ghost" 
@@ -666,8 +651,21 @@ const TableCard = ({
                   )}
                    {order && <p className="text-sm font-bold mt-1">₹{order.total.toFixed(0)}</p>}
               </CardContent>
-              <CardFooter className="p-1 flex justify-center items-center h-6">
-                  {status === 'KOT Printed' && !onPrintAction && <Printer className="h-4 w-4 text-muted-foreground" />}
+              <CardFooter className="p-1 flex justify-end items-center h-7">
+                  {onPrintAction && (
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-muted-foreground"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onPrintAction();
+                        }}
+                    >
+                        <Printer className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {hasPrintedKot && !onPrintAction && <Printer className="h-4 w-4 text-muted-foreground" />}
               </CardFooter>
             </div>
         </Card>
@@ -823,7 +821,7 @@ const TableGridView = () => {
       <Dialog open={!!switchingOrder} onOpenChange={(isOpen) => !isOpen && setSwitchingOrder(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Switch from {switchingOrder ? tables.find(t => t.id === switchingOrder.tableId)?.name : ''}</DialogTitle>
+            <DialogTitle>Switch from {switchingOrder ? tables.find(t => t.id === switchingOrder.id)?.name : ''}</DialogTitle>
             <DialogDescription>
               Select a vacant table to move this order to.
             </DialogDescription>
