@@ -125,7 +125,7 @@ export default function CustomerView() {
            toast({
                title: "Location Verified",
                description: "You're cleared to place an order.",
-               duration: 3000,
+               duration: 2000,
            });
         } else {
           setLocationState({ status: 'error', message: 'You are too far from the restaurant to place an order.' });
