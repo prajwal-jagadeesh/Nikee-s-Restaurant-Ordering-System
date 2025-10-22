@@ -7,7 +7,7 @@ import { useMenuStore } from '@/lib/menu-store';
 import type { Order, Table, MenuItem, OrderItem } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon } from 'lucide-react';
+import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -562,6 +562,72 @@ const TableManagement = () => {
     );
 };
 
+const useElapsedTime = (timestamp: number) => {
+    const [elapsed, setElapsed] = useState('');
+
+    useEffect(() => {
+        const update = () => {
+            const now = Date.now();
+            const diff = now - timestamp;
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            setElapsed(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+        };
+
+        update();
+        const interval = setInterval(update, 1000);
+
+        return () => clearInterval(interval);
+    }, [timestamp]);
+
+    return elapsed;
+};
+
+const TableCard = ({ table, order, onSelect }: { table: Table; order?: Order; onSelect: (tableId: string) => void; }) => {
+    const elapsed = useElapsedTime(order?.timestamp || 0);
+
+    const getStatus = () => {
+        if (!order) return 'Vacant';
+        if (order.status === 'Billed') return 'Billed';
+        if (order.items.some(i => i.kotStatus === 'Printed')) return 'KOT Printed';
+        return 'Running';
+    };
+
+    const status = getStatus();
+
+    const statusStyles = {
+        'Vacant': 'border-dashed bg-card',
+        'Running': 'bg-[hsl(var(--status-running))] border-transparent',
+        'KOT Printed': 'bg-[hsl(var(--status-kot))] border-transparent',
+        'Billed': 'bg-[hsl(var(--status-billed))] border-transparent',
+    };
+
+    return (
+        <Card
+            onClick={() => order && onSelect(table.id)}
+            className={cn(
+                "flex flex-col h-28 w-28 justify-between transition-all duration-300 rounded-lg border-2 shadow-sm",
+                order ? 'cursor-pointer hover:shadow-lg' : 'cursor-default',
+                statusStyles[status]
+            )}
+        >
+            <CardHeader className="p-2 text-center">
+                <CardTitle className="text-base font-bold">{table.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 flex-1 flex flex-col justify-end text-center">
+                {status === 'Billed' && <p className="font-bold text-sm">Billed</p>}
+                {(status === 'Running' || status === 'KOT Printed') && (
+                     <p className="text-xs font-semibold">{elapsed}</p>
+                )}
+                 {order && <p className="text-sm font-bold mt-1">₹{order.total.toFixed(0)}</p>}
+            </CardContent>
+            <CardFooter className="p-1 flex justify-center items-center h-6">
+                {status === 'KOT Printed' && <Printer className="h-4 w-4 text-muted-foreground" />}
+            </CardFooter>
+        </Card>
+    );
+};
+
 
 const TableGridView = () => {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
@@ -642,31 +708,17 @@ const TableGridView = () => {
     <>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-11 gap-4">
         <AnimatePresence>
-          {sortedTables.map((table) => {
-              const order = ordersByTable[table.id];
-              
-              return (
-                <motion.div
-                  key={table.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                >
-                  <Card
-                    onClick={() => order && setSelectedTableId(table.id)}
-                    className={cn(
-                      "flex flex-col h-24 w-24 justify-center items-center transition-all duration-300 rounded-lg border-2 border-dashed",
-                      order ? 'cursor-pointer hover:shadow-lg bg-card' : 'shadow-sm bg-card'
-                    )}
-                  >
-                    <CardContent className="p-0 flex flex-col items-center justify-center flex-1">
-                      <p className="font-semibold text-card-foreground">{table.name}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-          })}
+          {sortedTables.map((table) => (
+              <motion.div
+                key={table.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+              >
+               <TableCard table={table} order={ordersByTable[table.id]} onSelect={setSelectedTableId} />
+              </motion.div>
+            ))}
          </AnimatePresence>
       </div>
       <Sheet open={!!selectedOrder} onOpenChange={(isOpen) => !isOpen && setSelectedTableId(null)}>
@@ -758,7 +810,7 @@ export default function POSView({
           <div className="space-y-8">
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-11 gap-4">
                 {[...Array(22)].map((_, j) => (
-                  <Skeleton key={j} className="h-24 w-24" />
+                  <Skeleton key={j} className="h-28 w-28" />
                 ))}
             </div>
           </div>
