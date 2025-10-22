@@ -442,7 +442,7 @@ export default function CustomerView() {
                      </>
                    )}
 
-                    {activeOrder && cart.length === 0 && (
+                    {activeOrder && (
                         <div className="space-y-2">
                              {allItemsServed && !activeOrder.paymentRequested ? (
                                 <Button size="lg" className="w-full" onClick={handleReadyToPay}>Ready to Pay?</Button>
@@ -479,3 +479,4 @@ export default function CustomerView() {
 }
 
     
+
