@@ -45,10 +45,12 @@ const updateOverallOrderStatus = (order: Order): Order => {
       return order;
   }
 
-  const allServed = itemsInKitchen.every(item => item.itemStatus === 'Served');
-  if (allServed) {
-    return { ...order, status: 'Served' };
-  }
+  // This logic was flawed. An order isn't "Served" just because all items are.
+  // It should wait for billing. We'll remove the 'Served' status update.
+  // const allServed = itemsInKitchen.every(item => item.itemStatus === 'Served');
+  // if (allServed) {
+  //   return { ...order, status: 'Served' };
+  // }
 
   const someReady = itemsInKitchen.some(item => item.itemStatus === 'Ready');
   if (someReady) {
