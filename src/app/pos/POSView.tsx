@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -9,7 +10,7 @@ import OrderCard from '@/components/OrderCard';
 import KOTPreviewSheet from './KOTPreviewSheet';
 import BillPreviewSheet from './BillPreviewSheet';
 import { Button } from '@/components/ui/button';
-import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock, Truck } from 'lucide-react';
+import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock, Truck, LocateFixed } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -59,15 +60,83 @@ const naturalSort = (a: Table, b: Table) => {
     return numA - numB;
 };
 
+const LocationSettings = () => {
+    const { toast } = useToast();
+    const [latitude, setLatitude] = useState('');
+    const [longitude, setLongitude] = useState('');
+
+    const handleFetchLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setLatitude(position.coords.latitude.toString());
+                    setLongitude(position.coords.longitude.toString());
+                    toast({
+                        title: "Location Fetched",
+                        description: "Coordinates have been updated.",
+                    });
+                },
+                (error) => {
+                    toast({
+                        variant: 'destructive',
+                        title: "Error Fetching Location",
+                        description: error.message,
+                    });
+                }
+            );
+        } else {
+            toast({
+                variant: 'destructive',
+                title: "Geolocation Not Supported",
+                description: "Your browser does not support geolocation.",
+            });
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Location Settings</CardTitle>
+                <CardDescription>Set your restaurant's coordinates for mapping and other services.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="latitude">Latitude</Label>
+                        <Input id="latitude" value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="e.g. 12.9716" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="longitude">Longitude</Label>
+                        <Input id="longitude" value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="e.g. 77.5946" />
+                    </div>
+                </div>
+                <Button variant="outline" onClick={handleFetchLocation}>
+                    <LocateFixed className="mr-2 h-4 w-4" />
+                    Fetch Automatically
+                </Button>
+            </CardContent>
+            <CardFooter>
+                <Button onClick={() => {
+                    toast({
+                        title: "Settings Saved",
+                        description: "Your location settings have been updated.",
+                    })
+                }}>Save Location</Button>
+            </CardFooter>
+        </Card>
+    )
+}
+
 const SettingsManagement = () => {
     const { toast } = useToast();
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-3xl font-bold font-headline">Settings</h2>
             <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="general">General Settings</TabsTrigger>
                     <TabsTrigger value="printer">Printer Settings</TabsTrigger>
+                    <TabsTrigger value="location">Location Settings</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general" className="mt-6">
                     <div className="space-y-6">
@@ -179,6 +248,9 @@ const SettingsManagement = () => {
                             }}>Save Printer Settings</Button>
                         </CardFooter>
                     </Card>
+                </TabsContent>
+                 <TabsContent value="location" className="mt-6">
+                    <LocationSettings />
                 </TabsContent>
             </Tabs>
         </div>
