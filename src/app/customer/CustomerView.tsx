@@ -6,17 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetDescription } from '@/components/ui/sheet';
-import { Plus, Minus, ShoppingCart, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
 import { useMenuStore } from '@/lib/menu-store';
+import { useSettingsStore } from '@/lib/settings-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
 import ItemStatusBadge from '@/components/ItemStatusBadge';
-
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 const statusInfo: Record<OrderStatus, { label: string, description: string, progress: number }> = {
   'New': { label: 'Waiting for Confirmation', description: 'Your order has been sent. A captain will confirm it shortly.', progress: 20 },
@@ -27,6 +29,10 @@ const statusInfo: Record<OrderStatus, { label: string, description: string, prog
   'Billed': { label: 'Bill Generated', description: 'The bill has been generated. Please proceed to payment with the captain.', progress: 100 },
   'Paid': { label: 'Paid', description: 'Thank you for your visit!', progress: 100 },
   'Cancelled': { label: 'Cancelled', description: 'This order has been cancelled.', progress: 0 },
+  Accepted: { label: 'Order Accepted', description: 'The restaurant has accepted your online order.', progress: 20 },
+  'Food Ready': { label: 'Food is Ready', description: 'Your food is ready for pickup/delivery.', progress: 80 },
+  'Out for Delivery': { label: 'Out for Delivery', description: 'Your order is on its way!', progress: 90 },
+  Delivered: { label: 'Delivered', description: 'Your order has been delivered.', progress: 100 },
 }
 
 const useRedirectIfSwitched = (currentTable: Table | undefined) => {
@@ -51,6 +57,22 @@ const useRedirectIfSwitched = (currentTable: Table | undefined) => {
     }, [allOrders, currentTable, allTables, router, clearSwitchedFrom]);
 };
 
+// Haversine formula to calculate distance between two lat/lon points
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI/180; // φ, λ in radians
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    const d = R * c; // in metres
+    return d;
+}
 
 export default function CustomerView() {
   const searchParams = useSearchParams();
@@ -67,10 +89,54 @@ export default function CustomerView() {
   const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
   const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
   const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
+
+  const restaurantLocation = useHydratedStore(useSettingsStore, state => state.location, { latitude: null, longitude: null });
   
   const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const [locationState, setLocationState] = useState<{ status: 'idle' | 'checking' | 'ok' | 'error', message: string }>({ status: 'idle', message: '' });
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!restaurantLocation.latitude || !restaurantLocation.longitude) {
+      setLocationState({ status: 'ok', message: '' }); // No location set, so we allow orders
+      return;
+    }
+
+    setLocationState({ status: 'checking', message: 'Verifying your location...' });
+
+    if (!navigator.geolocation) {
+      setLocationState({ status: 'error', message: 'Geolocation is not supported by your browser.' });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLat = position.coords.latitude;
+        const userLon = position.coords.longitude;
+        
+        const distance = getDistance(userLat, userLon, parseFloat(restaurantLocation.latitude!), parseFloat(restaurantLocation.longitude!));
+        
+        if (distance <= 50) {
+           setLocationState({ status: 'ok', message: '' });
+        } else {
+          setLocationState({ status: 'error', message: 'You are too far from the restaurant to place an order.' });
+        }
+      },
+      () => {
+        setLocationState({ status: 'error', message: 'Please enable location services to place an order.' });
+         toast({
+            variant: "destructive",
+            title: "Location Access Denied",
+            description: "To place an order, please allow location access in your browser settings.",
+          });
+      }
+    );
+  }, [restaurantLocation.latitude, restaurantLocation.longitude, toast]);
+
 
   useEffect(() => {
     if (menuCategories.length > 0) {
@@ -86,6 +152,7 @@ export default function CustomerView() {
   }, [orders, table]);
 
   const addToCart = (item: MenuItem, quantity = 1) => {
+    if (locationState.status !== 'ok') return;
     setCart((prev) => {
       const existing = prev.find((i) => i.menuItem.id === item.id);
       if (existing) {
@@ -117,7 +184,7 @@ export default function CustomerView() {
   }, [cart]);
   
   const placeOrUpdateOrder = () => {
-    if (cart.length === 0 || !table) return;
+    if (locationState.status !== 'ok' || cart.length === 0 || !table) return;
     
     if (activeOrder) {
       addItemsToOrder(activeOrder.id, cart);
@@ -128,6 +195,7 @@ export default function CustomerView() {
       });
     }
     setCart([]);
+    setIsCartOpen(false);
   };
 
   const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab, menuItems]);
@@ -148,7 +216,7 @@ export default function CustomerView() {
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline">
+          <Button variant="outline" disabled={locationState.status !== 'ok'}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Reorder
           </Button>
@@ -191,6 +259,24 @@ export default function CustomerView() {
         <p className="text-lg text-muted-foreground">You are ordering for {table.name}</p>
       </div>
 
+       {locationState.status === 'error' && (
+        <Alert variant="destructive" className="mb-6">
+          <WifiOff className="h-4 w-4" />
+          <AlertTitle>Order Placement Disabled</AlertTitle>
+          <AlertDescription>
+            {locationState.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {locationState.status === 'checking' && (
+         <Alert className="mb-6">
+          <AlertDescription className="text-center">
+            {locationState.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9">
           {menuCategories.map((cat) => (
@@ -219,7 +305,7 @@ export default function CustomerView() {
                             {isItemInCart(item.id) ? (
                                 <ReorderPopover item={item} />
                             ) : (
-                                <Button onClick={() => addToCart(item)}>Add to Order</Button>
+                                <Button onClick={() => addToCart(item)} disabled={locationState.status !== 'ok'}>Add to Order</Button>
                             )}
                             </CardFooter>
                         </Card>
@@ -231,7 +317,7 @@ export default function CustomerView() {
 
       <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
         <SheetTrigger asChild>
-          <Button className="fixed bottom-6 right-6 rounded-full h-16 w-16 shadow-lg">
+          <Button className="fixed bottom-6 right-6 rounded-full h-16 w-16 shadow-lg" disabled={locationState.status !== 'ok'}>
             <ShoppingCart />
             {(cartItemCount) > 0 && (
               <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
@@ -316,7 +402,7 @@ export default function CustomerView() {
                         <span>₹{(activeOrder.total + newItemsTotal).toFixed(2)}</span>
                       </div>
                     )}
-                    <Button size="lg" className="w-full" onClick={placeOrUpdateOrder}>
+                    <Button size="lg" className="w-full" onClick={placeOrUpdateOrder} disabled={locationState.status !== 'ok'}>
                       {activeOrder ? 'Add Items to Order' : 'Place Order'}
                     </Button>
                 </div>

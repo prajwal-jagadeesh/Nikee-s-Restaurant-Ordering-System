@@ -5,6 +5,7 @@ import type { Order, OrderStatus, OrderItem, ItemStatus, OrderType, OnlinePlatfo
 import { useState, useEffect } from 'react';
 import { useMenuStore } from './menu-store';
 import { useTableStore } from './tables-store';
+import { useSettingsStore } from './settings-store';
 
 interface OrderState {
   orders: Order[];
@@ -121,10 +122,11 @@ export const useOrderStore = create(
               return { ...order, status: 'Food Ready' };
             }
              // For online orders, when they are accepted, all items are marked as pending for the kitchen
-            if (order.orderType === 'online' && status === 'Preparing') {
+            if (order.orderType === 'online' && status === 'Accepted') {
                  const updatedItems = order.items.map(item => ({
                     ...item,
                     itemStatus: 'Pending' as const,
+                    kotStatus: 'Printed' as const,
                 }));
                 return { ...order, status, items: updatedItems };
             }
@@ -346,7 +348,7 @@ export const useOrderStore = create(
   )
 );
 
-const stores = [useOrderStore, useMenuStore, useTableStore];
+const stores = [useOrderStore, useMenuStore, useTableStore, useSettingsStore];
 
 export function useHydratedStore<T, F>(
   store: (callback: (state: T) => unknown) => unknown,
@@ -364,7 +366,7 @@ export function useHydratedStore<T, F>(
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       // If a storage event happens for any of our stores, rehydrate all of them.
-      if (e.key && ['order-storage', 'table-storage', 'menu-storage'].includes(e.key)) {
+      if (e.key && ['order-storage', 'table-storage', 'menu-storage', 'settings-storage'].includes(e.key)) {
         stores.forEach(s => s.persist.rehydrate());
       }
     };

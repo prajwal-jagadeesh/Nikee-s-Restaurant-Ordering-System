@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
 import { useMenuStore } from '@/lib/menu-store';
+import { useSettingsStore } from '@/lib/settings-store';
 import type { Order, Table, MenuItem, OrderItem } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import KOTPreviewSheet from './KOTPreviewSheet';
@@ -62,8 +63,16 @@ const naturalSort = (a: Table, b: Table) => {
 
 const LocationSettings = () => {
     const { toast } = useToast();
-    const [latitude, setLatitude] = useState('');
-    const [longitude, setLongitude] = useState('');
+    const location = useHydratedStore(useSettingsStore, (state) => state.location, { latitude: '', longitude: '' });
+    const setLocation = useSettingsStore((state) => state.setLocation);
+
+    const [latitude, setLatitude] = useState(location.latitude || '');
+    const [longitude, setLongitude] = useState(location.longitude || '');
+
+    useEffect(() => {
+        setLatitude(location.latitude || '');
+        setLongitude(location.longitude || '');
+    }, [location]);
 
     const handleFetchLocation = () => {
         if (navigator.geolocation) {
@@ -92,6 +101,14 @@ const LocationSettings = () => {
             });
         }
     };
+    
+    const handleSave = () => {
+        setLocation(latitude, longitude);
+         toast({
+            title: "Settings Saved",
+            description: "Your location settings have been updated.",
+        })
+    }
 
     return (
         <Card>
@@ -116,12 +133,7 @@ const LocationSettings = () => {
                 </Button>
             </CardContent>
             <CardFooter>
-                <Button onClick={() => {
-                    toast({
-                        title: "Settings Saved",
-                        description: "Your location settings have been updated.",
-                    })
-                }}>Save Location</Button>
+                <Button onClick={handleSave}>Save Location</Button>
             </CardFooter>
         </Card>
     )
