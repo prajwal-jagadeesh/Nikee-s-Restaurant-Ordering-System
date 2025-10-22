@@ -346,137 +346,140 @@ export default function CustomerView() {
             </motion.div>
         </AnimatePresence>
       </Tabs>
-
-      <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <SheetTrigger asChild>
-          <Button className="fixed bottom-6 right-6 rounded-full h-16 w-16 shadow-lg" disabled={locationState.status !== 'ok'}>
-            <ShoppingCart />
-            {(cartItemCount) > 0 && (
-              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
-                {cartItemCount}
-              </span>
-            )}
-          </Button>
-        </SheetTrigger>
-        <SheetContent className="flex flex-col">
-          <SheetHeader>
-            <SheetTitle>
-              {activeOrder ? `Order for ${table.name}` : `New Order (${table.name})`}
-            </SheetTitle>
-             <SheetDescription>
-                {activeOrder && statusInfo[activeOrder.status] ? statusInfo[activeOrder.status].description : "Review your items before placing the order."}
-              </SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto -mx-6 px-6 divide-y">
-            {activeOrder && (
-              <div className="py-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-semibold text-lg">Your Active Order</h3>
-                    {/* <OrderStatusBadge status={activeOrder.status} /> */}
-                  </div>
-                  <div className="space-y-2">
-                      {activeOrder.items.map((item, index) => (
-                          <div key={index} className="flex justify-between items-center text-sm">
-                              <span className="flex-1">{item.quantity} x {item.menuItem.name}</span>
-                              <ItemStatusBadge status={item.itemStatus} className="mx-2" />
-                              <span className="font-mono w-20 text-right">₹{(item.quantity * item.menuItem.price).toFixed(2)}</span>
-                          </div>
-                      ))}
-                  </div>
-                  <Separator className="my-3" />
-                  <div className="flex justify-between font-bold">
-                      <span>Total</span>
-                      <span>₹{activeOrder.total.toFixed(2)}</span>
-                  </div>
-              </div>
-            )}
-            
-            {cart.length === 0 && !activeOrder ? (
-              <p className="text-muted-foreground text-center pt-8">Your cart is empty. Add items from the menu.</p>
-            ) : null}
-
-            {cart.length > 0 && (
+      
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
+          <SheetTrigger asChild>
+            <Button className="rounded-full h-16 w-16 shadow-lg" disabled={locationState.status !== 'ok'}>
+              <ShoppingCart />
+              {(cartItemCount) > 0 && (
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="flex flex-col">
+            <SheetHeader>
+              <SheetTitle>
+                {activeOrder ? `Order for ${table.name}` : `New Order (${table.name})`}
+              </SheetTitle>
+               <SheetDescription>
+                  {activeOrder && statusInfo[activeOrder.status] ? statusInfo[activeOrder.status].description : "Review your items before placing the order."}
+                </SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto -mx-6 px-6 divide-y">
+              {activeOrder && (
                 <div className="py-4">
-                  <h3 className="font-semibold text-lg mb-2">{activeOrder ? "Add More Items" : "Your Items"}</h3>
-                  <div className="space-y-4">
-                    {cart.map(item => (
-                      <div key={item.menuItem.id} className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <p className="font-semibold">{item.menuItem.name}</p>
-                          <p className="text-sm text-muted-foreground">₹{item.menuItem.price.toFixed(2)}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}><Minus className="h-3 w-3" /></Button>
-                            <span>{item.quantity}</span>
-                            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="font-semibold text-lg">Your Active Order</h3>
+                      {/* <OrderStatusBadge status={activeOrder.status} /> */}
+                    </div>
+                    <div className="space-y-2">
+                        {activeOrder.items.map((item, index) => (
+                            <div key={index} className="flex justify-between items-center text-sm">
+                                <span className="flex-1">{item.quantity} x {item.menuItem.name}</span>
+                                <ItemStatusBadge status={item.itemStatus} className="mx-2" />
+                                <span className="font-mono w-20 text-right">₹{(item.quantity * item.menuItem.price).toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <Separator className="my-3" />
+                    <div className="flex justify-between font-bold">
+                        <span>Total</span>
+                        <span>₹{activeOrder.total.toFixed(2)}</span>
+                    </div>
+                </div>
+              )}
+              
+              {cart.length === 0 && !activeOrder ? (
+                <p className="text-muted-foreground text-center pt-8">Your cart is empty. Add items from the menu.</p>
+              ) : null}
+
+              {cart.length > 0 && (
+                  <div className="py-4">
+                    <h3 className="font-semibold text-lg mb-2">{activeOrder ? "Add More Items" : "Your Items"}</h3>
+                    <div className="space-y-4">
+                      {cart.map(item => (
+                        <div key={item.menuItem.id} className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <p className="font-semibold">{item.menuItem.name}</p>
+                            <p className="text-sm text-muted-foreground">₹{item.menuItem.price.toFixed(2)}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}><Minus className="h-3 w-3" /></Button>
+                              <span>{item.quantity}</span>
+                              <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                              <p className="font-semibold">₹{(item.menuItem.price * item.quantity).toFixed(2)}</p>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => removeItemFromCart(item.menuItem.id)}><Trash2 className="h-4 w-4"/></Button>
                           </div>
                         </div>
-                        <div className="text-right">
-                            <p className="font-semibold">₹{(item.menuItem.price * item.quantity).toFixed(2)}</p>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => removeItemFromCart(item.menuItem.id)}><Trash2 className="h-4 w-4"/></Button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-            )}
-          </div>
-          
-            <SheetFooter className="border-t pt-4 mt-auto bg-background">
-                <div className="w-full space-y-4">
-                   {cart.length > 0 && (
-                     <>
-                        <Separator />
-                        <div className="flex justify-between font-bold text-lg">
-                            <span>New Items Total</span>
-                            <span>₹{newItemsTotal.toFixed(2)}</span>
-                        </div>
-                        {activeOrder && (
-                        <div className="flex justify-between font-bold text-xl">
-                            <span>New Grand Total</span>
-                            <span>₹{(activeOrder.total + newItemsTotal).toFixed(2)}</span>
-                        </div>
-                        )}
-                        <Button size="lg" className="w-full" onClick={placeOrUpdateOrder} disabled={locationState.status !== 'ok'}>
-                        {activeOrder ? 'Add Items to Order' : 'Place Order'}
-                        </Button>
-                     </>
-                   )}
-
-                    {activeOrder && (
-                        <div className="space-y-2">
-                             {allItemsServed && !activeOrder.paymentRequested ? (
-                                <Button size="lg" className="w-full" onClick={handleReadyToPay}>Ready to Pay?</Button>
-                            ) : (
-                                 <Button 
-                                    size="lg" 
-                                    variant="outline" 
-                                    className="w-full" 
-                                    onClick={handleCallCaptain} 
-                                    disabled={activeOrder.assistanceRequested}
-                                >
-                                    {activeOrder.assistanceRequested ? (
-                                        <>
-                                            <BellRing className="mr-2 h-4 w-4 animate-ping" />
-                                            Captain is on the way
-                                        </>
-                                    ) : (
-                                         <>
-                                            <Hand className="mr-2 h-4 w-4" />
-                                            Call for Assistance
-                                        </>
-                                    )}
-                                </Button>
-                            )}
-                        </div>
+              )}
+            </div>
+            
+              <SheetFooter className="border-t pt-4 mt-auto bg-background">
+                  <div className="w-full space-y-4">
+                    {cart.length > 0 && (
+                      <>
+                          <Separator />
+                          <div className="flex justify-between font-bold text-lg">
+                              <span>New Items Total</span>
+                              <span>₹{newItemsTotal.toFixed(2)}</span>
+                          </div>
+                          {activeOrder && (
+                          <div className="flex justify-between font-bold text-xl">
+                              <span>New Grand Total</span>
+                              <span>₹{(activeOrder.total + newItemsTotal).toFixed(2)}</span>
+                          </div>
+                          )}
+                          <Button size="lg" className="w-full" onClick={placeOrUpdateOrder} disabled={locationState.status !== 'ok'}>
+                          {activeOrder ? 'Add Items to Order' : 'Place Order'}
+                          </Button>
+                      </>
                     )}
-                </div>
-            </SheetFooter>
-          
-        </SheetContent>
-      </Sheet>
+                  </div>
+              </SheetFooter>
+            
+          </SheetContent>
+        </Sheet>
+      </div>
+
+       {activeOrder && (
+         <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-3">
+             {allItemsServed && !activeOrder.paymentRequested ? (
+                <Button size="lg" className="shadow-lg rounded-full" onClick={handleReadyToPay}>Ready to Pay?</Button>
+            ) : (
+                <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="shadow-lg rounded-full" 
+                    onClick={handleCallCaptain} 
+                    disabled={activeOrder.assistanceRequested}
+                >
+                    {activeOrder.assistanceRequested ? (
+                        <>
+                            <BellRing className="mr-2 h-4 w-4 animate-ping" />
+                            Captain is on the way
+                        </>
+                    ) : (
+                          <>
+                            <Hand className="mr-2 h-4 w-4" />
+                            Call for Assistance
+                        </>
+                    )}
+                </Button>
+            )}
+        </div>
+       )}
+
     </>
   );
 }
 
     
-
