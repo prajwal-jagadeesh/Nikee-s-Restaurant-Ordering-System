@@ -41,18 +41,18 @@ export default function BillPreviewSheet({ order, table, onClose, onConfirm }: B
                     <Separator className="my-3 border-dashed" />
                     <div className="grid grid-cols-12 gap-2 font-bold">
                         <div className="col-span-1 text-right">#</div>
-                        <div className="col-span-5">Item</div>
-                        <div className="col-span-2 text-center">Qty</div>
+                        <div className="col-span-6">Item</div>
+                        <div className="col-span-1 text-center">Qty</div>
                         <div className="col-span-2 text-right">Rate</div>
                         <div className="col-span-2 text-right">Amount</div>
                     </div>
                     <Separator className="my-2" />
                      <div className="space-y-1">
                         {order.items.map((item, index) => (
-                            <div key={item.menuItem.id} className="grid grid-cols-12 gap-2 items-center">
+                            <div key={item.menuItem.id} className="grid grid-cols-12 gap-2 items-start">
                                 <div className="col-span-1 text-right">{index + 1}</div>
-                                <div className="col-span-5 truncate">{item.menuItem.name}</div>
-                                <div className="col-span-2 text-center">{item.quantity}</div>
+                                <div className="col-span-6 break-words">{item.menuItem.name}</div>
+                                <div className="col-span-1 text-center">{item.quantity}</div>
                                 <div className="col-span-2 text-right">{item.menuItem.price.toFixed(2)}</div>
                                 <div className="col-span-2 text-right font-semibold">{(item.menuItem.price * item.quantity).toFixed(2)}</div>
                             </div>
