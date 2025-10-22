@@ -7,7 +7,7 @@ import { useMenuStore } from '@/lib/menu-store';
 import type { Order, Table, MenuItem, OrderItem } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
-import { Printer, Clock, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon } from 'lucide-react';
+import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -234,7 +234,7 @@ const AnalyticsView = () => {
 
 const MenuManagement = () => {
     const menuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
-    const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
+    const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []) || [];
     const addMenuItem = useMenuStore(state => state.addMenuItem);
     const updateMenuItem = useMenuStore(state => state.updateMenuItem);
     const deleteMenuItem = useMenuStore(state => state.deleteMenuItem);
@@ -405,7 +405,7 @@ const MenuItemForm = ({ isOpen, onOpenChange, onSubmit, item, categories }: {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">Description</Label>
-              <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" />
+              <Textarea id="description" value={description} onChange={(e) => setDescription(e.targe.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="price" className="text-right">Price</Label>
@@ -570,11 +570,11 @@ const getTableStatus = (order: Order | undefined) => {
     return 'Vacant';
 }
 
-const tableStatusStyles: Record<string, { bg: string, text: string, border: string }> = {
-    'Vacant': { bg: 'bg-card', text: 'text-card-foreground', border: 'border-border border-dashed' },
-    'Running': { bg: 'bg-[var(--table-running)]', text: 'text-blue-800', border: 'border-blue-300' },
-    'KOT Printed': { bg: 'bg-[var(--table-kot)]', text: 'text-green-800', border: 'border-green-300' },
-    'Billed': { bg: 'bg-[var(--table-billed)]', text: 'text-yellow-800', border: 'border-yellow-400' },
+const tableStatusStyles: Record<string, { bg: string; text: string; border: string }> = {
+    Vacant: { bg: 'bg-[var(--table-vacant)]', text: 'text-[var(--table-vacant-foreground)]', border: 'border-border border-dashed' },
+    Running: { bg: 'bg-[var(--table-running)]', text: 'text-[var(--table-running-foreground)]', border: 'border-transparent' },
+    'KOT Printed': { bg: 'bg-[var(--table-kot)]', text: 'text-[var(--table-kot-foreground)]', border: 'border-transparent' },
+    Billed: { bg: 'bg-[var(--table-billed)]', text: 'text-[var(--table-billed-foreground)]', border: 'border-transparent' },
 }
 
 const TableGridView = () => {
@@ -654,12 +654,13 @@ const TableGridView = () => {
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-11 gap-4">
         <AnimatePresence>
           {sortedTables.map((table) => {
               const order = ordersByTable[table.id];
               const status = getTableStatus(order);
               const styles = tableStatusStyles[status];
+              const hasPrintedKot = order && order.items.some(i => i.kotStatus === 'Printed');
               
               return (
                 <motion.div
@@ -672,32 +673,21 @@ const TableGridView = () => {
                   <Card
                     onClick={() => order && setSelectedTableId(table.id)}
                     className={cn(
-                      "flex flex-col h-28 transition-all duration-300 rounded-lg border-2",
+                      "flex flex-col h-24 w-24 justify-center items-center transition-all duration-300 rounded-lg border-2",
                       styles.bg,
                       styles.border,
                       order ? 'cursor-pointer hover:shadow-lg' : 'shadow-sm'
                     )}
                   >
-                    <CardHeader className="p-2 pb-0">
-                      <CardTitle className={cn("text-sm font-semibold", styles.text)}>{table.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col justify-end flex-1 p-2 text-xs">
-                      {order ? (
-                         <div className={cn("font-bold", styles.text)}>
-                          <p className="text-base">₹{order.total.toFixed(0)}</p>
-                          <div className="flex items-center gap-1 mt-1">
-                            {status === 'Running' && <Clock className="h-3 w-3"/>}
-                            {status === 'KOT Printed' && <Printer className="h-3 w-3"/>}
-                            {status === 'Billed' && <Check className="h-4 w-4"/>}
-                            <span className="text-xs">
-                               {Math.round((Date.now() - order.timestamp) / 60000)} min
-                            </span>
-                          </div>
-                         </div>
-                      ) : (
-                        <p className={cn("text-xs font-semibold", styles.text)}>Vacant</p>
-                      )}
+                    <CardContent className="p-0 flex flex-col items-center justify-center flex-1">
+                      <p className={cn("font-semibold", styles.text)}>{table.name}</p>
                     </CardContent>
+                     {order && (
+                        <CardFooter className={cn("p-1 w-full h-8 flex items-center justify-center gap-3", styles.text)}>
+                            <Eye className="h-4 w-4" />
+                            {hasPrintedKot && <Printer className="h-4 w-4" />}
+                        </CardFooter>
+                     )}
                   </Card>
                 </motion.div>
               )
@@ -791,9 +781,9 @@ export default function POSView({
       <main className="flex-1 p-6">
          <Skeleton className="h-12 w-48 mb-6" />
           <div className="space-y-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                {[...Array(15)].map((_, j) => (
-                  <Skeleton key={j} className="h-28 w-full" />
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-11 gap-4">
+                {[...Array(22)].map((_, j) => (
+                  <Skeleton key={j} className="h-24 w-24" />
                 ))}
             </div>
           </div>
