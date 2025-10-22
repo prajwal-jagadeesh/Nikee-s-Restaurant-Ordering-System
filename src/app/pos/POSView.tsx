@@ -2,6 +2,7 @@
 
 
 
+
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -729,7 +730,7 @@ const TableCard = ({
     const status = getStatus();
 
     const statusStyles = {
-        'Vacant': 'border-dashed bg-card',
+        'Vacant': 'border-input bg-card',
         'Running': 'bg-[hsl(var(--status-running))] border-transparent',
         'KOT Printed': 'bg-[hsl(var(--status-kot))] border-transparent',
         'Billed': 'bg-[hsl(var(--status-billed))] border-transparent',
