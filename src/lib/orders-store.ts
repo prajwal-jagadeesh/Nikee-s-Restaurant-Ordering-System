@@ -34,34 +34,33 @@ const recalculateTotal = (items: OrderItem[]): number => {
 };
 
 const updateOverallOrderStatus = (order: Order): Order => {
-  if (order.orderType === 'online' || ['Billed', 'Paid', 'Cancelled', 'Delivered', 'New', 'Accepted', 'Food Ready', 'Out for Delivery'].includes(order.status)) {
+  // Do not change status for these terminal/manual states or for online orders.
+  if (order.orderType === 'online' || ['Billed', 'Paid', 'Cancelled', 'Delivered', 'New'].includes(order.status)) {
     return order;
   }
 
   const itemsInKitchen = order.items.filter(item => item.kotStatus === 'Printed');
   
+  // If no items have been sent to the kitchen yet, it remains Confirmed (or whatever it was).
   if (itemsInKitchen.length === 0) {
       if (order.status !== 'New') return { ...order, status: 'Confirmed' };
       return order;
   }
 
-  // This logic was flawed. An order isn't "Served" just because all items are.
-  // It should wait for billing. We'll remove the 'Served' status update.
-  // const allServed = itemsInKitchen.every(item => item.itemStatus === 'Served');
-  // if (allServed) {
-  //   return { ...order, status: 'Served' };
-  // }
-
+  // If any item is Ready, the order status is Ready. This is the highest priority status pre-billing.
   const someReady = itemsInKitchen.some(item => item.itemStatus === 'Ready');
   if (someReady) {
     return { ...order, status: 'Ready' };
   }
-
+  
+  // If any item is Preparing, the order status is Preparing.
   const somePreparing = itemsInKitchen.some(item => item.itemStatus === 'Preparing');
   if (somePreparing) {
     return { ...order, status: 'Preparing' };
   }
 
+  // If all items are served or it's just a mix of pending/served, it goes back to Confirmed.
+  // This ensures it stays on the Captain's screen.
   if (order.status !== 'New') {
      return { ...order, status: 'Confirmed' };
   }
