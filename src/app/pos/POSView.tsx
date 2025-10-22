@@ -113,8 +113,12 @@ const SettingsManagement = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                      <div className="space-y-2">
+                        <Label htmlFor="restaurant-name">Restaurant Name</Label>
+                        <Input id="restaurant-name" placeholder="e.g. Nikee's Zara" />
+                    </div>
+                     <div className="space-y-2">
                         <Label htmlFor="bill-header">Header Content</Label>
-                        <Textarea id="bill-header" placeholder="e.g. Your Restaurant Name&#x0a;Address Line 1&#x0a;Phone: 123-456-7890" rows={4} />
+                        <Textarea id="bill-header" placeholder="e.g. Address Line 1&#x0a;Phone: 123-456-7890" rows={3} />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="bill-footer">Footer Content</Label>
