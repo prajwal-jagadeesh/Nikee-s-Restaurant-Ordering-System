@@ -1,7 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Order, OrderStatus, OrderItem, ItemStatus } from './types';
+import type { Order, OrderStatus, OrderItem, ItemStatus, OrderType, OnlinePlatform, CustomerDetails } from './types';
 import { useState, useEffect } from 'react';
 import { useMenuStore } from './menu-store';
 import { useTableStore } from './tables-store';
@@ -9,7 +9,8 @@ import { useTableStore } from './tables-store';
 interface OrderState {
   orders: Order[];
   hydrated: boolean;
-  addOrder: (order: Omit<Order, 'id' | 'total' | 'timestamp' | 'status' | 'tableNumber'>) => void;
+  addOrder: (order: Omit<Order, 'id' | 'total' | 'timestamp' | 'status' | 'tableNumber' | 'orderType'>) => void;
+  addOnlineOrder: (order: Omit<Order, 'id' | 'total' | 'timestamp' | 'status' | 'orderType'>) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   updateOrderItemStatus: (orderId: string, menuItemId: string, newStatus: ItemStatus) => void;
   updateOrderItemsStatus: (orderId: string, currentItemStatus: ItemStatus, newItemStatus: ItemStatus) => void;
@@ -30,7 +31,7 @@ const recalculateTotal = (items: OrderItem[]): number => {
 };
 
 const updateOverallOrderStatus = (order: Order): Order => {
-  if (['Billed', 'Paid', 'Cancelled'].includes(order.status)) {
+  if (order.orderType === 'online' || ['Billed', 'Paid', 'Cancelled'].includes(order.status)) {
     return order;
   }
 
@@ -80,9 +81,31 @@ export const useOrderStore = create(
 
         const newOrder: Order = {
           ...order,
+          orderType: 'dine-in',
           id: `ORD${String(orderCounter).padStart(3, '0')}`,
           items: itemsWithStatus,
           status: 'New',
+          timestamp: Date.now(),
+          total: recalculateTotal(itemsWithStatus),
+          kotCounter: 0,
+        };
+        set((state) => ({ orders: [...state.orders, newOrder] }));
+      },
+       addOnlineOrder: (order) => {
+        const latestId = get().orders.reduce((maxId, o) => {
+          const idNum = parseInt(o.id.replace('ORD', ''), 10);
+          return idNum > maxId ? idNum : maxId;
+        }, 0);
+        orderCounter = latestId + 1;
+        
+        const itemsWithStatus: OrderItem[] = order.items.map(i => ({...i, itemStatus: 'Pending', kotStatus: 'New'}));
+
+        const newOrder: Order = {
+          ...order,
+          orderType: 'online',
+          id: `ORD${String(orderCounter).padStart(3, '0')}`,
+          items: itemsWithStatus,
+          status: 'Accepted',
           timestamp: Date.now(),
           total: recalculateTotal(itemsWithStatus),
           kotCounter: 0,
@@ -93,6 +116,10 @@ export const useOrderStore = create(
         set((state) => ({
           orders: state.orders.map((order) => {
             if (order.id !== orderId) return order;
+            // For online orders, when they are marked as ready, we move them to 'Food Ready'
+            if(order.orderType === 'online' && status === 'Ready') {
+              return { ...order, status: 'Food Ready' };
+            }
             return { ...order, status };
           }),
         })),
@@ -150,11 +177,13 @@ export const useOrderStore = create(
                 return item;
               });
               
+              const newStatus: OrderStatus = order.orderType === 'online' ? 'Preparing' : 'Confirmed';
+
               const updatedOrder = { 
                 ...order, 
                 items: updatedItems,
                 kotCounter: newKotCounter,
-                status: 'Confirmed' as const,
+                status: newStatus,
               };
 
               return updateOverallOrderStatus(updatedOrder);
@@ -178,8 +207,18 @@ export const useOrderStore = create(
                     itemStatus: newStatus
                   };
 
-                  const updatedOrder = { ...order, items: updatedItems };
-                  return updateOverallOrderStatus(updatedOrder);
+                  let updatedOrder = { ...order, items: updatedItems };
+                  
+                  if(order.orderType === 'online') {
+                    const allItemsReady = updatedItems.every(i => i.itemStatus === 'Ready' || i.itemStatus === 'Served');
+                    if (allItemsReady) {
+                      updatedOrder.status = 'Food Ready';
+                    }
+                  } else {
+                     updatedOrder = updateOverallOrderStatus(updatedOrder);
+                  }
+
+                  return updatedOrder;
                 }
 
                 return order;
@@ -197,8 +236,18 @@ export const useOrderStore = create(
                   ? { ...item, itemStatus: newItemStatus }
                   : item
               );
-              const updatedOrder = { ...order, items: updatedItems };
-              return updateOverallOrderStatus(updatedOrder);
+              let updatedOrder = { ...order, items: updatedItems };
+
+              if(order.orderType === 'online') {
+                  const allItemsReady = updatedItems.every(i => i.itemStatus === 'Ready' || i.itemStatus === 'Served');
+                  if (allItemsReady) {
+                    updatedOrder.status = 'Food Ready';
+                  }
+              } else {
+                  updatedOrder = updateOverallOrderStatus(updatedOrder);
+              }
+
+              return updatedOrder;
             }
             return order;
           })

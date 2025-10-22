@@ -3,6 +3,7 @@
 
 
 
+
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -13,7 +14,7 @@ import OrderCard from '@/components/OrderCard';
 import KOTPreviewSheet from './KOTPreviewSheet';
 import BillPreviewSheet from './BillPreviewSheet';
 import { Button } from '@/components/ui/button';
-import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock, Truck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -52,7 +53,8 @@ import { addDays, format, startOfDay, endOfDay, startOfMonth, endOfMonth, subDay
 import type { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
+import OnlineOrdersView from './online-orders/OnlineOrdersView';
 
 
 const naturalSort = (a: Table, b: Table) => {
@@ -185,7 +187,7 @@ const AnalyticsView = () => {
     });
 
     const paidOrders = useMemo(() => allOrders.filter(o => {
-        if (o.status !== 'Paid') return false;
+        if (o.status !== 'Paid' && o.status !== 'Delivered') return false;
         if (!dateRange?.from) return true; // No start date, include all
         const orderDate = new Date(o.timestamp);
         const from = startOfDay(dateRange.from);
@@ -730,7 +732,7 @@ const TableCard = ({
     const status = getStatus();
 
     const statusStyles = {
-        'Vacant': 'border-input bg-card',
+        'Vacant': 'bg-card border-input',
         'Running': 'bg-[hsl(var(--status-running))] border-transparent',
         'KOT Printed': 'bg-[hsl(var(--status-kot))] border-transparent',
         'Billed': 'bg-[hsl(var(--status-billed))] border-transparent',
@@ -773,7 +775,7 @@ const TableCard = ({
                    {order && <p className="text-sm font-bold mt-1">₹{order.total.toFixed(0)}</p>}
                    {!order && <div className="flex-1" />}
               </CardContent>
-              <CardFooter className="p-0 flex justify-end items-center h-7">
+               <CardFooter className="p-0 flex justify-end items-center h-7">
                   {onPrintAction ? (
                     <Button 
                         variant="ghost" 
@@ -807,9 +809,11 @@ const TableGridView = () => {
   const [billPreviewOrder, setBillPreviewOrder] = useState<Order | null>(null);
 
   const ordersByTable = useMemo(() => allOrders.reduce((acc, order) => {
-    const table = tables.find(t => t.id === order.tableId);
-    if (table && order.status !== 'Paid' && order.status !== 'Cancelled') {
-      acc[table.id] = order;
+    if (order.orderType === 'dine-in' && order.tableId) {
+        const table = tables.find(t => t.id === order.tableId);
+        if (table && order.status !== 'Paid' && order.status !== 'Cancelled') {
+        acc[table.id] = order;
+        }
     }
     return acc;
   }, {} as Record<string, Order>), [allOrders, tables]);
@@ -853,7 +857,7 @@ const TableGridView = () => {
     const occupiedIds = new Set<string>();
     allOrders.forEach(order => {
         if (switchingOrder && order.id === switchingOrder.id) return;
-        if (order.status !== 'Paid' && order.status !== 'Cancelled') {
+        if (order.orderType === 'dine-in' && order.tableId && order.status !== 'Paid' && order.status !== 'Cancelled') {
           occupiedIds.add(order.tableId);
         }
     });
@@ -960,7 +964,7 @@ const TableGridView = () => {
       <Dialog open={!!switchingOrder} onOpenChange={(isOpen) => !isOpen && setSwitchingOrder(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Switch from {switchingOrder ? tables.find(t => t.id === switchingOrder.id)?.name : ''}</DialogTitle>
+            <DialogTitle>Switch from {switchingOrder ? tables.find(t => t.id === switchingOrder.tableId)?.name : ''}</DialogTitle>
             <DialogDescription>
               Select a vacant table to move this order to.
             </DialogDescription>
@@ -1045,6 +1049,17 @@ export default function POSView({
                         <span className="ml-4">Active Orders</span>
                     </Button>
                     <Button
+                        variant={activeView === 'onlineOrders' ? 'secondary' : 'ghost'}
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setActiveView('onlineOrders');
+                          setSidebarOpen(false);
+                        }}
+                    >
+                        <Truck className="h-5 w-5" />
+                        <span className="ml-4">Online Orders</span>
+                    </Button>
+                    <Button
                         variant={activeView === 'menu' ? 'secondary' : 'ghost'}
                         className="w-full justify-start"
                         onClick={() => {
@@ -1095,6 +1110,7 @@ export default function POSView({
 
       <main className="flex-1 p-6">
         {activeView === 'orders' && <TableGridView />}
+        {activeView === 'onlineOrders' && <OnlineOrdersView />}
         {activeView === 'menu' && <MenuManagement />}
         {activeView === 'tables' && <TableManagement />}
         {activeView === 'analytics' && <AnalyticsView />}

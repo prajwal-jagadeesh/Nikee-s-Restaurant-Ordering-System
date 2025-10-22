@@ -16,7 +16,13 @@ const statusColors: Record<OrderStatus, string> = {
   Billed: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800/60',
   Paid: 'bg-gray-200 text-gray-800 border-gray-300 dark:bg-gray-800/40 dark:text-gray-300 dark:border-gray-700/60',
   Cancelled: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800/60',
+  // Online Order Statuses
+  Accepted: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800/60',
+  'Food Ready': 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800/60',
+  'Out for Delivery': 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800/60',
+  Delivered: 'bg-gray-200 text-gray-800 border-gray-300 dark:bg-gray-800/40 dark:text-gray-300 dark:border-gray-700/60',
 };
+
 
 export default function OrderStatusBadge({ status, className }: OrderStatusBadgeProps) {
   if (!statusColors[status]) return null;

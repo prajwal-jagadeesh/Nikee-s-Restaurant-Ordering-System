@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
 import ItemStatusBadge from '@/components/ItemStatusBadge';
+import { Utensils, Truck } from 'lucide-react';
 
 const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } | null> = {
   'Pending': { next: 'Preparing', label: 'Start Preparing' },
@@ -19,8 +20,11 @@ const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } 
 
 type GroupedOrder = {
   orderId: string;
-  tableId: string;
-  tableName: string;
+  orderType: 'dine-in' | 'online';
+  tableId?: string;
+  tableName?: string;
+  platform?: string;
+  platformOrderId?: string;
   orderTimestamp: number;
   items: (OrderItem & { originalOrderId: string })[];
 }
@@ -34,57 +38,27 @@ export default function KDSView() {
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
-    const activeKitchenItemsByTable = allOrders.reduce((acc, order) => {
-      if (['Paid', 'Cancelled'].includes(order.status)) {
-        return acc;
-      }
-      
-      const kitchenItems = order.items.filter(
-        item => item.kotStatus === 'Printed'
-      );
+    const activeKitchenOrders = allOrders.filter(order => {
+        return !['Paid', 'Cancelled', 'Delivered', 'New', 'Accepted'].includes(order.status) &&
+               order.items.some(item => item.kotStatus === 'Printed');
+    });
 
-      if (kitchenItems.length > 0) {
-        if (!acc[order.tableId]) {
-          acc[order.tableId] = {
-            orderId: order.id,
-            tableId: order.tableId,
-            tableName: tableMap.get(order.tableId) || `Table ${order.tableNumber}`,
-            orderTimestamp: order.timestamp,
-            items: []
-          };
-        }
+    const combinedOrders = activeKitchenOrders.map(order => {
+        const kitchenItems = order.items
+            .filter(item => item.kotStatus === 'Printed')
+            .map(item => ({ ...item, originalOrderId: order.id }));
         
-        if(order.timestamp > acc[order.tableId].orderTimestamp){
-            acc[order.tableId].orderTimestamp = order.timestamp;
-        }
-      }
-      
-      return acc;
-    }, {} as Record<string, GroupedOrder>);
-
-     const combinedOrders = Object.values(activeKitchenItemsByTable).map(tableOrder => {
-        const allTableItems = allOrders
-            .filter(o => o.tableId === tableOrder.tableId && !['Paid', 'Cancelled'].includes(o.status))
-            .flatMap(o => 
-                o.items
-                 .filter(item => item.kotStatus === 'Printed')
-                 .map(item => ({ ...item, originalOrderId: o.id }))
-            );
-        
-        const uniqueItems = allTableItems.reduce((acc, current) => {
-            const x = acc.find(item => item.originalOrderId === current.originalOrderId && item.menuItem.id === current.menuItem.id && item.kotId === current.kotId);
-            if (!x) {
-                return acc.concat([current]);
-            } else {
-                return acc;
-            }
-        }, [] as (OrderItem & {originalOrderId: string})[]);
-
         return {
-            ...tableOrder,
-            items: uniqueItems,
+            orderId: order.id,
+            orderType: order.orderType,
+            tableId: order.tableId,
+            tableName: order.tableId ? tableMap.get(order.tableId) : undefined,
+            platform: order.onlinePlatform,
+            platformOrderId: order.platformOrderId,
+            orderTimestamp: order.timestamp,
+            items: kitchenItems,
         };
-     });
+    });
 
     return combinedOrders.sort((a,b) => a.orderTimestamp - b.orderTimestamp);
 
@@ -117,7 +91,7 @@ export default function KDSView() {
         ) : (
           kdsOrders.map((order) => (
              <motion.div
-              key={order.tableId}
+              key={order.orderId}
               layout
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -125,10 +99,15 @@ export default function KDSView() {
             >
               <Card className="h-full flex flex-col">
                 <CardHeader>
-                  <CardTitle>{order.tableName}</CardTitle>
-                  <span className="text-xs font-normal text-muted-foreground -mt-1">
-                      {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
-                  </span>
+                    <div className="flex items-center gap-3">
+                        {order.orderType === 'dine-in' ? <Utensils /> : <Truck />}
+                        <div>
+                            <CardTitle>{order.orderType === 'dine-in' ? order.tableName : `${order.platform} #${order.platformOrderId}`}</CardTitle>
+                            <span className="text-xs font-normal text-muted-foreground -mt-1">
+                                {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
+                            </span>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="text-sm">

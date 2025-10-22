@@ -6,10 +6,16 @@ export type OrderStatus =
   | 'Served'
   | 'Billed'
   | 'Paid'
-  | 'Cancelled';
+  | 'Cancelled'
+  | 'Accepted' // For online orders
+  | 'Food Ready' // For online orders
+  | 'Out for Delivery' // For online orders
+  | 'Delivered'; // For online orders
 
 export type KotStatus = 'New' | 'Printed';
 export type ItemStatus = 'Pending' | 'Preparing' | 'Ready' | 'Served';
+export type OrderType = 'dine-in' | 'online';
+export type OnlinePlatform = 'Zomato' | 'Swiggy' | 'Others';
 
 export interface MenuItem {
   id: string;
@@ -29,9 +35,19 @@ export interface OrderItem {
   kotId?: string; // Unique identifier for the KOT
 }
 
+export interface CustomerDetails {
+    name: string;
+    phone: string;
+    address: string;
+}
+
 export interface Order {
   id: string;
-  tableId: string;
+  orderType: OrderType;
+  tableId?: string; // For dine-in
+  onlinePlatform?: OnlinePlatform; // For online orders
+  platformOrderId?: string; // For online orders
+  customerDetails?: CustomerDetails; // For online orders
   items: OrderItem[];
   status: OrderStatus;
   timestamp: number;
