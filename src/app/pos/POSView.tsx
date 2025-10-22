@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -104,6 +105,43 @@ const SettingsManagement = () => {
                     <Button>Save Printer Settings</Button>
                 </CardFooter>
             </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Bill Customization</CardTitle>
+                    <CardDescription>Customize the header, footer, and other elements of your printed bill.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                     <div className="space-y-2">
+                        <Label htmlFor="bill-header">Header Content</Label>
+                        <Textarea id="bill-header" placeholder="e.g. Your Restaurant Name&#x0a;Address Line 1&#x0a;Phone: 123-456-7890" rows={4} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="bill-footer">Footer Content</Label>
+                        <Textarea id="bill-footer" placeholder="e.g. Thank you for visiting!&#x0a;WiFi: YourNetwork" rows={3} />
+                    </div>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="show-gst">Show GST Number</Label>
+                                <CardDescription>Display your GSTIN on the bill.</CardDescription>
+                            </div>
+                            <Switch id="show-gst" />
+                        </div>
+                        <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="show-fssai">Show FSSAI Number</Label>
+                                <CardDescription>Display your FSSAI license number.</CardDescription>
+                            </div>
+                            <Switch id="show-fssai" />
+                        </div>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button>Save Bill Settings</Button>
+                </CardFooter>
+            </Card>
+
              <Card>
                 <CardHeader>
                     <CardTitle>Template Design</CardTitle>
@@ -716,7 +754,7 @@ const TableCard = ({
                    {order && <p className="text-sm font-bold mt-1">₹{order.total.toFixed(0)}</p>}
               </CardContent>
               <CardFooter className="p-1 flex justify-end items-center h-7">
-                  {onPrintAction && (
+                  {onPrintAction ? (
                     <Button 
                         variant="ghost" 
                         size="icon" 
@@ -728,8 +766,9 @@ const TableCard = ({
                     >
                         <Printer className="h-4 w-4" />
                     </Button>
+                  ) : (
+                    hasPrintedKot && <Printer className="h-4 w-4 text-muted-foreground" />
                   )}
-                  {hasPrintedKot && !onPrintAction && <Printer className="h-4 w-4 text-muted-foreground" />}
               </CardFooter>
             </div>
         </Card>
