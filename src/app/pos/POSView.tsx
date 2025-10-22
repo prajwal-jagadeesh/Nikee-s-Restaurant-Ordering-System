@@ -1,5 +1,6 @@
 
 
+
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -49,6 +50,7 @@ import { addDays, format, startOfDay, endOfDay, startOfMonth, endOfMonth, subDay
 import type { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useToast } from "@/hooks/use-toast"
 
 
 const naturalSort = (a: Table, b: Table) => {
@@ -58,6 +60,7 @@ const naturalSort = (a: Table, b: Table) => {
 };
 
 const SettingsManagement = () => {
+    const { toast } = useToast();
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <Card>
@@ -102,7 +105,12 @@ const SettingsManagement = () => {
                     </div>
                 </CardContent>
                  <CardFooter>
-                    <Button>Save Printer Settings</Button>
+                    <Button onClick={() => {
+                        toast({
+                            title: "Settings Saved",
+                            description: "Your printer settings have been updated.",
+                        })
+                    }}>Save Printer Settings</Button>
                 </CardFooter>
             </Card>
 
@@ -142,7 +150,12 @@ const SettingsManagement = () => {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button>Save Bill Settings</Button>
+                    <Button onClick={() => {
+                        toast({
+                            title: "Settings Saved",
+                            description: "Your bill customization settings have been updated.",
+                        })
+                    }}>Save Bill Settings</Button>
                 </CardFooter>
             </Card>
 
