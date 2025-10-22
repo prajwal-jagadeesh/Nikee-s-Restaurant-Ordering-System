@@ -583,7 +583,19 @@ const useElapsedTime = (timestamp: number) => {
     return elapsed;
 };
 
-const TableCard = ({ table, order, onSelect, onSwitch }: { table: Table; order?: Order; onSelect: () => void; onSwitch: () => void; }) => {
+const TableCard = ({ 
+    table, 
+    order, 
+    onSelect, 
+    onSwitch,
+    onPrintAction
+}: { 
+    table: Table; 
+    order?: Order; 
+    onSelect: () => void; 
+    onSwitch: () => void;
+    onPrintAction?: () => void;
+}) => {
     const elapsed = useElapsedTime(order?.timestamp || 0);
 
     const getStatus = () => {
@@ -601,6 +613,9 @@ const TableCard = ({ table, order, onSelect, onSwitch }: { table: Table; order?:
         'KOT Printed': 'bg-[hsl(var(--status-kot))] border-transparent',
         'Billed': 'bg-[hsl(var(--status-billed))] border-transparent',
     };
+    
+    const hasKotOrBillAction = !!onPrintAction;
+    const hasPrintedKot = order?.items.some(i => i.kotStatus === 'Printed');
 
     return (
         <Card
@@ -610,19 +625,36 @@ const TableCard = ({ table, order, onSelect, onSwitch }: { table: Table; order?:
                 statusStyles[status]
             )}
         >
-            {order && (
-                 <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="absolute top-0 right-0 h-7 w-7 text-muted-foreground z-10"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onSwitch();
-                    }}
-                >
-                    <ArrowRightLeft className="h-4 w-4" />
-                </Button>
-            )}
+            <div 
+                className="absolute top-0 right-0 z-10 flex gap-0.5"
+            >
+                {onPrintAction && (
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-muted-foreground"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onPrintAction();
+                        }}
+                    >
+                        <Printer className="h-4 w-4" />
+                    </Button>
+                )}
+                {order && (
+                     <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-muted-foreground"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onSwitch();
+                        }}
+                    >
+                        <ArrowRightLeft className="h-4 w-4" />
+                    </Button>
+                )}
+            </div>
             <div onClick={onSelect} className="flex flex-col flex-1 h-full w-full">
               <CardHeader className="p-2 text-center flex-initial">
                   <CardTitle className="text-base font-bold">{table.name}</CardTitle>
@@ -635,7 +667,7 @@ const TableCard = ({ table, order, onSelect, onSwitch }: { table: Table; order?:
                    {order && <p className="text-sm font-bold mt-1">₹{order.total.toFixed(0)}</p>}
               </CardContent>
               <CardFooter className="p-1 flex justify-center items-center h-6">
-                  {status === 'KOT Printed' && <Printer className="h-4 w-4 text-muted-foreground" />}
+                  {status === 'KOT Printed' && !onPrintAction && <Printer className="h-4 w-4 text-muted-foreground" />}
               </CardFooter>
             </div>
         </Card>
@@ -724,6 +756,16 @@ const TableGridView = () => {
         <AnimatePresence>
           {sortedTables.map((table) => {
             const order = ordersByTable[table.id];
+            
+            let printAction;
+            if (order) {
+              if (needsKotPrint(order)) {
+                printAction = () => handlePrintKOT(order);
+              } else if (canGenerateBill(order)) {
+                printAction = () => handlePrintBill(order);
+              }
+            }
+
             return (
               <motion.div
                 key={table.id}
@@ -737,6 +779,7 @@ const TableGridView = () => {
                   order={order} 
                   onSelect={() => order && setSelectedTableId(table.id)}
                   onSwitch={() => order && setSwitchingOrder(order)}
+                  onPrintAction={printAction}
                />
               </motion.div>
             )
