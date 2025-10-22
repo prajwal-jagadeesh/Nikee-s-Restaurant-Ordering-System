@@ -39,8 +39,8 @@ export default function KDSView() {
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
     const activeKitchenOrders = allOrders.filter(order => {
-        // KDS should show Confirmed (for dine-in) and Preparing (for online) orders
-        return ['Confirmed', 'Preparing'].includes(order.status) &&
+        // KDS should show orders that are Confirmed, Preparing, or Ready.
+        return ['Confirmed', 'Preparing', 'Ready'].includes(order.status) &&
                order.items.some(item => ['Printed', 'New'].includes(item.kotStatus));
     });
 
