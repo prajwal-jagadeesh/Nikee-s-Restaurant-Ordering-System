@@ -6,6 +6,8 @@ import { useTableStore } from '@/lib/tables-store';
 import { useMenuStore } from '@/lib/menu-store';
 import type { Order, Table, MenuItem, OrderItem } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
+import KOTPreviewSheet from './KOTPreviewSheet';
+import BillPreviewSheet from './BillPreviewSheet';
 import { Button } from '@/components/ui/button';
 import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -614,7 +616,6 @@ const TableCard = ({
         'Billed': 'bg-[hsl(var(--status-billed))] border-transparent',
     };
     
-    const hasKotOrBillAction = !!onPrintAction;
     const hasPrintedKot = order?.items.some(i => i.kotStatus === 'Printed');
 
     return (
@@ -680,6 +681,9 @@ const TableGridView = () => {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [switchingOrder, setSwitchingOrder] = useState<Order | null>(null);
 
+  const [kotPreviewOrder, setKotPreviewOrder] = useState<Order | null>(null);
+  const [billPreviewOrder, setBillPreviewOrder] = useState<Order | null>(null);
+
   const ordersByTable = useMemo(() => allOrders.reduce((acc, order) => {
     const table = tables.find(t => t.id === order.tableId);
     if (table && order.status !== 'Paid' && order.status !== 'Cancelled') {
@@ -693,6 +697,9 @@ const TableGridView = () => {
   const selectedOrder = selectedTableId ? ordersByTable[selectedTableId] : null;
   const selectedTable = selectedTableId ? tables.find(t => t.id === selectedTableId) : null;
   
+  const kotPreviewTable = kotPreviewOrder ? tables.find(t => t.id === kotPreviewOrder.tableId) : null;
+  const billPreviewTable = billPreviewOrder ? tables.find(t => t.id === billPreviewOrder.tableId) : null;
+  
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
   const switchTable = useOrderStore((state) => state.switchTable);
@@ -705,8 +712,8 @@ const TableGridView = () => {
     updateOrderItemsKotStatus(order.id, newItemIds);
   };
 
-  const handlePrintBill = (order: Order) => {
-    updateOrderStatus(order.id, 'Billed');
+  const handlePrintBill = (orderId: string) => {
+    updateOrderStatus(orderId, 'Billed');
   };
 
   const needsKotPrint = (order: Order) => {
@@ -747,6 +754,16 @@ const TableGridView = () => {
     }
   };
 
+  const handleConfirmKot = (order: Order) => {
+    handlePrintKOT(order);
+    setKotPreviewOrder(null);
+  }
+
+  const handleConfirmBill = (orderId: string) => {
+    handlePrintBill(orderId);
+    setBillPreviewOrder(null);
+  }
+
 
   return (
     <>
@@ -758,9 +775,9 @@ const TableGridView = () => {
             let printAction;
             if (order) {
               if (needsKotPrint(order)) {
-                printAction = () => handlePrintKOT(order);
+                printAction = () => setKotPreviewOrder(order);
               } else if (canGenerateBill(order)) {
-                printAction = () => handlePrintBill(order);
+                printAction = () => setBillPreviewOrder(order);
               }
             }
 
@@ -797,7 +814,7 @@ const TableGridView = () => {
                       {needsKotPrint(selectedOrder) && (
                         <Button
                           variant="outline"
-                          onClick={() => handlePrintKOT(selectedOrder)}
+                          onClick={() => setKotPreviewOrder(selectedOrder)}
                           className="w-full"
                         >
                           <Printer className="mr-2 h-4 w-4" />
@@ -805,7 +822,7 @@ const TableGridView = () => {
                         </Button>
                       )}
                       {canGenerateBill(selectedOrder) && (
-                        <Button onClick={() => handlePrintBill(selectedOrder)} className="w-full">
+                        <Button onClick={() => setBillPreviewOrder(selectedOrder)} className="w-full">
                           <Printer className="mr-2 h-4 w-4" />
                           Generate & Print Bill
                         </Button>
@@ -843,6 +860,18 @@ const TableGridView = () => {
           </div>
         </DialogContent>
       </Dialog>
+      <KOTPreviewSheet
+        order={kotPreviewOrder}
+        table={kotPreviewTable}
+        onClose={() => setKotPreviewOrder(null)}
+        onConfirm={handleConfirmKot}
+      />
+      <BillPreviewSheet
+        order={billPreviewOrder}
+        table={billPreviewTable}
+        onClose={() => setBillPreviewOrder(null)}
+        onConfirm={handleConfirmBill}
+      />
     </>
   );
 }
