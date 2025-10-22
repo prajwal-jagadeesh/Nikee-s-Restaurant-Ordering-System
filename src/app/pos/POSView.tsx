@@ -234,7 +234,7 @@ const AnalyticsView = () => {
 
 const MenuManagement = () => {
     const menuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
-    const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []) || [];
+    const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
     const addMenuItem = useMenuStore(state => state.addMenuItem);
     const updateMenuItem = useMenuStore(state => state.updateMenuItem);
     const deleteMenuItem = useMenuStore(state => state.deleteMenuItem);
@@ -276,7 +276,7 @@ const MenuManagement = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-8">
-                        {menuCategories.map(category => (
+                        {(menuCategories || []).map(category => (
                             <div key={category}>
                                 <h3 className="text-xl font-semibold mb-4 font-headline">{category}</h3>
                                 <div className="border rounded-lg">
@@ -350,7 +350,7 @@ const MenuManagement = () => {
                 onOpenChange={setFormOpen}
                 onSubmit={handleSubmit}
                 item={editingItem}
-                categories={menuCategories}
+                categories={menuCategories || []}
             />
         </div>
     )
@@ -405,7 +405,7 @@ const MenuItemForm = ({ isOpen, onOpenChange, onSubmit, item, categories }: {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">Description</Label>
-              <Textarea id="description" value={description} onChange={(e) => setDescription(e.targe.value)} className="col-span-3" />
+              <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="price" className="text-right">Price</Label>
@@ -562,20 +562,6 @@ const TableManagement = () => {
     );
 };
 
-const getTableStatus = (order: Order | undefined) => {
-    if (!order) return 'Vacant';
-    if (order.status === 'Billed') return 'Billed';
-    if (order.items.some(i => i.kotStatus === 'Printed')) return 'KOT Printed';
-    if (order.status === 'Confirmed' || order.status === 'New') return 'Running';
-    return 'Vacant';
-}
-
-const tableStatusStyles: Record<string, { bg: string; text: string; border: string }> = {
-    Vacant: { bg: 'bg-[var(--table-vacant)]', text: 'text-[var(--table-vacant-foreground)]', border: 'border-border border-dashed' },
-    Running: { bg: 'bg-[var(--table-running)]', text: 'text-[var(--table-running-foreground)]', border: 'border-transparent' },
-    'KOT Printed': { bg: 'bg-[var(--table-kot)]', text: 'text-[var(--table-kot-foreground)]', border: 'border-transparent' },
-    Billed: { bg: 'bg-[var(--table-billed)]', text: 'text-[var(--table-billed-foreground)]', border: 'border-transparent' },
-}
 
 const TableGridView = () => {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
@@ -658,9 +644,6 @@ const TableGridView = () => {
         <AnimatePresence>
           {sortedTables.map((table) => {
               const order = ordersByTable[table.id];
-              const status = getTableStatus(order);
-              const styles = tableStatusStyles[status];
-              const hasPrintedKot = order && order.items.some(i => i.kotStatus === 'Printed');
               
               return (
                 <motion.div
@@ -673,21 +656,13 @@ const TableGridView = () => {
                   <Card
                     onClick={() => order && setSelectedTableId(table.id)}
                     className={cn(
-                      "flex flex-col h-24 w-24 justify-center items-center transition-all duration-300 rounded-lg border-2",
-                      styles.bg,
-                      styles.border,
-                      order ? 'cursor-pointer hover:shadow-lg' : 'shadow-sm'
+                      "flex flex-col h-24 w-24 justify-center items-center transition-all duration-300 rounded-lg border-2 border-dashed",
+                      order ? 'cursor-pointer hover:shadow-lg bg-card' : 'shadow-sm bg-card'
                     )}
                   >
                     <CardContent className="p-0 flex flex-col items-center justify-center flex-1">
-                      <p className={cn("font-semibold", styles.text)}>{table.name}</p>
+                      <p className="font-semibold text-card-foreground">{table.name}</p>
                     </CardContent>
-                     {order && (
-                        <CardFooter className={cn("p-1 w-full h-8 flex items-center justify-center gap-3", styles.text)}>
-                            <Eye className="h-4 w-4" />
-                            {hasPrintedKot && <Printer className="h-4 w-4" />}
-                        </CardFooter>
-                     )}
                   </Card>
                 </motion.div>
               )
@@ -858,9 +833,3 @@ export default function POSView({
     </div>
   );
 }
-
-    
-
-    
-
-    
