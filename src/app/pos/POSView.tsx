@@ -56,6 +56,69 @@ const naturalSort = (a: Table, b: Table) => {
     return numA - numB;
 };
 
+const SettingsManagement = () => {
+    return (
+        <div className="max-w-4xl mx-auto space-y-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Printer Settings</CardTitle>
+                    <CardDescription>Configure the default printer and page settings for KOTs and Bills.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="printer-select">Default Printer</Label>
+                        <Select defaultValue="tvs-rp-3230">
+                            <SelectTrigger id="printer-select" className="w-[300px]">
+                                <SelectValue placeholder="Select a printer" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="tvs-rp-3230">TVS RP 3230 Thermal Printer</SelectItem>
+                                <SelectItem value="generic-80mm">Generic 80mm Thermal Printer</SelectItem>
+                                <SelectItem value="system">System Print Dialog</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Page Settings</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-md">
+                            <div className="space-y-2">
+                                <Label htmlFor="paper-width">Paper Width</Label>
+                                <Input id="paper-width" defaultValue="80mm" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="margin-top">Margin Top</Label>
+                                <Input id="margin-top" defaultValue="5mm" />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="margin-bottom">Margin Bottom</Label>
+                                <Input id="margin-bottom" defaultValue="5mm" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="margin-sides">Margin Sides</Label>
+                                <Input id="margin-sides" defaultValue="3mm" />
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+                 <CardFooter>
+                    <Button>Save Printer Settings</Button>
+                </CardFooter>
+            </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle>Template Design</CardTitle>
+                    <CardDescription>Customize the look and feel of your printed KOTs and Bills. (Future Feature)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <div className="text-muted-foreground text-center py-8">
+                        Template customization options will be available here in a future update.
+                   </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
 const AnalyticsView = () => {
     const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
     
@@ -955,6 +1018,17 @@ export default function POSView({
                         <BarChart2 className="h-5 w-5" />
                         <span className="ml-4">Analytics</span>
                     </Button>
+                     <Button
+                        variant={activeView === 'settings' ? 'secondary' : 'ghost'}
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setActiveView('settings');
+                          setSidebarOpen(false);
+                        }}
+                    >
+                        <Printer className="h-5 w-5" />
+                        <span className="ml-4">Printer Settings</span>
+                    </Button>
                 </nav>
             </div>
         </SheetContent>
@@ -965,6 +1039,7 @@ export default function POSView({
         {activeView === 'menu' && <MenuManagement />}
         {activeView === 'tables' && <TableManagement />}
         {activeView === 'analytics' && <AnalyticsView />}
+        {activeView === 'settings' && <SettingsManagement />}
       </main>
     </div>
   );
