@@ -40,16 +40,14 @@ export default function KDSView() {
   const kdsOrders = useMemo((): GroupedOrder[] => {
     const activeKitchenOrders = allOrders.filter(order => {
         // KDS should show orders that are Confirmed, Preparing, Ready, or Billed.
-        // It should not show items that are already fully served.
         const relevantStatuses = ['Confirmed', 'Preparing', 'Ready', 'Billed'];
-        return relevantStatuses.includes(order.status) &&
-               order.items.some(item => (item.kotStatus === 'Printed' && item.itemStatus !== 'Served') || item.kotStatus === 'New');
+        return relevantStatuses.includes(order.status);
     });
 
     const combinedOrders = activeKitchenOrders.map(order => {
         const kitchenItems = order.items
             // For dine-in, we still respect the KOT status. For online, all items are sent to kitchen at once.
-            .filter(item => (order.orderType === 'online' || item.kotStatus === 'Printed') && item.itemStatus !== 'Served')
+            .filter(item => (order.orderType === 'online' || item.kotStatus === 'Printed'))
             .map(item => ({ ...item, originalOrderId: order.id }));
         
         return {
