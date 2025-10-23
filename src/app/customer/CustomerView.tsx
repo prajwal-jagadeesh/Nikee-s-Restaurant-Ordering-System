@@ -6,19 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetDescription } from '@/components/ui/sheet';
-import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, BellRing, Hand, IndianRupee } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
 import { useMenuStore } from '@/lib/menu-store';
 import { useSettingsStore } from '@/lib/settings-store';
+import { useSessionStore } from '@/lib/session-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
 import ItemStatusBadge from '@/components/ItemStatusBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 const statusInfo: Record<OrderStatus, { label: string, description: string, progress: number }> = {
   'New': { label: 'Waiting for Confirmation', description: 'Your order has been sent. A captain will confirm it shortly.', progress: 20 },
@@ -92,6 +95,8 @@ export default function CustomerView() {
 
   const restaurantLocation = useHydratedStore(useSettingsStore, state => state.location, { latitude: null, longitude: null });
   
+  const { sessionId, tableId: sessionTableId, startTime, isValid: isSessionValid, startSession, endSession } = useHydratedStore(useSessionStore, state => state, { sessionId: null, tableId: null, startTime: null, isValid: false, startSession: () => {}, endSession: () => {} });
+
   const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -100,47 +105,85 @@ export default function CustomerView() {
 
   const { toast } = useToast();
 
+  const activeOrder = useMemo(() => {
+    if (!table || !sessionId) return undefined;
+    return orders.find(o => o.tableId === table.id && o.sessionId === sessionId && o.status !== 'Paid' && o.status !== 'Cancelled');
+  }, [orders, table, sessionId]);
+
+  // Session and Geolocation Logic
   useEffect(() => {
-    if (!restaurantLocation.latitude || !restaurantLocation.longitude) {
-      setLocationState({ status: 'ok', message: '' }); // No location set, so we allow orders
-      return;
+    if (!table) return;
+
+    // If session is for a different table, end it.
+    if (sessionTableId && sessionTableId !== table.id) {
+        endSession();
+        return;
     }
 
-    setLocationState({ status: 'checking', message: 'Verifying your location...' });
+    // If there's no valid session for this table, start the check.
+    if (!isSessionValid || sessionTableId !== table.id) {
+      setLocationState({ status: 'checking', message: 'Verifying your location to start a new session...' });
 
-    if (!navigator.geolocation) {
-      setLocationState({ status: 'error', message: 'Geolocation is not supported by your browser.' });
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userLat = position.coords.latitude;
-        const userLon = position.coords.longitude;
-        
-        const distance = getDistance(userLat, userLon, parseFloat(restaurantLocation.latitude!), parseFloat(restaurantLocation.longitude!));
-        
-        if (distance <= 50) {
-           setLocationState({ status: 'ok', message: 'Location verified.' });
-           toast({
-               title: "Location Verified",
-               description: "You're cleared to place an order.",
-               duration: 2000,
-           });
-        } else {
-          setLocationState({ status: 'error', message: 'You are too far from the restaurant to place an order.' });
-        }
-      },
-      () => {
-        setLocationState({ status: 'error', message: 'Please enable location services to place an order.' });
-         toast({
-            variant: "destructive",
-            title: "Location Access Denied",
-            description: "To place an order, please allow location access in your browser settings.",
-          });
+      if (!navigator.geolocation) {
+        setLocationState({ status: 'error', message: 'Geolocation is not supported by your browser.' });
+        return;
       }
-    );
-  }, [restaurantLocation.latitude, restaurantLocation.longitude, toast]);
+      
+      if (!restaurantLocation.latitude || !restaurantLocation.longitude) {
+        setLocationState({ status: 'ok', message: '' }); // No location set, so we allow orders
+        startSession(table.id);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLat = position.coords.latitude;
+          const userLon = position.coords.longitude;
+          const distance = getDistance(userLat, userLon, parseFloat(restaurantLocation.latitude!), parseFloat(restaurantLocation.longitude!));
+          
+          if (distance <= 500) { // Increased range for better UX
+             setLocationState({ status: 'ok', message: 'Location verified.' });
+             startSession(table.id);
+             toast({ title: "Session Started", description: "You can now place your order.", duration: 3000 });
+          } else {
+            setLocationState({ status: 'error', message: 'You must be at the restaurant to start a session.' });
+            endSession();
+          }
+        },
+        () => {
+          setLocationState({ status: 'error', message: 'Please enable location services to place an order.' });
+          endSession();
+        }
+      );
+    } else {
+        // Session is valid and for the correct table
+        setLocationState({ status: 'ok', message: '' });
+    }
+  }, [table, restaurantLocation, sessionTableId, isSessionValid, startSession, endSession, toast]);
+  
+  // Session Timeout Logic
+  useEffect(() => {
+    if (!isSessionValid || !startTime) return;
+
+    // If there is an active order, the session does not expire.
+    if (activeOrder) return;
+    
+    const interval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        if (elapsed > SESSION_TIMEOUT_MS) {
+            endSession();
+            toast({
+                variant: 'destructive',
+                title: 'Session Expired',
+                description: 'Your session has timed out due to inactivity. Please scan the QR code again.',
+            });
+            clearInterval(interval);
+        }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+
+  }, [isSessionValid, startTime, activeOrder, endSession, toast]);
 
 
   useEffect(() => {
@@ -151,13 +194,10 @@ export default function CustomerView() {
 
   useRedirectIfSwitched(table);
 
-  const activeOrder = useMemo(() => {
-    if (!table) return undefined;
-    return orders.find(o => o.tableId === table.id && o.status !== 'Paid' && o.status !== 'Cancelled');
-  }, [orders, table]);
+  const canPlaceOrder = locationState.status === 'ok' && isSessionValid;
 
   const addToCart = (item: MenuItem, quantity = 1) => {
-    if (locationState.status !== 'ok') return;
+    if (!canPlaceOrder) return;
     setCart((prev) => {
       const existing = prev.find((i) => i.menuItem.id === item.id);
       if (existing) {
@@ -189,7 +229,7 @@ export default function CustomerView() {
   }, [cart]);
   
   const placeOrUpdateOrder = () => {
-    if (locationState.status !== 'ok' || cart.length === 0 || !table) return;
+    if (!canPlaceOrder || cart.length === 0 || !table) return;
     
     if (activeOrder) {
       addItemsToOrder(activeOrder.id, cart);
@@ -197,6 +237,7 @@ export default function CustomerView() {
       addOrder({
         tableId: table.id,
         items: cart,
+        sessionId: sessionId!,
       });
     }
     setCart([]);
@@ -221,7 +262,7 @@ export default function CustomerView() {
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" disabled={locationState.status !== 'ok'}>
+          <Button variant="outline" disabled={!canPlaceOrder}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Add More
           </Button>
@@ -259,6 +300,26 @@ export default function CustomerView() {
 
   return (
     <>
+      <AnimatePresence>
+        {!isSessionValid && locationState.status !== 'checking' && (
+           <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"
+           >
+              <Card className="max-w-sm text-center">
+                  <CardHeader>
+                      <CardTitle>Session Expired or Invalid</CardTitle>
+                      <CardDescription>Your ordering session is not active. Please scan the QR code on your table to begin.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <QrCode className="mx-auto h-24 w-24 text-muted-foreground" />
+                  </CardContent>
+              </Card>
+           </motion.div>
+        )}
+      </AnimatePresence>
       <div className="text-center mb-6">
         <h1 className="text-4xl font-bold font-headline">Welcome to Nikee's Zara</h1>
         <p className="text-lg text-muted-foreground">You are ordering for {table.name}</p>
@@ -310,7 +371,7 @@ export default function CustomerView() {
                             {isItemInCart(item.id) ? (
                                 <ReorderPopover item={item} />
                             ) : (
-                                <Button onClick={() => addToCart(item)} disabled={locationState.status !== 'ok'}>Add to Order</Button>
+                                <Button onClick={() => addToCart(item)} disabled={!canPlaceOrder}>Add to Order</Button>
                             )}
                             </CardFooter>
                         </Card>
@@ -321,10 +382,10 @@ export default function CustomerView() {
       </Tabs>
       
       {/* Floating Action Buttons */}
-      <div className="fixed bottom-6 right-6 z-50">
+       <div className="fixed bottom-6 right-6 z-40">
         <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
           <SheetTrigger asChild>
-            <Button className="rounded-full h-16 w-16 shadow-lg" disabled={locationState.status !== 'ok'}>
+            <Button className="rounded-full h-16 w-16 shadow-lg" disabled={!canPlaceOrder}>
               <ShoppingCart />
               {(cartItemCount) > 0 && (
                 <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
@@ -411,7 +472,7 @@ export default function CustomerView() {
                               <span>₹{(activeOrder.total + newItemsTotal).toFixed(2)}</span>
                           </div>
                           )}
-                          <Button size="lg" className="w-full" onClick={placeOrUpdateOrder} disabled={locationState.status !== 'ok'}>
+                          <Button size="lg" className="w-full" onClick={placeOrUpdateOrder} disabled={!canPlaceOrder}>
                           {activeOrder ? 'Add Items to Order' : 'Place Order'}
                           </Button>
                       </>

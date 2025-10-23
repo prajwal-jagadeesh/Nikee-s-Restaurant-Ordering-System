@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useMenuStore } from './menu-store';
 import { useTableStore } from './tables-store';
 import { useSettingsStore } from './settings-store';
+import { useSessionStore } from './session-store';
 
 interface OrderState {
   orders: Order[];
@@ -33,16 +34,21 @@ const recalculateTotal = (items: OrderItem[]): number => {
 
 const updateOverallOrderStatus = (order: Order): Order => {
   // Do not change status for these terminal/manual states or for online orders.
-  if (order.orderType === 'online' || ['Billed', 'Paid', 'Cancelled', 'Delivered', 'New'].includes(order.status)) {
+  if (order.orderType === 'online' || ['Billed', 'Paid', 'Cancelled', 'Delivered'].includes(order.status)) {
     return order;
   }
 
   const itemsInKitchen = order.items.filter(item => item.kotStatus === 'Printed');
   
-  // If no items have been sent to the kitchen yet, it remains Confirmed (or whatever it was).
+  // If no items have been sent to the kitchen yet, it remains as it was (New or Confirmed)
   if (itemsInKitchen.length === 0) {
-      if (order.status !== 'New') return { ...order, status: 'Confirmed' };
       return order;
+  }
+
+  // If every KOT item is served, the order status returns to 'Confirmed' to keep it on the captain screen
+  const allServed = itemsInKitchen.every(item => item.itemStatus === 'Served');
+  if (allServed) {
+    return { ...order, status: 'Confirmed' };
   }
 
   // If any item is Ready, the order status is Ready. This is the highest priority status pre-billing.
@@ -56,13 +62,12 @@ const updateOverallOrderStatus = (order: Order): Order => {
   if (somePreparing) {
     return { ...order, status: 'Preparing' };
   }
-
-  // If all items are served or it's just a mix of pending/served, it goes back to Confirmed.
-  // This ensures it stays on the Captain's screen.
-  if (order.status !== 'New') {
-     return { ...order, status: 'Confirmed' };
-  }
   
+  // If we're here, it means items are printed but all are 'Pending'. Status should be 'Confirmed'.
+  if(order.status === 'New' || order.status === 'Confirmed') {
+      return { ...order, status: 'Confirmed' };
+  }
+
   return order;
 };
 
@@ -73,6 +78,7 @@ export const useOrderStore = create(
       orders: [],
       hydrated: false,
       addOrder: (order) => {
+        const { sessionId } = useSessionStore.getState();
         const latestId = get().orders.reduce((maxId, o) => {
           const idNum = parseInt(o.id.replace('ORD', ''), 10);
           return idNum > maxId ? idNum : maxId;
@@ -90,6 +96,7 @@ export const useOrderStore = create(
           timestamp: Date.now(),
           total: recalculateTotal(itemsWithStatus),
           kotCounter: 0,
+          sessionId,
         };
         set((state) => ({ orders: [...state.orders, newOrder] }));
       },
@@ -367,7 +374,7 @@ export function useHydratedStore<T, F>(
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       // If a storage event happens for any of our stores, rehydrate all of them.
-      if (e.key && ['order-storage', 'table-storage', 'menu-storage', 'settings-storage'].includes(e.key)) {
+      if (e.key && ['order-storage', 'table-storage', 'menu-storage', 'settings-storage', 'session-storage'].includes(e.key)) {
         stores.forEach(s => s.persist.rehydrate());
       }
     };
