@@ -451,35 +451,32 @@ export default function CustomerView() {
       </div>
 
        {activeOrder && (
-         <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-3">
-             {allItemsServed && !activeOrder.paymentRequested ? (
+         <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-3">
+             {allItemsServed && !activeOrder.paymentRequested && (
                 <Button size="lg" className="shadow-lg rounded-full" onClick={handleReadyToPay}>Ready to Pay?</Button>
-            ) : (
-                <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="shadow-lg rounded-full" 
-                    onClick={handleCallCaptain} 
-                    disabled={activeOrder.assistanceRequested}
-                >
-                    {activeOrder.assistanceRequested ? (
-                        <>
-                            <BellRing className="mr-2 h-4 w-4 animate-ping" />
-                            Captain is on the way
-                        </>
-                    ) : (
-                          <>
-                            <Hand className="mr-2 h-4 w-4" />
-                            Call for Assistance
-                        </>
-                    )}
-                </Button>
             )}
+            <Button 
+                size="lg" 
+                variant="outline" 
+                className="shadow-lg rounded-full" 
+                onClick={handleCallCaptain} 
+                disabled={activeOrder.assistanceRequested}
+            >
+                {activeOrder.assistanceRequested ? (
+                    <>
+                        <BellRing className="mr-2 h-4 w-4 animate-ping" />
+                        Captain is on the way
+                    </>
+                ) : (
+                      <>
+                        <Hand className="mr-2 h-4 w-4" />
+                        Call for Assistance
+                    </>
+                )}
+            </Button>
         </div>
        )}
 
     </>
   );
 }
-
-    
