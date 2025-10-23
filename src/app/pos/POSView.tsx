@@ -1012,7 +1012,6 @@ const TableGridView = () => {
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
   const switchTable = useOrderStore((state) => state.switchTable);
-  const applyDiscount = useOrderStore((state) => state.applyDiscount);
 
   const handlePrintKOT = (order: Order) => {
     const newItems = order.items.filter(item => item.kotStatus === 'New');
@@ -1022,8 +1021,7 @@ const TableGridView = () => {
     updateOrderItemsKotStatus(order.id, newItemKotIds);
   };
 
-  const handlePrintBill = (orderId: string, discountValue: number, discountType: DiscountType) => {
-    applyDiscount(orderId, discountValue, discountType);
+  const handlePrintBill = (orderId: string) => {
     updateOrderStatus(orderId, 'Billed');
   };
 
@@ -1071,8 +1069,8 @@ const TableGridView = () => {
     setKotPreviewOrder(null);
   }
 
-  const handleConfirmBill = (orderId: string, discountValue: number, discountType: DiscountType) => {
-    handlePrintBill(orderId, discountValue, discountType);
+  const handleConfirmBill = (orderId: string) => {
+    handlePrintBill(orderId);
     setBillPreviewOrder(null);
   }
 
@@ -1121,7 +1119,11 @@ const TableGridView = () => {
                 <SheetTitle>Details for {selectedTable.name}</SheetTitle>
               </SheetHeader>
                <div className="py-4">
-                  <OrderCard order={selectedOrder} tableName={selectedTable.name}>
+                  <OrderCard 
+                    order={selectedOrder} 
+                    tableName={selectedTable.name}
+                    showDiscountControls={true}
+                  >
                     <div className="mt-4 flex flex-col space-y-2">
                       {needsKotPrint(selectedOrder) && (
                         <Button

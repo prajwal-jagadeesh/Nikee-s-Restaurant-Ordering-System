@@ -4,43 +4,29 @@ import type { Order, Table, DiscountType } from '@/lib/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Printer, Percent, BadgeIndianRupee } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Printer } from 'lucide-react';
 
 interface BillPreviewSheetProps {
     order: Order | null;
     table: Table | null;
     onClose: () => void;
-    onConfirm: (orderId: string, discountValue: number, discountType: DiscountType) => void;
+    onConfirm: (orderId: string) => void;
 }
 
 export default function BillPreviewSheet({ order, table, onClose, onConfirm }: BillPreviewSheetProps) {
-    const [discountType, setDiscountType] = useState<DiscountType>('percentage');
-    const [discountValue, setDiscountValue] = useState(0);
-
-    useEffect(() => {
-        if (order) {
-            setDiscountType(order.discountType || 'percentage');
-            setDiscountValue(order.discount || 0);
-        } else {
-            setDiscountValue(0);
-            setDiscountType('percentage');
-        }
-    }, [order]);
-
+    
     const subtotal = useMemo(() => {
         if (!order) return 0;
         return order.originalTotal || order.items.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
     }, [order]);
 
     const discountAmount = useMemo(() => {
-        if (discountType === 'percentage') {
-            return (subtotal * discountValue) / 100;
+        if (!order || !order.discount) return 0;
+        if (order.discountType === 'percentage') {
+            return (subtotal * order.discount) / 100;
         }
-        return discountValue;
-    }, [subtotal, discountValue, discountType]);
+        return order.discount;
+    }, [subtotal, order]);
 
     const grandTotal = useMemo(() => {
         const total = subtotal - discountAmount;
@@ -51,7 +37,7 @@ export default function BillPreviewSheet({ order, table, onClose, onConfirm }: B
     if (!order || !table) return null;
 
     const handleConfirmClick = () => {
-        onConfirm(order.id, discountValue, discountType);
+        onConfirm(order.id);
     }
 
     return (
@@ -66,31 +52,7 @@ export default function BillPreviewSheet({ order, table, onClose, onConfirm }: B
                     </SheetDescription>
                 </SheetHeader>
 
-                {/* Discount Section */}
-                <div className="py-4 font-sans">
-                    <Label className="text-base font-semibold">Apply Discount</Label>
-                    <div className="flex gap-4 mt-2">
-                        <RadioGroup defaultValue={discountType} onValueChange={(v) => setDiscountType(v as DiscountType)} className="flex items-center">
-                           <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="percentage" id="r1" />
-                                <Label htmlFor="r1" className="flex items-center gap-1"><Percent className="h-4 w-4"/> Percentage</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="amount" id="r2" />
-                                <Label htmlFor="r2" className="flex items-center gap-1"><BadgeIndianRupee className="h-4 w-4"/> Amount</Label>
-                            </div>
-                        </RadioGroup>
-                        <Input 
-                            type="number" 
-                            value={discountValue}
-                            onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                            className="max-w-[120px] font-mono text-base"
-                            min={0}
-                        />
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto my-2 -mx-2 px-2 border-t pt-4">
+                <div className="flex-1 overflow-y-auto my-4 -mx-2 px-2 border-t pt-4">
                     <div className="space-y-1 text-xs">
                         <div className="flex justify-between">
                             <span>Order ID: {order.id}</span>
@@ -129,7 +91,7 @@ export default function BillPreviewSheet({ order, table, onClose, onConfirm }: B
                         </div>
                          {discountAmount > 0 && (
                              <div className="flex justify-between">
-                                <span>Discount ({discountType === 'percentage' ? `${discountValue}%` : `₹${discountValue}`})</span>
+                                <span>Discount ({order.discountType === 'percentage' ? `${order.discount}%` : `₹${order.discount}`})</span>
                                 <span>- ₹{discountAmount.toFixed(2)}</span>
                             </div>
                          )}

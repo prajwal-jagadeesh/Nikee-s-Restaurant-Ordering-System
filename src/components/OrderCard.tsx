@@ -1,8 +1,8 @@
 'use client';
-import type { Order, OrderItem } from '@/lib/types';
+import type { Order, OrderItem, DiscountType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2 } from 'lucide-react';
+import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, Percent, BadgeIndianRupee } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import ItemStatusBadge from './ItemStatusBadge';
@@ -10,6 +10,10 @@ import { Button } from './ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { groupBy } from 'lodash';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Input } from '@/components/ui/input';
+import { useOrderStore } from '@/lib/orders-store';
 
 interface OrderCardProps {
   order: Order;
@@ -20,6 +24,7 @@ interface OrderCardProps {
   onSwitchTable?: () => void;
   onEditItems?: () => void;
   onCancelOrder?: () => void;
+  showDiscountControls?: boolean;
 }
 
 // Helper to group items for display
@@ -59,7 +64,18 @@ export default function OrderCard({
     onSwitchTable,
     onEditItems,
     onCancelOrder,
+    showDiscountControls = false,
 }: OrderCardProps) {
+  const applyDiscount = useOrderStore(state => state.applyDiscount);
+  
+  const handleDiscountTypeChange = (type: DiscountType) => {
+    applyDiscount(order.id, order.discount || 0, type);
+  }
+  
+  const handleDiscountValueChange = (value: number) => {
+     applyDiscount(order.id, value, order.discountType || 'percentage');
+  }
+
   const newItems = groupItemsForDisplay(order.items.filter(i => i.kotStatus === 'New'));
   const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
   
@@ -73,6 +89,8 @@ export default function OrderCard({
 
   const showOrderDetailsHeader = !showKotDetails && itemsForDisplay.length > 0;
   const displayName = tableName || `Table ${order.tableId}`;
+
+  const subtotal = order.originalTotal || order.items.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
 
   return (
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300 relative">
@@ -175,7 +193,7 @@ export default function OrderCard({
                   {readyItems.map(item => (
                     <li key={item.kotId} className="flex justify-between items-center bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
                       <span className="font-medium text-sm">{item.quantity} x {item.menuItem.name}</span>
-                      <Button size="sm" className="h-7" onClick={() => onServeItem(order.id, item.kotId!)}>
+                       <Button size="sm" className="h-8" onClick={() => onServeItem(order.id, item.kotId!)}>
                         Mark Served
                       </Button>
                     </li>
@@ -186,6 +204,37 @@ export default function OrderCard({
         )}
       </CardContent>
       <CardFooter className="flex flex-col items-start pt-4 border-t">
+        {showDiscountControls && (
+          <div className="w-full mb-4">
+              <Separator className="mb-4"/>
+              <Label className="text-base font-semibold">Apply Discount</Label>
+              <div className="flex gap-4 mt-2">
+                  <RadioGroup defaultValue={order.discountType || 'percentage'} onValueChange={(v) => handleDiscountTypeChange(v as DiscountType)} className="flex items-center">
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="percentage" id={`r1-${order.id}`} />
+                          <Label htmlFor={`r1-${order.id}`} className="flex items-center gap-1"><Percent className="h-4 w-4"/> Percentage</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="amount" id={`r2-${order.id}`} />
+                          <Label htmlFor={`r2-${order.id}`} className="flex items-center gap-1"><BadgeIndianRupee className="h-4 w-4"/> Amount</Label>
+                      </div>
+                  </RadioGroup>
+                  <Input 
+                      type="number" 
+                      value={order.discount || 0}
+                      onChange={(e) => handleDiscountValueChange(parseFloat(e.target.value) || 0)}
+                      className="max-w-[120px] font-mono text-base h-9"
+                      min={0}
+                  />
+              </div>
+          </div>
+        )}
+        {(order.discount || 0) > 0 && (
+          <div className='w-full flex justify-between text-sm text-muted-foreground'>
+            <span>Subtotal</span>
+            <span>₹{subtotal.toFixed(2)}</span>
+          </div>
+        )}
         <div className="w-full flex justify-between font-bold text-md mb-4">
           <span>Total</span>
           <span>₹{order.total.toFixed(2)}</span>
