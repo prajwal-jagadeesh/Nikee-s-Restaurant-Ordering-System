@@ -3,10 +3,11 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { MenuItem, OrderItem, Order, OrderStatus, Table } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetDescription } from '@/components/ui/sheet';
-import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode, IndianRupee } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode, IndianRupee, CreditCard, Wallet } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -101,6 +102,7 @@ export default function CustomerView() {
   const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isPaymentOptionsOpen, setPaymentOptionsOpen] = useState(false);
 
   const [locationState, setLocationState] = useState<{ status: 'idle' | 'checking' | 'ok' | 'error', message: string }>({ status: 'idle', message: '' });
 
@@ -147,7 +149,7 @@ export default function CustomerView() {
              startSession(table.id);
              toast({ title: "Session Started", description: "You can now place your order.", duration: 3000 });
           } else {
-            setLocationState({ status: 'error', message: 'You must be at the restaurant to start a session.' });
+            setLocationState({ status: 'error', message: 'You must be at the restaurant to place an order.' });
             endSession();
           }
         },
@@ -507,10 +509,45 @@ export default function CustomerView() {
                           </Button>
                       </>
                     )}
-                    {activeOrder?.status === 'Billed' && upiDetails.upiId && (
-                        <Button size="lg" className="w-full" onClick={handleUpiPayment}>
-                            <IndianRupee className="mr-2 h-5 w-5" /> Pay with UPI
-                        </Button>
+                    {activeOrder?.status === 'Billed' && (
+                        <Dialog open={isPaymentOptionsOpen} onOpenChange={setPaymentOptionsOpen}>
+                          <DialogTrigger asChild>
+                            <Button size="lg" className="w-full">
+                                <Wallet className="mr-2 h-5 w-5" /> Proceed to Pay
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Select Payment Method</DialogTitle>
+                              <DialogDescription>
+                                How would you like to pay for your order of ₹{activeOrder.total.toFixed(2)}?
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              <Button variant="outline" className="justify-start h-14 text-left" onClick={() => {handleUpiPayment(); setPaymentOptionsOpen(false);}}>
+                                <IndianRupee className="mr-4 h-6 w-6" />
+                                <div>
+                                  <p className="font-semibold">Pay with UPI</p>
+                                  <p className="text-xs text-muted-foreground">Use GPay, PhonePe, Paytm, etc.</p>
+                                </div>
+                              </Button>
+                              <Button variant="outline" className="justify-start h-14 text-left" disabled>
+                                <CreditCard className="mr-4 h-6 w-6" />
+                                <div>
+                                  <p className="font-semibold">Card Payment</p>
+                                  <p className="text-xs text-muted-foreground">Coming Soon</p>
+                                </div>
+                              </Button>
+                               <Button variant="outline" className="justify-start h-14 text-left" onClick={() => setPaymentOptionsOpen(false)}>
+                                <QrCode className="mr-4 h-6 w-6" />
+                                <div>
+                                  <p className="font-semibold">Cash or Counter QR</p>
+                                  <p className="text-xs text-muted-foreground">Pay at the billing counter.</p>
+                                </div>
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                     )}
                   </div>
               </SheetFooter>
