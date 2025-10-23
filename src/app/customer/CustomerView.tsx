@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import type { MenuItem, OrderItem, Order, OrderStatus, Table } from '@/lib/types';
+import type { MenuItem, OrderItem, Order, OrderStatus, Table, PaymentMethod } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -89,6 +89,7 @@ export default function CustomerView() {
   const orders = useHydratedStore(useOrderStore, state => state.orders, []);
   const addOrder = useOrderStore((state) => state.addOrder);
   const addItemsToOrder = useOrderStore((state) => state.addItemsToOrder);
+  const setPaymentMethod = useOrderStore((state) => state.setPaymentMethod);
 
   const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
   const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
@@ -256,14 +257,24 @@ export default function CustomerView() {
     setIsCartOpen(false);
   };
   
-  const handleUpiPayment = () => {
-      if (!activeOrder || !upiDetails.upiId) return;
+  const handlePaymentSelection = (method: PaymentMethod) => {
+    if (!activeOrder) return;
+    
+    setPaymentMethod(activeOrder.id, method);
+    setPaymentOptionsOpen(false);
 
+    if (method === 'upi') {
       const payeeName = upiDetails.restaurantName || "Nikee's Zara";
       const upiLink = `upi://pay?pa=${upiDetails.upiId}&pn=${encodeURIComponent(payeeName)}&am=${activeOrder.total.toFixed(2)}&cu=INR&tn=Order%20at%20${encodeURIComponent(payeeName)}`;
-      
       window.location.href = upiLink;
+    } else if (method === 'cash_at_counter') {
+       toast({
+        title: "Captain Notified",
+        description: "A captain has been notified and will be with you shortly to assist with payment.",
+      });
+    }
   }
+
 
   const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab, menuItems]);
   const isItemInCart = (itemId: string) => activeOrder?.items.some(item => item.menuItem.id === itemId);
@@ -524,7 +535,7 @@ export default function CustomerView() {
                               </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
-                              <Button variant="outline" className="justify-start h-14 text-left" onClick={() => {handleUpiPayment(); setPaymentOptionsOpen(false);}}>
+                              <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('upi')}>
                                 <IndianRupee className="mr-4 h-6 w-6" />
                                 <div>
                                   <p className="font-semibold">Pay with UPI</p>
@@ -538,7 +549,7 @@ export default function CustomerView() {
                                   <p className="text-xs text-muted-foreground">Coming Soon</p>
                                 </div>
                               </Button>
-                               <Button variant="outline" className="justify-start h-14 text-left" onClick={() => setPaymentOptionsOpen(false)}>
+                               <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('cash_at_counter')}>
                                 <QrCode className="mr-4 h-6 w-6" />
                                 <div>
                                   <p className="font-semibold">Cash or Counter QR</p>

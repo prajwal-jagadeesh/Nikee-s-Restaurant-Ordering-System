@@ -17,6 +17,7 @@ export type ItemStatus = 'Pending' | 'Preparing' | 'Ready' | 'Served';
 export type OrderType = 'dine-in' | 'online';
 export type OnlinePlatform = 'Zomato' | 'Swiggy' | 'Others';
 export type DiscountType = 'percentage' | 'amount';
+export type PaymentMethod = 'upi' | 'card' | 'cash_at_counter';
 
 export interface MenuItem {
   id: string;
@@ -59,6 +60,7 @@ export interface Order {
   kotCounter?: number; // To generate unique KOT IDs
   switchedFrom?: string; // To track table switches
   sessionId?: string;
+  paymentMethod?: PaymentMethod | null;
 }
 
 export interface Table {

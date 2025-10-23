@@ -1,7 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Order, OrderStatus, OrderItem, ItemStatus, OrderType, OnlinePlatform, CustomerDetails, DiscountType } from './types';
+import type { Order, OrderStatus, OrderItem, ItemStatus, OrderType, OnlinePlatform, CustomerDetails, DiscountType, PaymentMethod } from './types';
 import { useState, useEffect } from 'react';
 import { useMenuStore } from './menu-store';
 import { useTableStore } from './tables-store';
@@ -23,6 +23,7 @@ interface OrderState {
   switchTable: (orderId: string, newTableId: string) => boolean;
   clearSwitchedFrom: (orderId: string) => void;
   applyDiscount: (orderId: string, value: number, type: DiscountType) => void;
+  setPaymentMethod: (orderId: string, method: PaymentMethod | null) => void;
   clearOrders: () => void;
   setHydrated: (hydrated: boolean) => void;
 }
@@ -400,6 +401,13 @@ export const useOrderStore = create(
                     discountType: type,
                 }
             })
+        }))
+      },
+      setPaymentMethod: (orderId, method) => {
+        set(state => ({
+          orders: state.orders.map(order => 
+            order.id === orderId ? { ...order, paymentMethod: method } : order
+          )
         }))
       },
       clearOrders: () => {

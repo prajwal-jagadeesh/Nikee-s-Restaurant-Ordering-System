@@ -1,9 +1,9 @@
 'use client';
 import { useMemo } from 'react';
-import type { Order, OrderItem, DiscountType } from '@/lib/types';
+import type { Order, OrderItem, DiscountType, PaymentMethod } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, Percent, BadgeIndianRupee, Printer } from 'lucide-react';
+import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, Percent, BadgeIndianRupee, Printer, Wallet, CircleCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import ItemStatusBadge from './ItemStatusBadge';
@@ -70,6 +70,7 @@ export default function OrderCard({
     onReprintKot,
 }: OrderCardProps) {
   const applyDiscount = useOrderStore(state => state.applyDiscount);
+  const setPaymentMethod = useOrderStore(state => state.setPaymentMethod);
   
   const handleDiscountTypeChange = (type: DiscountType) => {
     applyDiscount(order.id, order.discount || 0, type);
@@ -146,6 +147,21 @@ export default function OrderCard({
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-2 pt-2">
+        {order.paymentMethod === 'cash_at_counter' && (
+          <div className="bg-yellow-100 dark:bg-yellow-900/40 border border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-300 p-3 rounded-md mb-2">
+              <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                      <Wallet className="h-5 w-5"/>
+                      <p className="font-bold">Cash Payment Requested</p>
+                  </div>
+                  <Button size="sm" className="h-7" onClick={() => setPaymentMethod(order.id, null)}>
+                      <CircleCheck className="h-4 w-4 mr-1" />
+                      Acknowledge
+                  </Button>
+              </div>
+          </div>
+        )}
+
         {newItems.length > 0 && (
           <>
             <Separator />
