@@ -272,6 +272,11 @@ export default function CustomerView() {
         title: "Captain Notified",
         description: "A captain has been notified and will be with you shortly to assist with payment.",
       });
+    } else if (method === 'card') {
+       toast({
+        title: "Captain Notified",
+        description: "A captain has been notified and will bring the card machine to your table.",
+      });
     }
   }
 
@@ -542,11 +547,11 @@ export default function CustomerView() {
                                   <p className="text-xs text-muted-foreground">Use GPay, PhonePe, Paytm, etc.</p>
                                 </div>
                               </Button>
-                              <Button variant="outline" className="justify-start h-14 text-left" disabled>
+                              <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('card')}>
                                 <CreditCard className="mr-4 h-6 w-6" />
                                 <div>
                                   <p className="font-semibold">Card Payment</p>
-                                  <p className="text-xs text-muted-foreground">Coming Soon</p>
+                                  <p className="text-xs text-muted-foreground">Request card machine at table</p>
                                 </div>
                               </Button>
                                <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('cash_at_counter')}>

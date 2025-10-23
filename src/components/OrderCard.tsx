@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import type { Order, OrderItem, DiscountType, PaymentMethod } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, Percent, BadgeIndianRupee, Printer, Wallet, CircleCheck } from 'lucide-react';
+import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, Percent, BadgeIndianRupee, Printer, Wallet, CircleCheck, CreditCard } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import ItemStatusBadge from './ItemStatusBadge';
@@ -153,6 +153,21 @@ export default function OrderCard({
                   <div className="flex items-center gap-2">
                       <Wallet className="h-5 w-5"/>
                       <p className="font-bold">Cash Payment Requested</p>
+                  </div>
+                  <Button size="sm" className="h-7" onClick={() => setPaymentMethod(order.id, null)}>
+                      <CircleCheck className="h-4 w-4 mr-1" />
+                      Acknowledge
+                  </Button>
+              </div>
+          </div>
+        )}
+
+        {order.paymentMethod === 'card' && (
+          <div className="bg-blue-100 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300 p-3 rounded-md mb-2">
+              <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5"/>
+                      <p className="font-bold">Card Payment Requested</p>
                   </div>
                   <Button size="sm" className="h-7" onClick={() => setPaymentMethod(order.id, null)}>
                       <CircleCheck className="h-4 w-4 mr-1" />
