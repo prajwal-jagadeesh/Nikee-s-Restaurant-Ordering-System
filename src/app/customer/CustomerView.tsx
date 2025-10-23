@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { MenuItem, OrderItem, Order, OrderStatus, Table } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetDescription } from '@/components/ui/sheet';
 import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode, IndianRupee } from 'lucide-react';
@@ -228,6 +228,15 @@ export default function CustomerView() {
   const newItemsTotal = useMemo(() => {
     return cart.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
   }, [cart]);
+
+  const discountAmount = useMemo(() => {
+    if (!activeOrder || !activeOrder.discount) return 0;
+    const subtotal = activeOrder.originalTotal || activeOrder.total + (activeOrder.discountType === 'amount' ? activeOrder.discount : (activeOrder.total / (1 - activeOrder.discount/100)) * (activeOrder.discount/100) );
+    if (activeOrder.discountType === 'percentage') {
+        return (subtotal * activeOrder.discount) / 100;
+    }
+    return activeOrder.discount;
+  }, [activeOrder]);
   
   const placeOrUpdateOrder = () => {
     if (!canPlaceOrder || cart.length === 0 || !table) return;
@@ -321,7 +330,7 @@ export default function CustomerView() {
               <Card className="max-w-sm text-center">
                   <CardHeader>
                       <CardTitle>Session Expired or Invalid</CardTitle>
-                      <CardDescription>Your ordering session is not active. Please scan the QR code on your table to begin.</CardDescription>
+                      <SheetDescription>Your ordering session is not active. Please scan the QR code on your table to begin.</SheetDescription>
                   </CardHeader>
                   <CardContent>
                       <QrCode className="mx-auto h-24 w-24 text-muted-foreground" />
@@ -429,6 +438,18 @@ export default function CustomerView() {
                         ))}
                     </div>
                     <Separator className="my-3" />
+                    {(activeOrder.discount || 0) > 0 && (
+                      <div className="space-y-1 text-sm mb-2">
+                        <div className='w-full flex justify-between text-muted-foreground'>
+                          <span>Subtotal</span>
+                          <span>₹{(activeOrder.originalTotal || 0).toFixed(2)}</span>
+                        </div>
+                         <div className='w-full flex justify-between text-muted-foreground'>
+                            <span>Discount ({activeOrder.discountType === 'percentage' ? `${activeOrder.discount}%` : `₹${activeOrder.discount}`})</span>
+                            <span>- ₹{discountAmount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-between font-bold">
                         <span>Total</span>
                         <span>₹{activeOrder.total.toFixed(2)}</span>

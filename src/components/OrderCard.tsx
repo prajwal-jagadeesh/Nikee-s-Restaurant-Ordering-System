@@ -88,9 +88,19 @@ export default function OrderCard({
   const groupedPrintedItems = groupBy(printedItems, 'kotId');
 
   const showOrderDetailsHeader = !showKotDetails && itemsForDisplay.length > 0;
-  const displayName = tableName || `Table ${order.tableId}`;
+  const displayName = tableName || (order.onlinePlatform ? `${order.onlinePlatform} #${order.platformOrderId}`: `Table ${order.tableId}`);
 
   const subtotal = order.originalTotal || order.items.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
+
+  const discountAmount = useMemo(() => {
+    if (!order || !order.discount) return 0;
+    const currentSubtotal = order.originalTotal || subtotal;
+    if (order.discountType === 'percentage') {
+        return (currentSubtotal * order.discount) / 100;
+    }
+    return order.discount;
+  }, [subtotal, order]);
+
 
   return (
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300 relative">
@@ -193,7 +203,7 @@ export default function OrderCard({
                   {readyItems.map(item => (
                     <li key={item.kotId} className="flex justify-between items-center bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
                       <span className="font-medium text-sm">{item.quantity} x {item.menuItem.name}</span>
-                       <Button size="sm" className="h-8" onClick={() => onServeItem(order.id, item.kotId!)}>
+                       <Button size="sm" className="h-8 w-full" onClick={() => onServeItem(order.id, item.kotId!)}>
                         Mark Served
                       </Button>
                     </li>
@@ -230,12 +240,18 @@ export default function OrderCard({
           </div>
         )}
         {(order.discount || 0) > 0 && (
-          <div className='w-full flex justify-between text-sm text-muted-foreground'>
-            <span>Subtotal</span>
-            <span>₹{subtotal.toFixed(2)}</span>
+          <div className="w-full space-y-1 text-sm">
+            <div className='w-full flex justify-between text-muted-foreground'>
+              <span>Subtotal</span>
+              <span>₹{subtotal.toFixed(2)}</span>
+            </div>
+             <div className='w-full flex justify-between text-muted-foreground'>
+                <span>Discount ({order.discountType === 'percentage' ? `${order.discount}%` : `₹${order.discount}`})</span>
+                <span>- ₹{discountAmount.toFixed(2)}</span>
+            </div>
           </div>
         )}
-        <div className="w-full flex justify-between font-bold text-md mb-4">
+        <div className="w-full flex justify-between font-bold text-md mt-1 mb-4">
           <span>Total</span>
           <span>₹{order.total.toFixed(2)}</span>
         </div>
