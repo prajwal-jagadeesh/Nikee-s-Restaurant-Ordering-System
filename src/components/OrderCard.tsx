@@ -1,4 +1,5 @@
 'use client';
+import { useMemo } from 'react';
 import type { Order, OrderItem, DiscountType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -203,7 +204,7 @@ export default function OrderCard({
                   {readyItems.map(item => (
                     <li key={item.kotId} className="flex justify-between items-center bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
                       <span className="font-medium text-sm">{item.quantity} x {item.menuItem.name}</span>
-                       <Button size="sm" className="h-8 w-full" onClick={() => onServeItem(order.id, item.kotId!)}>
+                       <Button size="sm" className="h-8" onClick={() => onServeItem(order.id, item.kotId!)}>
                         Mark Served
                       </Button>
                     </li>
