@@ -56,3 +56,8 @@ export interface Order {
   switchedFrom?: string; // To track table switches
   sessionId?: string;
 }
+
+export interface UpiDetails {
+  upiId?: string;
+  restaurantName?: string;
+}

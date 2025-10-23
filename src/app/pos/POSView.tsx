@@ -4,7 +4,7 @@ import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
 import { useMenuStore } from '@/lib/menu-store';
 import { useSettingsStore } from '@/lib/settings-store';
-import type { Order, Table, MenuItem, OrderItem } from '@/lib/types';
+import type { Order, Table, MenuItem, OrderItem, UpiDetails } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import KOTPreviewSheet from './KOTPreviewSheet';
 import BillPreviewSheet from './BillPreviewSheet';
@@ -138,16 +138,70 @@ const LocationSettings = () => {
     )
 }
 
+const PaymentSettings = () => {
+    const { toast } = useToast();
+    const upiDetails = useHydratedStore(useSettingsStore, (state) => state.upiDetails, { upiId: '', restaurantName: '' });
+    const setUpiDetails = useSettingsStore((state) => state.setUpiDetails);
+
+    const [details, setDetails] = useState<UpiDetails>({ upiId: '', restaurantName: '' });
+
+    useEffect(() => {
+        setDetails(upiDetails);
+    }, [upiDetails]);
+
+    const handleSave = () => {
+        setUpiDetails(details);
+        toast({
+            title: "Settings Saved",
+            description: "Your payment settings have been updated.",
+        });
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Payment Settings</CardTitle>
+                <CardDescription>Configure UPI and other payment methods.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="upiId">UPI ID</Label>
+                    <Input 
+                        id="upiId" 
+                        value={details.upiId || ''} 
+                        onChange={(e) => setDetails(prev => ({...prev, upiId: e.target.value}))} 
+                        placeholder="e.g. yourname@oksbi" 
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="restaurantName">Payee Name (for UPI)</Label>
+                    <Input 
+                        id="restaurantName" 
+                        value={details.restaurantName || ''} 
+                        onChange={(e) => setDetails(prev => ({...prev, restaurantName: e.target.value}))} 
+                        placeholder="e.g. Nikee's Zara" 
+                    />
+                </div>
+            </CardContent>
+            <CardFooter>
+                <Button onClick={handleSave}>Save Payment Settings</Button>
+            </CardFooter>
+        </Card>
+    )
+}
+
+
 const SettingsManagement = () => {
     const { toast } = useToast();
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-3xl font-bold font-headline">Settings</h2>
             <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="general">General Settings</TabsTrigger>
-                    <TabsTrigger value="printer">Printer Settings</TabsTrigger>
-                    <TabsTrigger value="location">Location Settings</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="payments">Payments</TabsTrigger>
+                    <TabsTrigger value="printer">Printer</TabsTrigger>
+                    <TabsTrigger value="location">Location</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general" className="mt-6">
                     <div className="space-y-6">
@@ -207,6 +261,9 @@ const SettingsManagement = () => {
                             </CardContent>
                         </Card>
                     </div>
+                </TabsContent>
+                 <TabsContent value="payments" className="mt-6">
+                    <PaymentSettings />
                 </TabsContent>
                 <TabsContent value="printer" className="mt-6">
                     <Card>

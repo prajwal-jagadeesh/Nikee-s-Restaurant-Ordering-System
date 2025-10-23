@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetDescription } from '@/components/ui/sheet';
-import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode, IndianRupee } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -29,7 +29,7 @@ const statusInfo: Record<OrderStatus, { label: string, description: string, prog
   'Preparing': { label: 'Preparing', description: 'Your dishes are being prepared with care by our chefs.', progress: 60 },
   'Ready': { label: 'Ready for Serving', description: 'Your order is ready and will be served shortly.', progress: 80 },
   'Served': { label: 'Served', description: 'Enjoy your meal! Your order has been served.', progress: 100 },
-  'Billed': { label: 'Bill Generated', description: 'The bill has been generated. Please proceed to payment with the captain.', progress: 100 },
+  'Billed': { label: 'Bill Generated', description: 'The bill has been generated. Please proceed to payment.', progress: 100 },
   'Paid': { label: 'Paid', description: 'Thank you for your visit!', progress: 100 },
   'Cancelled': { label: 'Cancelled', description: 'This order has been cancelled.', progress: 0 },
   Accepted: { label: 'Order Accepted', description: 'The restaurant has accepted your online order.', progress: 20 },
@@ -94,7 +94,8 @@ export default function CustomerView() {
   const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
 
   const restaurantLocation = useHydratedStore(useSettingsStore, state => state.location, { latitude: null, longitude: null });
-  
+  const upiDetails = useHydratedStore(useSettingsStore, state => state.upiDetails, { upiId: '', restaurantName: ''});
+
   const { sessionId, tableId: sessionTableId, startTime, isValid: isSessionValid, startSession, endSession } = useHydratedStore(useSessionStore, state => state, { sessionId: null, tableId: null, startTime: null, isValid: false, startSession: () => {}, endSession: () => {} });
 
   const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
@@ -243,6 +244,15 @@ export default function CustomerView() {
     setCart([]);
     setIsCartOpen(false);
   };
+  
+  const handleUpiPayment = () => {
+      if (!activeOrder || !upiDetails.upiId) return;
+
+      const payeeName = upiDetails.restaurantName || "Nikee's Zara";
+      const upiLink = `upi://pay?pa=${upiDetails.upiId}&pn=${encodeURIComponent(payeeName)}&am=${activeOrder.total.toFixed(2)}&cu=INR&tn=Order%20at%20${encodeURIComponent(payeeName)}`;
+      
+      window.location.href = upiLink;
+  }
 
   const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab, menuItems]);
   const isItemInCart = (itemId: string) => activeOrder?.items.some(item => item.menuItem.id === itemId);
@@ -407,7 +417,7 @@ export default function CustomerView() {
                 <div className="py-4">
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="font-semibold text-lg">Your Active Order</h3>
-                      {/* <OrderStatusBadge status={activeOrder.status} /> */}
+                      <OrderStatusBadge status={activeOrder.status} />
                     </div>
                     <div className="space-y-2">
                         {activeOrder.items.map((item, index) => (
@@ -476,6 +486,11 @@ export default function CustomerView() {
                           </Button>
                       </>
                     )}
+                    {activeOrder?.status === 'Billed' && upiDetails.upiId && (
+                        <Button size="lg" className="w-full" onClick={handleUpiPayment}>
+                            <IndianRupee className="mr-2 h-5 w-5" /> Pay with UPI
+                        </Button>
+                    )}
                   </div>
               </SheetFooter>
             
@@ -485,7 +500,3 @@ export default function CustomerView() {
     </>
   );
 }
-
-    
-
-    

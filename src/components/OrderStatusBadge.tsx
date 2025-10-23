@@ -1,3 +1,4 @@
+'use client';
 import { Badge } from '@/components/ui/badge';
 import type { OrderStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
