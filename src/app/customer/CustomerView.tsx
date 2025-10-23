@@ -85,8 +85,6 @@ export default function CustomerView() {
   const orders = useHydratedStore(useOrderStore, state => state.orders, []);
   const addOrder = useOrderStore((state) => state.addOrder);
   const addItemsToOrder = useOrderStore((state) => state.addItemsToOrder);
-  const requestAssistance = useOrderStore((state) => state.requestAssistance);
-  const requestPayment = useOrderStore((state) => state.requestPayment);
 
   const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
   const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
@@ -157,31 +155,6 @@ export default function CustomerView() {
     if (!table) return undefined;
     return orders.find(o => o.tableId === table.id && o.status !== 'Paid' && o.status !== 'Cancelled');
   }, [orders, table]);
-
-  const allItemsServed = useMemo(() => {
-    if (!activeOrder) return false;
-    const printedItems = activeOrder.items.filter(item => item.kotStatus === 'Printed');
-    if (printedItems.length === 0) return false; // Nothing ordered that needs serving
-    return printedItems.every(item => item.itemStatus === 'Served');
-  }, [activeOrder]);
-
-  const handleCallCaptain = () => {
-    if (!activeOrder) return;
-    requestAssistance(activeOrder.id, true);
-    toast({
-      title: "Captain has been called",
-      description: "Someone will be with you shortly.",
-    });
-  };
-
-  const handleReadyToPay = () => {
-    if (!activeOrder) return;
-    requestPayment(activeOrder.id, true);
-    toast({
-      title: "Payment Requested",
-      description: "A staff member will bring the bill to your table.",
-    });
-  }
 
   const addToCart = (item: MenuItem, quantity = 1) => {
     if (locationState.status !== 'ok') return;
@@ -449,33 +422,6 @@ export default function CustomerView() {
           </SheetContent>
         </Sheet>
       </div>
-
-      {activeOrder && (
-        <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-3">
-          {allItemsServed && !activeOrder.paymentRequested && (
-            <Button size="lg" className="shadow-lg rounded-full" onClick={handleReadyToPay}>Ready to Pay?</Button>
-          )}
-          <Button
-            size="lg"
-            variant="outline"
-            className="shadow-lg rounded-full"
-            onClick={handleCallCaptain}
-            disabled={activeOrder.assistanceRequested}
-          >
-            {activeOrder.assistanceRequested ? (
-              <>
-                <BellRing className="mr-2 h-4 w-4 animate-ping" />
-                Captain is on the way
-              </>
-            ) : (
-              <>
-                <Hand className="mr-2 h-4 w-4" />
-                Call for Assistance
-              </>
-            )}
-          </Button>
-        </div>
-      )}
     </>
   );
 }

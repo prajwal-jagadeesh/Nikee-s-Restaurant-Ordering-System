@@ -852,11 +852,6 @@ const TableCard = ({
                         <ArrowRightLeft className="h-4 w-4" />
                     </Button>
                 )}
-                 {order?.paymentRequested && (
-                    <div className="h-7 w-7 flex items-center justify-center bg-green-500 text-white rounded-full">
-                        <IndianRupee className="h-4 w-4" />
-                    </div>
-                 )}
             </div>
             <div onClick={onSelect} className="flex flex-col flex-1 h-full w-full p-2">
               <CardHeader className="p-0 text-center flex-initial">
@@ -924,7 +919,6 @@ const TableGridView = () => {
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
   const switchTable = useOrderStore((state) => state.switchTable);
-  const requestPayment = useOrderStore((state) => state.requestPayment);
 
   const handlePrintKOT = (order: Order) => {
     const newItems = order.items.filter(item => item.kotStatus === 'New');
@@ -936,10 +930,6 @@ const TableGridView = () => {
 
   const handlePrintBill = (orderId: string) => {
     updateOrderStatus(orderId, 'Billed');
-    const order = allOrders.find(o => o.id === orderId);
-    if(order?.paymentRequested) {
-        requestPayment(orderId, false);
-    }
   };
 
   const needsKotPrint = (order: Order) => {
@@ -949,9 +939,6 @@ const TableGridView = () => {
   const canGenerateBill = (order: Order) => {
      if (order.status === 'Billed') return false;
      
-     // Allow generating bill if payment is requested, regardless of item status
-     if (order.paymentRequested) return true;
-
      const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
      if (printedItems.length === 0) return false;
      return printedItems.every(item => item.itemStatus === 'Served');

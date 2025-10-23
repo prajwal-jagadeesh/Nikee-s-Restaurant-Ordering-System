@@ -2,7 +2,7 @@
 import type { Order, OrderItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, BellRing } from 'lucide-react';
+import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import ItemStatusBadge from './ItemStatusBadge';
@@ -20,7 +20,6 @@ interface OrderCardProps {
   onSwitchTable?: () => void;
   onEditItems?: () => void;
   onCancelOrder?: () => void;
-  onAcknowledgeAssistance?: () => void;
 }
 
 const ItemRow = ({ item, isNew }: { item: OrderItem; isNew: boolean }) => (
@@ -45,7 +44,6 @@ export default function OrderCard({
     onSwitchTable,
     onEditItems,
     onCancelOrder,
-    onAcknowledgeAssistance,
 }: OrderCardProps) {
   const newItems = order.items.filter(i => i.kotStatus === 'New');
   const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
@@ -63,20 +61,6 @@ export default function OrderCard({
 
   return (
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300 relative">
-      {order.assistanceRequested && (
-          <div className="absolute top-2 right-2 z-10">
-              <TooltipProvider>
-                  <Tooltip>
-                      <TooltipTrigger asChild>
-                           <Button size="icon" variant="destructive" className="h-10 w-10 rounded-full animate-bounce" onClick={onAcknowledgeAssistance}>
-                                <BellRing />
-                           </Button>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Customer needs assistance!</p></TooltipContent>
-                  </Tooltip>
-              </TooltipProvider>
-          </div>
-      )}
       <CardHeader className="flex flex-row items-start justify-between pb-2">
         <div>
             <CardTitle className="text-lg font-headline">{displayName}</CardTitle>

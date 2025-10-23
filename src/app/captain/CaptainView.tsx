@@ -34,7 +34,6 @@ export default function CaptainView() {
   const updateItemQuantity = useOrderStore((state) => state.updateItemQuantity);
   const removeItem = useOrderStore((state) => state.removeItem);
   const switchTable = useOrderStore((state) => state.switchTable);
-  const requestAssistance = useOrderStore((state) => state.requestAssistance);
   
   const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
@@ -134,7 +133,6 @@ export default function CaptainView() {
                   onSwitchTable={() => setSwitchingOrder(order)}
                   onEditItems={hasNewItems(order) ? () => setEditingOrderId(order.id) : undefined}
                   onCancelOrder={canCancelOrder(order) ? () => handleCancel(order.id) : undefined}
-                  onAcknowledgeAssistance={() => requestAssistance(order.id, false)}
                 >
                   <div className="mt-4 flex flex-col space-y-2">
                     {hasNewItems(order) && order.status === 'New' && (

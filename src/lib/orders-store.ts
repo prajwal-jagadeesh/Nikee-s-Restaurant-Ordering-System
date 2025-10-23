@@ -21,8 +21,6 @@ interface OrderState {
   removeItem: (orderId: string, menuItemId: string) => void;
   switchTable: (orderId: string, newTableId: string) => boolean;
   clearSwitchedFrom: (orderId: string) => void;
-  requestAssistance: (orderId: string, requested: boolean) => void;
-  requestPayment: (orderId: string, requested: boolean) => void;
   clearOrders: () => void;
   setHydrated: (hydrated: boolean) => void;
 }
@@ -331,20 +329,6 @@ export const useOrderStore = create(
             }
             return order;
           }),
-        }));
-      },
-      requestAssistance: (orderId, requested) => {
-         set((state) => ({
-          orders: state.orders.map((order) =>
-            order.id === orderId ? { ...order, assistanceRequested: requested } : order
-          ),
-        }));
-      },
-      requestPayment: (orderId, requested) => {
-         set((state) => ({
-          orders: state.orders.map((order) =>
-            order.id === orderId ? { ...order, paymentRequested: requested } : order
-          ),
         }));
       },
       clearOrders: () => {
