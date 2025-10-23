@@ -53,7 +53,7 @@ export default function KDSView() {
 
     const combinedOrders = activeKitchenOrders.map(order => {
         const kitchenItems = order.items
-            .filter(item => item.kotStatus === 'Printed' && item.itemStatus !== 'Served')
+            .filter(item => item.kotStatus === 'Printed')
             .map(item => ({ ...item, originalOrderId: order.id }));
         
         const groupedByItem = groupBy(kitchenItems, 'menuItem.id');
