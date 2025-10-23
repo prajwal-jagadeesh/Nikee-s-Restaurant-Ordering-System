@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { MenuItem, OrderItem, Order, OrderStatus, Table, PaymentMethod } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetDescription } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
@@ -348,7 +348,7 @@ export default function CustomerView() {
               <Card className="max-w-sm text-center">
                   <CardHeader>
                       <CardTitle>Session Expired or Invalid</CardTitle>
-                      <SheetDescription>Your ordering session is not active. Please scan the QR code on your table to begin.</SheetDescription>
+                      <CardDescription>Your ordering session is not active. Please scan the QR code on your table to begin.</CardDescription>
                   </CardHeader>
                   <CardContent>
                       <QrCode className="mx-auto h-24 w-24 text-muted-foreground" />
@@ -574,3 +574,5 @@ export default function CustomerView() {
     </>
   );
 }
+
+    
