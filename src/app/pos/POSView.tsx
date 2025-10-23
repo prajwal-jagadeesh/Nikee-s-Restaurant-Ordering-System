@@ -863,6 +863,9 @@ const TableManagement = () => {
                             />
                         )}
                     </div>
+                     <DialogFooter>
+                      <Button variant="secondary" onClick={() => setQRCodeDialogOpen(false)}>Close</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
@@ -1032,8 +1035,14 @@ const TableGridView = () => {
   const canGenerateBill = (order: Order) => {
      if (order.status === 'Billed') return false;
      
+     // Check if there are any new items that haven't been sent to the kitchen yet.
+     const hasNewItems = order.items.some(i => i.kotStatus === 'New');
+     if (hasNewItems) return false;
+
      const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
      if (printedItems.length === 0) return false;
+     
+     // All printed items must be served.
      return printedItems.every(item => item.itemStatus === 'Served');
   }
 
@@ -1307,3 +1316,5 @@ export default function POSView({
     </div>
   );
 }
+
+    
