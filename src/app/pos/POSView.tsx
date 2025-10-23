@@ -9,7 +9,7 @@ import OrderCard from '@/components/OrderCard';
 import KOTPreviewSheet from './KOTPreviewSheet';
 import BillPreviewSheet from './BillPreviewSheet';
 import { Button } from '@/components/ui/button';
-import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock, Truck, LocateFixed, IndianRupee } from 'lucide-react';
+import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock, Truck, LocateFixed, IndianRupee, QrCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -51,6 +51,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import OnlineOrdersView from './online-orders/OnlineOrdersView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import QRCode from 'qrcode.react';
 
 
 const naturalSort = (a: Table, b: Table) => {
@@ -656,12 +657,21 @@ const TableManagement = () => {
 
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+    const [isQRCodeDialogOpen, setQRCodeDialogOpen] = useState(false);
     
     const [tableName, setTableName] = useState('');
     
     const [tableToEdit, setTableToEdit] = useState<Table | null>(null);
+    const [tableForQRCode, setTableForQRCode] = useState<Table | null>(null);
 
     const sortedTables = useMemo(() => [...tables].sort(naturalSort), [tables]);
+    
+    const [baseUrl, setBaseUrl] = useState('');
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setBaseUrl(window.location.origin);
+        }
+    }, []);
 
     const handleAddTable = () => {
         if (tableName.trim()) {
@@ -690,6 +700,11 @@ const TableManagement = () => {
         setTableName('');
         setAddDialogOpen(true);
     }
+
+    const openQRCodeDialog = (table: Table) => {
+        setTableForQRCode(table);
+        setQRCodeDialogOpen(true);
+    };
 
 
     return (
@@ -731,6 +746,9 @@ const TableManagement = () => {
                                   <Button variant="outline" size="icon" className="h-8 w-8 flex-1" onClick={() => openEditDialog(table)}>
                                     <Pen className="h-4 w-4" />
                                   </Button>
+                                  <Button variant="outline" size="icon" className="h-8 w-8 flex-1" onClick={() => openQRCodeDialog(table)}>
+                                    <QrCode className="h-4 w-4" />
+                                  </Button>
                                   <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                       <Button variant="destructive" size="icon" className="h-8 w-8 flex-1">
@@ -770,6 +788,24 @@ const TableManagement = () => {
                     <DialogFooter>
                         <Button type="submit" onClick={handleUpdateTable}>Save Changes</Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+             <Dialog open={isQRCodeDialogOpen} onOpenChange={(isOpen) => !isOpen && setTableForQRCode(null)}>
+                <DialogContent className="sm:max-w-xs">
+                    <DialogHeader>
+                        <DialogTitle>QR Code for {tableForQRCode?.name}</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex items-center justify-center p-4">
+                        {tableForQRCode && baseUrl && (
+                            <QRCode 
+                                value={`${baseUrl}/customer?table=${tableForQRCode.name.replace(/\D/g, '')}`} 
+                                size={200}
+                                level={"H"}
+                                includeMargin={true}
+                            />
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
