@@ -1017,8 +1017,8 @@ const TableGridView = () => {
     const newItems = order.items.filter(item => item.kotStatus === 'New');
     if (newItems.length === 0) return;
     
-    const newItemIds = newItems.map(item => item.menuItem.id);
-    updateOrderItemsKotStatus(order.id, newItemIds);
+    const newItemKotIds = newItems.map(item => item.kotId!);
+    updateOrderItemsKotStatus(order.id, newItemKotIds);
   };
 
   const handlePrintBill = (orderId: string) => {

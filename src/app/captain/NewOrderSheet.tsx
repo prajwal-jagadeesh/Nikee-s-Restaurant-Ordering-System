@@ -25,6 +25,20 @@ const naturalSort = (a: Table, b: Table) => {
     return numA - numB;
 };
 
+// Helper to group items for display
+const groupItemsForDisplay = (items: OrderItem[]) => {
+    const grouped = new Map<string, OrderItem>();
+    items.forEach(item => {
+        const existing = grouped.get(item.menuItem.id);
+        if (existing) {
+            existing.quantity += item.quantity;
+        } else {
+            grouped.set(item.menuItem.id, { ...item, quantity: item.quantity });
+        }
+    });
+    return Array.from(grouped.values());
+};
+
 
 export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetProps) {
     const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
@@ -35,7 +49,7 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
     const addItemsToOrder = useOrderStore(state => state.addItemsToOrder);
 
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-    const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
+    const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[]>([]);
     const [activeTab, setActiveTab] = useState(menuCategories[0]);
     
     useEffect(() => {
@@ -184,7 +198,7 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
                                   <div className="pt-2">
                                     <h4 className="font-semibold text-md mb-2">Current Items</h4>
                                     <div className="space-y-2 text-sm">
-                                      {activeOrder.items.map((item, index) => (
+                                      {groupItemsForDisplay(activeOrder.items).map((item, index) => (
                                           <div key={index} className="flex justify-between items-center">
                                               <span className="flex-1">{item.quantity} x {item.menuItem.name}</span>
                                               <ItemStatusBadge status={item.itemStatus} className="mx-2" />

@@ -10,6 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
 import ItemStatusBadge from '@/components/ItemStatusBadge';
 import { Utensils, Truck } from 'lucide-react';
+import { groupBy } from 'lodash';
 
 const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } | null> = {
   'Pending': { next: 'Preparing', label: 'Start Preparing' },
@@ -17,6 +18,13 @@ const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } 
   'Ready': null,
   'Served': null,
 };
+
+type GroupedKitchenItem = {
+    menuItemId: string;
+    name: string;
+    quantity: number;
+    items: (OrderItem & { originalOrderId: string })[];
+}
 
 type GroupedOrder = {
   orderId: string;
@@ -26,7 +34,7 @@ type GroupedOrder = {
   platform?: string;
   platformOrderId?: string;
   orderTimestamp: number;
-  items: (OrderItem & { originalOrderId: string })[];
+  items: GroupedKitchenItem[];
 }
 
 export default function KDSView() {
@@ -39,17 +47,24 @@ export default function KDSView() {
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
     const activeKitchenOrders = allOrders.filter(order => {
-        // KDS should show orders that are Confirmed, Preparing, Ready, or Billed.
         const relevantStatuses = ['Confirmed', 'Preparing', 'Ready', 'Billed'];
         return relevantStatuses.includes(order.status);
     });
 
     const combinedOrders = activeKitchenOrders.map(order => {
         const kitchenItems = order.items
-            // For dine-in, we still respect the KOT status. For online, all items are sent to kitchen at once.
-            .filter(item => (order.orderType === 'online' || item.kotStatus === 'Printed'))
+            .filter(item => item.kotStatus === 'Printed' && item.itemStatus !== 'Served')
             .map(item => ({ ...item, originalOrderId: order.id }));
         
+        const groupedByItem = groupBy(kitchenItems, 'menuItem.id');
+
+        const groupedItems: GroupedKitchenItem[] = Object.entries(groupedByItem).map(([menuItemId, items]) => ({
+            menuItemId,
+            name: items[0].menuItem.name,
+            quantity: items.length,
+            items: items
+        }));
+
         return {
             orderId: order.id,
             orderType: order.orderType,
@@ -58,7 +73,7 @@ export default function KDSView() {
             platform: order.onlinePlatform,
             platformOrderId: order.platformOrderId,
             orderTimestamp: order.timestamp,
-            items: kitchenItems,
+            items: groupedItems,
         };
     });
 
@@ -66,10 +81,10 @@ export default function KDSView() {
 
   }, [allOrders, tableMap]);
 
-  const handleAction = (orderId: string, menuItemId: string, currentStatus: ItemStatus) => {
+  const handleAction = (orderId: string, kotId: string, currentStatus: ItemStatus) => {
     const action = itemStatusActions[currentStatus];
     if (action) {
-      updateOrderItemStatus(orderId, menuItemId, action.next);
+      updateOrderItemStatus(orderId, kotId, action.next);
     }
   };
 
@@ -113,34 +128,38 @@ export default function KDSView() {
                 </CardHeader>
                 <CardContent>
                     <div className="text-sm">
-                      {/* Header */}
                       <div className="flex items-center font-semibold text-muted-foreground border-b pb-2">
                           <div className="flex-1">Item</div>
                           <div className="w-12 text-center">Qty</div>
-                          <div className="w-28 text-center">Status</div>
-                          <div className="w-32 text-right">Action</div>
                       </div>
-                      {/* Items */}
                       <ul className="divide-y">
                         {order.items
-                        .sort((a, b) => a.menuItem.name.localeCompare(b.menuItem.name))
-                        .map((item) => (
-                          <li key={`${item.originalOrderId}-${item.menuItem.id}-${item.kotId}`} className="flex items-center py-3">
-                            <div className="flex-1 font-medium">{item.menuItem.name}</div>
-                            <div className="w-12 text-center font-bold">{item.quantity}</div>
-                            <div className="w-28 flex justify-center">
-                              <ItemStatusBadge status={item.itemStatus} />
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((groupedItem) => (
+                          <li key={groupedItem.menuItemId} className="flex flex-col py-3">
+                            <div className="flex items-center">
+                                <div className="flex-1 font-medium">{groupedItem.name}</div>
+                                <div className="w-12 text-center font-bold">{groupedItem.quantity}</div>
                             </div>
-                            <div className="w-32 text-right">
-                              {itemStatusActions[item.itemStatus] && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleAction(item.originalOrderId, item.menuItem.id, item.itemStatus)}
-                                    className="w-full"
-                                  >
-                                    {itemStatusActions[item.itemStatus]?.label}
-                                  </Button>
-                                )}
+                            <div className="pl-4 mt-2 space-y-2">
+                                {groupedItem.items.map(item => (
+                                    <div key={item.kotId} className="flex items-center gap-2">
+                                        <div className="w-24">
+                                            <ItemStatusBadge status={item.itemStatus} />
+                                        </div>
+                                        <div className="flex-1">
+                                          {itemStatusActions[item.itemStatus] && (
+                                              <Button
+                                                size="sm"
+                                                onClick={() => handleAction(item.originalOrderId, item.kotId!, item.itemStatus)}
+                                                className="w-full h-7"
+                                              >
+                                                {itemStatusActions[item.itemStatus]?.label}
+                                              </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                           </li>
                         ))}

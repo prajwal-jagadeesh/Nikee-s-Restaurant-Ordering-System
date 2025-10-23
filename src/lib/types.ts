@@ -32,7 +32,7 @@ export interface OrderItem {
   notes?: string;
   kotStatus: KotStatus;
   itemStatus: ItemStatus;
-  kotId?: string; // Unique identifier for the KOT
+  kotId?: string; // Unique identifier for the KOT for each item
 }
 
 export interface CustomerDetails {
@@ -55,6 +55,11 @@ export interface Order {
   kotCounter?: number; // To generate unique KOT IDs
   switchedFrom?: string; // To track table switches
   sessionId?: string;
+}
+
+export interface Table {
+  id: string;
+  name: string;
 }
 
 export interface UpiDetails {

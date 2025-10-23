@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface OrderCardProps {
   order: Order;
   children?: React.ReactNode;
-  onServeItem?: (orderId: string, menuItemId: string) => void;
+  onServeItem?: (orderId: string, kotId: string) => void;
   showKotDetails?: boolean;
   tableName?: string;
   onSwitchTable?: () => void;
@@ -22,10 +22,25 @@ interface OrderCardProps {
   onCancelOrder?: () => void;
 }
 
-const ItemRow = ({ item, isNew }: { item: OrderItem; isNew: boolean }) => (
+// Helper to group items for display
+const groupItemsForDisplay = (items: OrderItem[]) => {
+    const grouped = new Map<string, OrderItem & { count: number }>();
+    items.forEach(item => {
+        const existing = grouped.get(item.menuItem.id);
+        if (existing) {
+            existing.count += 1;
+        } else {
+            grouped.set(item.menuItem.id, { ...item, count: 1 });
+        }
+    });
+    return Array.from(grouped.values());
+};
+
+
+const ItemRow = ({ item, count, isNew }: { item: OrderItem; count: number; isNew: boolean }) => (
   <li className="flex justify-between items-center text-sm py-1">
     <span className="flex items-center">
-      {item.quantity} x {item.menuItem.name}
+      {count} x {item.menuItem.name}
     </span>
     {isNew 
       ? <Badge variant="outline" className="border-yellow-500 text-yellow-500 text-xs">New</Badge> 
@@ -45,16 +60,16 @@ export default function OrderCard({
     onEditItems,
     onCancelOrder,
 }: OrderCardProps) {
-  const newItems = order.items.filter(i => i.kotStatus === 'New');
+  const newItems = groupItemsForDisplay(order.items.filter(i => i.kotStatus === 'New'));
   const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
   
   const readyItems = onServeItem ? printedItems.filter(i => i.itemStatus === 'Ready') : [];
   
   const itemsForDisplay = !showKotDetails 
-    ? printedItems.filter(i => i.itemStatus !== 'Ready') 
-    : printedItems;
+    ? groupItemsForDisplay(printedItems.filter(i => i.itemStatus !== 'Ready'))
+    : [];
   
-  const groupedPrintedItems = groupBy(itemsForDisplay, 'kotId');
+  const groupedPrintedItems = groupBy(printedItems, 'kotId');
 
   const showOrderDetailsHeader = !showKotDetails && itemsForDisplay.length > 0;
   const displayName = tableName || `Table ${order.tableId}`;
@@ -105,8 +120,8 @@ export default function OrderCard({
             <Separator />
             <h4 className="text-sm font-semibold text-center text-muted-foreground pt-2">New Items</h4>
             <ul className="space-y-1 text-sm divide-y">
-              {newItems.map((item, index) => (
-                <ItemRow key={`${item.menuItem.id}-${index}`} item={item} isNew={true} />
+              {newItems.map((item) => (
+                <ItemRow key={item.menuItem.id} item={item} count={item.count} isNew={true} />
               ))}
             </ul>
           </>
@@ -127,8 +142,8 @@ export default function OrderCard({
                       <ChefHat className="h-3 w-3 mr-1" /> {kotId}
                     </div>
                     <ul className="space-y-1 text-sm divide-y border rounded-md p-2">
-                       {items.map((item, index) => (
-                          <ItemRow key={`${item.menuItem.id}-${index}`} item={item} isNew={false}/>
+                       {groupItemsForDisplay(items).map((item) => (
+                          <ItemRow key={item.menuItem.id} item={item} count={item.count} isNew={false}/>
                        ))}
                     </ul>
                   </div>
@@ -144,8 +159,8 @@ export default function OrderCard({
                 <Separator />
                 <h4 className="text-sm font-semibold text-center text-muted-foreground pt-2">Order Details</h4>
                 <ul className="space-y-1 text-sm divide-y">
-                    {itemsForDisplay.map((item, index) => (
-                        <ItemRow key={`${item.menuItem.id}-${index}`} item={item} isNew={false} />
+                    {itemsForDisplay.map((item) => (
+                        <ItemRow key={item.menuItem.id} item={item} count={item.count} isNew={false} />
                     ))}
                 </ul>
             </>
@@ -158,9 +173,9 @@ export default function OrderCard({
                 <h4 className="text-sm font-semibold text-center text-muted-foreground pt-2">Ready to Serve</h4>
                 <ul className="space-y-2">
                   {readyItems.map(item => (
-                    <li key={item.menuItem.id} className="flex justify-between items-center bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
+                    <li key={item.kotId} className="flex justify-between items-center bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
                       <span className="font-medium text-sm">{item.quantity} x {item.menuItem.name}</span>
-                      <Button size="sm" onClick={() => onServeItem(order.id, item.menuItem.id)}>
+                      <Button size="sm" onClick={() => onServeItem(order.id, item.kotId!)}>
                         Mark Served
                       </Button>
                     </li>

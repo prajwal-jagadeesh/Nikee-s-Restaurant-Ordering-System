@@ -25,6 +25,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+// Helper to group items for display
+const groupItems = (items: OrderItem[]) => {
+    const grouped = new Map<string, OrderItem>();
+    items.forEach(item => {
+        const existing = grouped.get(item.menuItem.id);
+        if (existing) {
+            existing.quantity += 1;
+        } else {
+            grouped.set(item.menuItem.id, { ...item, quantity: 1 });
+        }
+    });
+    return Array.from(grouped.values());
+};
+
 export default function CaptainView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
@@ -41,8 +55,8 @@ export default function CaptainView() {
 
   const orders = allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled');
   
-  const handleMarkServed = (orderId: string, menuItemId: string) => {
-    updateOrderItemStatus(orderId, menuItemId, 'Served');
+  const handleMarkServed = (orderId: string, kotId: string) => {
+    updateOrderItemStatus(orderId, kotId, 'Served');
   };
   
   const handlePayment = (orderId: string) => {
@@ -97,7 +111,7 @@ export default function CaptainView() {
   };
 
 
-  const newItemsForEditing = editingOrder?.items.filter(i => i.kotStatus === 'New');
+  const newItemsForEditing = editingOrder ? groupItems(editingOrder.items.filter(i => i.kotStatus === 'New')) : [];
   const newItemsTotal = newItemsForEditing?.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0) || 0;
 
 
@@ -165,8 +179,8 @@ export default function CaptainView() {
             {newItemsForEditing && newItemsForEditing.length > 0 ? (
                 <div className="py-4">
                   <div className="space-y-4">
-                    {newItemsForEditing.map((item, index) => (
-                      <div key={`${item.menuItem.id}-${index}`} className="flex items-center gap-4">
+                    {newItemsForEditing.map((item) => (
+                      <div key={item.menuItem.id} className="flex items-center gap-4">
                         <div className="flex-1">
                           <p className="font-semibold">{item.menuItem.name}</p>
                           <p className="text-sm text-muted-foreground">₹{item.menuItem.price.toFixed(2)}</p>

@@ -11,12 +11,12 @@ import { useSessionStore } from './session-store';
 interface OrderState {
   orders: Order[];
   hydrated: boolean;
-  addOrder: (order: Omit<Order, 'id' | 'total' | 'timestamp' | 'status' | 'orderType'>) => void;
-  addOnlineOrder: (order: Omit<Order, 'id' | 'total' | 'timestamp' | 'status' | 'orderType'>) => void;
+  addOrder: (order: Omit<Order, 'id' | 'total' | 'timestamp' | 'status' | 'orderType' | 'items'> & { items: Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[] }) => void;
+  addOnlineOrder: (order: Omit<Order, 'id' | 'total' | 'timestamp' | 'status' | 'orderType' | 'items'> & { items: Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[] }) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  updateOrderItemStatus: (orderId: string, menuItemId: string, newStatus: ItemStatus) => void;
+  updateOrderItemStatus: (orderId: string, kotId: string, newStatus: ItemStatus) => void;
   updateOrderItemsStatus: (orderId: string, currentItemStatus: ItemStatus, newItemStatus: ItemStatus) => void;
-  addItemsToOrder: (orderId: string, items: Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]) => void;
+  addItemsToOrder: (orderId: string, items: Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[]) => void;
   updateOrderItemsKotStatus: (orderId: string, itemIds: string[]) => void;
   updateItemQuantity: (orderId: string, menuItemId: string, quantity: number) => void;
   removeItem: (orderId: string, menuItemId: string) => void;
@@ -85,7 +85,20 @@ export const useOrderStore = create(
         }, 0);
         orderCounter = latestId + 1;
         
-        const itemsWithStatus: OrderItem[] = order.items.map(i => ({...i, itemStatus: 'Pending', kotStatus: 'New'}));
+        let kotCounter = 0;
+        const itemsWithStatus: OrderItem[] = order.items.flatMap(i => {
+          const items: OrderItem[] = [];
+          for (let qty = 0; qty < i.quantity; qty++) {
+            items.push({ 
+              ...i, 
+              quantity: 1, 
+              itemStatus: 'Pending', 
+              kotStatus: 'New', 
+              kotId: `temp-${Date.now()}-${i.menuItem.id}-${qty}` // a temporary unique id
+            });
+          }
+          return items;
+        });
 
         const newOrder: Order = {
           ...order,
@@ -95,7 +108,7 @@ export const useOrderStore = create(
           status: 'New',
           timestamp: Date.now(),
           total: recalculateTotal(itemsWithStatus),
-          kotCounter: 0,
+          kotCounter: kotCounter,
           sessionId,
         };
         set((state) => ({ orders: [...state.orders, newOrder] }));
@@ -107,7 +120,7 @@ export const useOrderStore = create(
         }, 0);
         orderCounter = latestId + 1;
         
-        const itemsWithStatus: OrderItem[] = order.items.map(i => ({...i, itemStatus: 'Pending', kotStatus: 'New'}));
+        const itemsWithStatus: OrderItem[] = order.items.map(i => ({...i, itemStatus: 'Pending', kotStatus: 'New', kotId: `temp-online-${Date.now()}-${i.menuItem.id}`}));
 
         const newOrder: Order = {
           ...order,
@@ -135,8 +148,9 @@ export const useOrderStore = create(
                     ...item,
                     itemStatus: 'Pending' as const,
                     kotStatus: 'Printed' as const,
+                    kotId: `KOT-${(order.kotCounter || 0) + 1}-${item.menuItem.id}`
                 }));
-                return { ...order, status, items: updatedItems };
+                return { ...order, status, items: updatedItems, kotCounter: (order.kotCounter || 0) + 1 };
             }
             return { ...order, status };
           }),
@@ -148,19 +162,21 @@ export const useOrderStore = create(
               if (order.id === orderId) {
                 const updatedItems = [...order.items];
 
-                const itemsWithStatus: OrderItem[] = newItems.map(item => ({...item, itemStatus: 'Pending', kotStatus: 'New'}));
-
-                itemsWithStatus.forEach((newItem) => {
-                    const existingItemIndex = updatedItems.findIndex(
-                        (i) => i.menuItem.id === newItem.menuItem.id && i.kotStatus === 'New'
-                    );
-                    
-                    if (existingItemIndex > -1) {
-                         updatedItems[existingItemIndex].quantity += newItem.quantity;
-                    } else {
-                        updatedItems.push(newItem);
+                const itemsWithStatus: OrderItem[] = newItems.flatMap(item => {
+                    const items: OrderItem[] = [];
+                    for (let qty = 0; qty < item.quantity; qty++) {
+                      items.push({ 
+                        ...item, 
+                        quantity: 1, 
+                        itemStatus: 'Pending', 
+                        kotStatus: 'New',
+                        kotId: `temp-${Date.now()}-${item.menuItem.id}-${qty}`
+                      });
                     }
+                    return items;
                 });
+
+                updatedItems.push(...itemsWithStatus);
                 
                  const newStatus: OrderStatus = ['Billed', 'Paid', 'Cancelled'].includes(order.status) ? order.status : 'New';
 
@@ -180,16 +196,17 @@ export const useOrderStore = create(
         set((state) => ({
           orders: state.orders.map((order) => {
             if (order.id === orderId) {
-              const newKotCounter = (order.kotCounter || 0) + 1;
-              const newKotId = `KOT-${newKotCounter}`;
+              let newKotCounter = (order.kotCounter || 0);
 
               const updatedItems = order.items.map((item) => {
-                if (itemIds.includes(item.menuItem.id) && item.kotStatus === 'New') {
+                // We now check against the temporary unique KOT ID assigned to new items
+                if (itemIds.includes(item.kotId) && item.kotStatus === 'New') {
+                  newKotCounter++;
                   return { 
                     ...item, 
                     kotStatus: 'Printed' as const, 
                     itemStatus: 'Pending' as const,
-                    kotId: newKotId,
+                    kotId: `KOT-${newKotCounter}`,
                   };
                 }
                 return item;
@@ -210,12 +227,12 @@ export const useOrderStore = create(
           }),
         }));
       },
-      updateOrderItemStatus: (orderId, menuItemId, newStatus) => {
+      updateOrderItemStatus: (orderId, kotId, newStatus) => {
          set((state) => ({
           orders: state.orders.map((order) => {
             if (order.id === orderId) {
                 const itemIndexToUpdate = order.items.findIndex(item => 
-                    item.menuItem.id === menuItemId && item.itemStatus !== 'Served'
+                    item.kotId === kotId
                 );
 
                 if (itemIndexToUpdate > -1) {
@@ -273,44 +290,64 @@ export const useOrderStore = create(
       },
       updateItemQuantity: (orderId, menuItemId, quantity) => {
         set((state) => ({
-          orders: state.orders.map((order) => {
-            if (order.id !== orderId) return order;
+            orders: state.orders.map((order) => {
+                if (order.id !== orderId) return order;
 
-            const updatedItems = order.items
-              .map((item) => {
-                if (item.menuItem.id === menuItemId && item.kotStatus === 'New') {
-                  if (quantity <= 0) return null; // Mark for removal
-                  return { ...item, quantity };
+                const newItems = order.items.filter(item => item.menuItem.id === menuItemId && item.kotStatus === 'New');
+                const diff = quantity - newItems.length;
+
+                let updatedItems = [...order.items];
+
+                if (diff > 0) { // Add items
+                    const itemToAdd = order.items.find(item => item.menuItem.id === menuItemId);
+                    if (itemToAdd) {
+                        for (let i = 0; i < diff; i++) {
+                            updatedItems.push({
+                                ...itemToAdd,
+                                quantity: 1,
+                                kotStatus: 'New',
+                                itemStatus: 'Pending',
+                                kotId: `temp-${Date.now()}-${menuItemId}-${i}`
+                            });
+                        }
+                    }
+                } else if (diff < 0) { // Remove items
+                    const itemsToRemove = Math.abs(diff);
+                    let removedCount = 0;
+                    updatedItems = updatedItems.filter(item => {
+                        if (item.menuItem.id === menuItemId && item.kotStatus === 'New' && removedCount < itemsToRemove) {
+                            removedCount++;
+                            return false;
+                        }
+                        return true;
+                    });
                 }
-                return item;
-              })
-              .filter(Boolean) as OrderItem[]; // Filter out nulls
-
-            return {
-              ...order,
-              items: updatedItems,
-              total: recalculateTotal(updatedItems),
-            };
-          }),
+                
+                return {
+                    ...order,
+                    items: updatedItems,
+                    total: recalculateTotal(updatedItems),
+                };
+            }),
         }));
-      },
-      removeItem: (orderId, menuItemId) => {
-        set((state) => ({
+    },
+    removeItem: (orderId, menuItemId) => {
+      set((state) => ({
           orders: state.orders.map((order) => {
-            if (order.id !== orderId) return order;
-            
-            const updatedItems = order.items.filter(
-              (item) => !(item.menuItem.id === menuItemId && item.kotStatus === 'New')
-            );
-            
-            return {
-              ...order,
-              items: updatedItems,
-              total: recalculateTotal(updatedItems),
-            };
+              if (order.id !== orderId) return order;
+              
+              const updatedItems = order.items.filter(
+                  (item) => !(item.menuItem.id === menuItemId && item.kotStatus === 'New')
+              );
+              
+              return {
+                  ...order,
+                  items: updatedItems,
+                  total: recalculateTotal(updatedItems),
+              };
           }),
-        }));
-      },
+      }));
+  },
       switchTable: (orderId, newTableId) => {
         const orders = get().orders;
         const targetTableIsOccupied = orders.some(o => o.tableId === newTableId && o.status !== 'Paid' && o.status !== 'Cancelled');
@@ -351,6 +388,35 @@ export const useOrderStore = create(
         if (state) {
           state.setHydrated(true);
         }
+      },
+      // A custom replacer is needed to handle the transformation from grouped items to individual items
+      replacer: (key, value) => {
+        if (key === 'orders') {
+          // This is a simple way to check if we're dealing with the old structure.
+          // A more robust check might be needed for complex migrations.
+          const isOldStructure = value.some((order: Order) => order.items.some(item => item.quantity > 1 && item.kotStatus === 'New'));
+          
+          if (isOldStructure) {
+            return value.map((order: Order) => ({
+              ...order,
+              items: order.items.flatMap((item: OrderItem) => {
+                if (item.quantity > 1) {
+                  const items: OrderItem[] = [];
+                  for (let i = 0; i < item.quantity; i++) {
+                    items.push({
+                      ...item,
+                      quantity: 1,
+                      kotId: item.kotId ? `${item.kotId}-${i}` : `temp-migrated-${Date.now()}-${item.menuItem.id}-${i}`
+                    });
+                  }
+                  return items;
+                }
+                return { ...item, kotId: item.kotId || `temp-migrated-${Date.now()}-${item.menuItem.id}` };
+              })
+            }));
+          }
+        }
+        return value;
       }
     }
   )

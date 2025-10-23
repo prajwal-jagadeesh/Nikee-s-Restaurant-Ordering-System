@@ -11,10 +11,25 @@ interface KOTPreviewSheetProps {
     onConfirm: (order: Order) => void;
 }
 
+// Helper to group items for display
+const groupItemsForDisplay = (items: OrderItem[]) => {
+    const grouped = new Map<string, OrderItem>();
+    items.forEach(item => {
+        const existing = grouped.get(item.menuItem.id);
+        if (existing) {
+            existing.quantity += item.quantity;
+        } else {
+            grouped.set(item.menuItem.id, { ...item, quantity: item.quantity });
+        }
+    });
+    return Array.from(grouped.values());
+};
+
 export default function KOTPreviewSheet({ order, table, onClose, onConfirm }: KOTPreviewSheetProps) {
     if (!order || !table) return null;
 
     const newItems = order.items.filter(item => item.kotStatus === 'New');
+    const groupedNewItems = groupItemsForDisplay(newItems);
 
     return (
         <Sheet open={!!order} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -28,7 +43,7 @@ export default function KOTPreviewSheet({ order, table, onClose, onConfirm }: KO
                     </SheetDescription>
                 </SheetHeader>
                 <div className="flex-1 overflow-y-auto my-4 -mx-2 px-2 border-y border-dashed py-4">
-                    {newItems.map(item => (
+                    {groupedNewItems.map(item => (
                         <div key={item.menuItem.id} className="flex items-center justify-between py-1">
                             <span className="font-bold text-lg mr-4">{item.quantity} x</span>
                             <span className="flex-1 text-base">{item.menuItem.name}</span>
