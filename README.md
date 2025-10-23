@@ -97,6 +97,49 @@ This will start the Next.js development server, typically on port `9002`.
 
 ---
 
+## Deployment to Firebase (Spark Plan)
+
+You can deploy this Next.js application to Firebase using the **Firebase App Hosting** service, which is available on the free Spark plan.
+
+### Prerequisites
+- You must have a Firebase account.
+- You must have the Firebase CLI installed on your machine. If not, install it globally:
+  ```bash
+  npm install -g firebase-tools
+  ```
+
+### Step 1: Login to Firebase
+In your terminal, log in to your Firebase account:
+```bash
+firebase login
+```
+
+### Step 2: Initialize Firebase
+1.  In the root directory of your project, run the following command:
+    ```bash
+    firebase init
+    ```
+2.  You will be prompted with several questions. Follow these steps:
+    -   "Which Firebase features do you want to set up for this directory?"
+        -   Use the arrow keys to navigate to **App Hosting: Deploy Next.js web apps to a new backend**.
+        -   Press `Space` to select it, then press `Enter`.
+    -   "Please select an option:"
+        -   If you have an existing Firebase project, select `Use an existing project`.
+        -   If you need to create a new one, select `Create a new project`. Follow the prompts to set a unique project ID and display name.
+    -   "What do you want to use as your public directory?"
+        -   Press `Enter` to accept the default (`.next`). This is automatically detected.
+    -   The CLI will then create a Firebase backend for App Hosting.
+
+### Step 3: Deploy
+After initialization is complete, you can deploy your application at any time by running:
+```bash
+firebase deploy
+```
+
+The CLI will build your Next.js application and deploy it. Once finished, it will provide you with a URL where your live application can be accessed (e.g., `https://your-app-name--nikee-s-zara.web.app`).
+
+---
+
 ## Project Structure
 
 - **`src/app`**: Contains the main pages for each module (e.g., `src/app/pos`, `src/app/customer`).
