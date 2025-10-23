@@ -322,7 +322,6 @@ export default function CustomerView() {
       </AnimatePresence>
       <div className="text-center mb-6">
         <h1 className="text-4xl font-bold font-headline">Welcome to Nikee's Zara</h1>
-        <p className="text-lg text-muted-foreground">You are ordering for {table.name}</p>
       </div>
 
        {locationState.status === 'error' && (
@@ -397,7 +396,7 @@ export default function CustomerView() {
           <SheetContent className="flex flex-col">
             <SheetHeader>
               <SheetTitle>
-                {activeOrder ? `Order for ${table.name}` : `New Order (${table.name})`}
+                Your Order
               </SheetTitle>
                <SheetDescription>
                   {activeOrder && statusInfo[activeOrder.status] ? statusInfo[activeOrder.status].description : "Review your items before placing the order."}

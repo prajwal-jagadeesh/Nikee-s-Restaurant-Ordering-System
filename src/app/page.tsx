@@ -14,7 +14,7 @@ export default function Home() {
   return (
     <div className="container mx-auto p-4">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold font-headline">Welcome to Nikee's Zara OrderFlow</h1>
+        <h1 className="text-4xl font-bold font-headline">Welcome to Nikee's Zara</h1>
         <p className="text-lg text-muted-foreground mt-2">Select an application to launch.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

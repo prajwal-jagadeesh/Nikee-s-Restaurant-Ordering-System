@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: "Nikee's Zara OrderFlow",
+  title: "Nikee's Zara",
   description: 'A complete ordering system for Nikee\'s Zara Multicuisine Rooftop.',
 };
 

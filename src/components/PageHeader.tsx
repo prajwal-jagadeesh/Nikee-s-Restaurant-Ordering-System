@@ -9,7 +9,7 @@ export default function PageHeader() {
         <Link href="/" className="flex items-center gap-2">
           <UtensilsCrossed className="h-6 w-6 text-primary" />
           <span className="hidden font-bold sm:inline-block text-lg">
-            Nikee's Zara OrderFlow
+            Nikee's Zara
           </span>
         </Link>
       </div>
