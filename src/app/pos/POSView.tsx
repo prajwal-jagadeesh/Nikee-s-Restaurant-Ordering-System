@@ -830,7 +830,10 @@ const TableManagement = () => {
                 </CardContent>
             </Card>
             
-             <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => !isOpen && setTableToEdit(null)}>
+             <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
+                if (!isOpen) setTableToEdit(null);
+                setEditDialogOpen(isOpen);
+             }}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>Edit Table</DialogTitle>
@@ -993,6 +996,8 @@ const TableGridView = () => {
 
   const [kotPreviewOrder, setKotPreviewOrder] = useState<Order | null>(null);
   const [billPreviewOrder, setBillPreviewOrder] = useState<Order | null>(null);
+  const [kotPreviewMode, setKotPreviewMode] = useState<'new' | 'reprint'>('new');
+
 
   const ordersByTable = useMemo(() => allOrders.reduce((acc, order) => {
     if (order.orderType === 'dine-in' && order.tableId) {
@@ -1030,6 +1035,10 @@ const TableGridView = () => {
 
   const needsKotPrint = (order: Order) => {
     return order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New');
+  }
+
+  const canReprintKot = (order: Order) => {
+    return order.items.some(item => item.kotStatus === 'Printed');
   }
 
   const canGenerateBill = (order: Order) => {
@@ -1076,7 +1085,10 @@ const TableGridView = () => {
   };
 
   const handleConfirmKot = (order: Order) => {
-    handlePrintKOT(order);
+    if (kotPreviewMode === 'new') {
+        handlePrintKOT(order);
+    }
+    // For reprints, we just close the sheet without changing data
     setKotPreviewOrder(null);
   }
 
@@ -1087,6 +1099,11 @@ const TableGridView = () => {
       handlePrintBill(orderId);
     }
     setBillPreviewOrder(null);
+  }
+
+  const openKotPreview = (order: Order, mode: 'new' | 'reprint') => {
+    setKotPreviewMode(mode);
+    setKotPreviewOrder(order);
   }
 
 
@@ -1100,8 +1117,10 @@ const TableGridView = () => {
             let printAction;
             if (order) {
               if (needsKotPrint(order)) {
-                printAction = () => setKotPreviewOrder(order);
+                printAction = () => openKotPreview(order, 'new');
               } else if (canGenerateBill(order)) {
+                printAction = () => setBillPreviewOrder(order);
+              } else if (order.status === 'Billed') {
                 printAction = () => setBillPreviewOrder(order);
               }
             }
@@ -1143,12 +1162,22 @@ const TableGridView = () => {
                       {needsKotPrint(selectedOrder) && (
                         <Button
                           variant="outline"
-                          onClick={() => setKotPreviewOrder(selectedOrder)}
+                          onClick={() => openKotPreview(selectedOrder, 'new')}
                           className="w-full"
                         >
                           <Printer className="mr-2 h-4 w-4" />
                           Print KOT
                         </Button>
+                      )}
+                      {canReprintKot(selectedOrder) && !needsKotPrint(selectedOrder) && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => openKotPreview(selectedOrder, 'reprint')}
+                            className="w-full"
+                          >
+                            <Printer className="mr-2 h-4 w-4" />
+                            Reprint KOT
+                          </Button>
                       )}
                       {canGenerateBill(selectedOrder) && (
                         <Button onClick={() => setBillPreviewOrder(selectedOrder)} className="w-full">
@@ -1164,7 +1193,9 @@ const TableGridView = () => {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={!!switchingOrder} onOpenChange={(isOpen) => !isOpen && setSwitchingOrder(null)}>
+      <Dialog open={!!switchingOrder} onOpenChange={(isOpen) => {
+        if (!isOpen) setSwitchingOrder(null);
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Switch from {switchingOrder ? tables.find(t => t.id === switchingOrder.tableId)?.name : ''}</DialogTitle>
@@ -1194,6 +1225,7 @@ const TableGridView = () => {
         table={kotPreviewTable}
         onClose={() => setKotPreviewOrder(null)}
         onConfirm={handleConfirmKot}
+        mode={kotPreviewMode}
       />
       <BillPreviewSheet
         order={billPreviewOrder}
