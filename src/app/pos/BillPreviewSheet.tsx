@@ -39,6 +39,8 @@ export default function BillPreviewSheet({ order, table, onClose, onConfirm }: B
     const handleConfirmClick = () => {
         onConfirm(order.id);
     }
+    
+    const buttonText = order.status === 'Billed' ? 'Print Duplicate Bill' : 'Confirm & Generate Bill';
 
     return (
         <Sheet open={!!order} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -108,7 +110,7 @@ export default function BillPreviewSheet({ order, table, onClose, onConfirm }: B
                 </div>
                 <SheetFooter>
                     <Button size="lg" className="w-full font-sans" onClick={handleConfirmClick}>
-                        <Printer className="mr-2 h-4 w-4" /> Confirm &amp; Generate Bill
+                        <Printer className="mr-2 h-4 w-4" /> {buttonText}
                     </Button>
                 </SheetFooter>
             </SheetContent>

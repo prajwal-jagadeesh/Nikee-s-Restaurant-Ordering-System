@@ -1033,17 +1033,19 @@ const TableGridView = () => {
   }
 
   const canGenerateBill = (order: Order) => {
-     if (order.status === 'Billed') return false;
-     
      // Check if there are any new items that haven't been sent to the kitchen yet.
      const hasNewItems = order.items.some(i => i.kotStatus === 'New');
      if (hasNewItems) return false;
 
      const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
-     if (printedItems.length === 0) return false;
+     if (printedItems.length === 0 && order.status !== 'Billed') return false;
      
-     // All printed items must be served.
-     return printedItems.every(item => item.itemStatus === 'Served');
+     // All printed items must be served, unless the order is already billed (for re-printing)
+     if (order.status !== 'Billed') {
+        return printedItems.every(item => item.itemStatus === 'Served');
+     }
+     
+     return true; // Already billed, so we can re-print.
   }
 
   const occupiedTableIds = useMemo(() => {
@@ -1079,7 +1081,11 @@ const TableGridView = () => {
   }
 
   const handleConfirmBill = (orderId: string) => {
-    handlePrintBill(orderId);
+    // Only update status if it's not already billed
+    const order = allOrders.find(o => o.id === orderId);
+    if(order && order.status !== 'Billed') {
+      handlePrintBill(orderId);
+    }
     setBillPreviewOrder(null);
   }
 
@@ -1147,7 +1153,7 @@ const TableGridView = () => {
                       {canGenerateBill(selectedOrder) && (
                         <Button onClick={() => setBillPreviewOrder(selectedOrder)} className="w-full">
                           <Printer className="mr-2 h-4 w-4" />
-                          Generate & Print Bill
+                          {selectedOrder.status === 'Billed' ? 'Print Duplicate Bill' : 'Generate & Print Bill'}
                         </Button>
                       )}
                     </div>
