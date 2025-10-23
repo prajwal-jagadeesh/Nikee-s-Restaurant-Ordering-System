@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetDescription } from '@/components/ui/sheet';
-import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, BellRing, Hand } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, BellRing, Hand, IndianRupee } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -204,7 +204,7 @@ export default function CustomerView() {
   };
 
   const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab, menuItems]);
-  const isItemInCart = (itemId: string) => activeOrder?.items.some(item => item.menuItem.id === itemId && item.itemStatus !== 'Served');
+  const isItemInCart = (itemId: string) => activeOrder?.items.some(item => item.menuItem.id === itemId);
   const cartItemCount = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart]);
 
 
@@ -223,7 +223,7 @@ export default function CustomerView() {
         <PopoverTrigger asChild>
           <Button variant="outline" disabled={locationState.status !== 'ok'}>
             <RotateCcw className="mr-2 h-4 w-4" />
-            Reorder
+            Add More
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-48">
@@ -241,7 +241,7 @@ export default function CustomerView() {
                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-full"
                 />
-              <Button onClick={handleReorder}>Add</Button>
+              <Button onClick={handleReorder}>Add to Cart</Button>
             </div>
           </div>
         </PopoverContent>
