@@ -13,6 +13,7 @@ interface KOTPreviewSheetProps {
     onClose: () => void;
     onConfirm: (order: Order) => void;
     mode: 'new' | 'reprint';
+    kotId?: string | null;
 }
 
 // Helper to group items for display
@@ -29,41 +30,31 @@ const groupItemsForDisplay = (items: OrderItem[]) => {
     return Array.from(grouped.values());
 };
 
-export default function KOTPreviewSheet({ order, table, onClose, onConfirm, mode }: KOTPreviewSheetProps) {
+export default function KOTPreviewSheet({ order, table, onClose, onConfirm, mode, kotId }: KOTPreviewSheetProps) {
     const itemsToDisplay = useMemo(() => {
         if (!order) return [];
 
         if (mode === 'reprint') {
-            const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
-            const latestKot = maxBy(printedItems, item => {
-                const match = item.kotId?.match(/KOT-(\d+)/);
-                return match ? parseInt(match[1], 10) : 0;
-            });
-            const latestKotId = latestKot?.kotId;
-            if (!latestKotId) return [];
-
-            const latestKotNumber = parseInt(latestKotId.match(/KOT-(\d+)/)?.[1] || '0', 10);
-            
-            return order.items.filter(item => {
-                const itemKotNumber = parseInt(item.kotId?.match(/KOT-(\d+)/)?.[1] || '-1', 10);
-                return itemKotNumber === latestKotNumber;
-            });
+             if (!kotId) return [];
+             return order.items.filter(item => item.kotId === kotId);
         }
         // mode === 'new'
         return order.items.filter(item => item.kotStatus === 'New');
 
-    }, [order, mode]);
+    }, [order, mode, kotId]);
 
     if (!order || !table || itemsToDisplay.length === 0) return null;
     
     const groupedItems = groupItemsForDisplay(itemsToDisplay);
     const buttonText = mode === 'reprint' ? 'Print Duplicate KOT' : 'Confirm & Print KOT';
+    const titleText = mode === 'reprint' ? `DUPLICATE ${kotId}` : 'KOT';
+
 
     return (
         <Sheet open={!!order} onOpenChange={(isOpen) => !isOpen && onClose()}>
             <SheetContent className="w-full max-w-sm flex flex-col font-mono text-sm">
                 <SheetHeader>
-                    <SheetTitle className="font-mono text-center">{mode === 'reprint' ? 'DUPLICATE KOT' : 'KOT'}</SheetTitle>
+                    <SheetTitle className="font-mono text-center">{titleText}</SheetTitle>
                     <SheetDescription className="font-mono text-center">
                         <p className="font-bold">{table.name}</p>
                         <p className="text-xs">Order ID: {order.id}</p>

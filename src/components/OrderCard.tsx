@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import type { Order, OrderItem, DiscountType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, Percent, BadgeIndianRupee } from 'lucide-react';
+import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, Percent, BadgeIndianRupee, Printer } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import ItemStatusBadge from './ItemStatusBadge';
@@ -26,6 +26,7 @@ interface OrderCardProps {
   onEditItems?: () => void;
   onCancelOrder?: () => void;
   showDiscountControls?: boolean;
+  onReprintKot?: (kotId: string) => void;
 }
 
 // Helper to group items for display
@@ -66,6 +67,7 @@ export default function OrderCard({
     onEditItems,
     onCancelOrder,
     showDiscountControls = false,
+    onReprintKot,
 }: OrderCardProps) {
   const applyDiscount = useOrderStore(state => state.applyDiscount);
   
@@ -167,8 +169,16 @@ export default function OrderCard({
               <AccordionContent>
                 {Object.entries(groupedPrintedItems).map(([kotId, items]) => (
                   <div key={kotId} className="mb-4">
-                    <div className="flex items-center justify-center text-xs font-semibold text-muted-foreground mb-1">
-                      <ChefHat className="h-3 w-3 mr-1" /> {kotId}
+                    <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground mb-1">
+                      <div className="flex items-center">
+                        <ChefHat className="h-3 w-3 mr-1" /> {kotId}
+                      </div>
+                       {onReprintKot && (
+                        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => onReprintKot(kotId)}>
+                          <Printer className="h-3 w-3 mr-1" />
+                          Reprint
+                        </Button>
+                      )}
                     </div>
                     <ul className="space-y-1 text-sm divide-y border rounded-md p-2">
                        {groupItemsForDisplay(items).map((item) => (

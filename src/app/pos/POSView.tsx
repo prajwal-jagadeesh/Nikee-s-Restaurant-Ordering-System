@@ -997,6 +997,7 @@ const TableGridView = () => {
   const [kotPreviewOrder, setKotPreviewOrder] = useState<Order | null>(null);
   const [billPreviewOrder, setBillPreviewOrder] = useState<Order | null>(null);
   const [kotPreviewMode, setKotPreviewMode] = useState<'new' | 'reprint'>('new');
+  const [kotReprintId, setKotReprintId] = useState<string | null>(null);
 
 
   const ordersByTable = useMemo(() => allOrders.reduce((acc, order) => {
@@ -1035,10 +1036,6 @@ const TableGridView = () => {
 
   const needsKotPrint = (order: Order) => {
     return order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New');
-  }
-
-  const canReprintKot = (order: Order) => {
-    return order.items.some(item => item.kotStatus === 'Printed');
   }
 
   const canGenerateBill = (order: Order) => {
@@ -1090,6 +1087,7 @@ const TableGridView = () => {
     }
     // For reprints, we just close the sheet without changing data
     setKotPreviewOrder(null);
+    setKotReprintId(null);
   }
 
   const handleConfirmBill = (orderId: string) => {
@@ -1101,9 +1099,10 @@ const TableGridView = () => {
     setBillPreviewOrder(null);
   }
 
-  const openKotPreview = (order: Order, mode: 'new' | 'reprint') => {
+  const openKotPreview = (order: Order, mode: 'new' | 'reprint', kotId: string | null = null) => {
     setKotPreviewMode(mode);
     setKotPreviewOrder(order);
+    setKotReprintId(kotId);
   }
 
 
@@ -1157,6 +1156,7 @@ const TableGridView = () => {
                     order={selectedOrder} 
                     tableName={selectedTable.name}
                     showDiscountControls={true}
+                    onReprintKot={(kotId) => openKotPreview(selectedOrder, 'reprint', kotId)}
                   >
                     <div className="mt-4 flex flex-col space-y-2">
                       {needsKotPrint(selectedOrder) && (
@@ -1168,16 +1168,6 @@ const TableGridView = () => {
                           <Printer className="mr-2 h-4 w-4" />
                           Print KOT
                         </Button>
-                      )}
-                      {canReprintKot(selectedOrder) && !needsKotPrint(selectedOrder) && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => openKotPreview(selectedOrder, 'reprint')}
-                            className="w-full"
-                          >
-                            <Printer className="mr-2 h-4 w-4" />
-                            Reprint KOT
-                          </Button>
                       )}
                       {canGenerateBill(selectedOrder) && (
                         <Button onClick={() => setBillPreviewOrder(selectedOrder)} className="w-full">
@@ -1223,9 +1213,10 @@ const TableGridView = () => {
       <KOTPreviewSheet
         order={kotPreviewOrder}
         table={kotPreviewTable}
-        onClose={() => setKotPreviewOrder(null)}
+        onClose={() => { setKotPreviewOrder(null); setKotReprintId(null); }}
         onConfirm={handleConfirmKot}
         mode={kotPreviewMode}
+        kotId={kotReprintId}
       />
       <BillPreviewSheet
         order={billPreviewOrder}
