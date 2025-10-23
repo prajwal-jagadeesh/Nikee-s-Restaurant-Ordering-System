@@ -44,7 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { addDays, format, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import { addDays, format, startOfDay, endOfDay, startOfMonth, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -791,7 +791,7 @@ const TableManagement = () => {
                 </DialogContent>
             </Dialog>
 
-             <Dialog open={isQRCodeDialogOpen} onOpenChange={(isOpen) => !isOpen && setTableForQRCode(null)}>
+             <Dialog open={isQRCodeDialogOpen} onOpenChange={setQRCodeDialogOpen}>
                 <DialogContent className="sm:max-w-xs">
                     <DialogHeader>
                         <DialogTitle>QR Code for {tableForQRCode?.name}</DialogTitle>
