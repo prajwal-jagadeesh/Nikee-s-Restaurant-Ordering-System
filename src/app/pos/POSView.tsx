@@ -4,7 +4,7 @@ import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
 import { useTableStore } from '@/lib/tables-store';
 import { useMenuStore } from '@/lib/menu-store';
 import { useSettingsStore } from '@/lib/settings-store';
-import type { Order, Table, MenuItem, OrderItem, UpiDetails } from '@/lib/types';
+import type { Order, Table, MenuItem, OrderItem, UpiDetails, DiscountType } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import KOTPreviewSheet from './KOTPreviewSheet';
 import BillPreviewSheet from './BillPreviewSheet';
@@ -1012,6 +1012,7 @@ const TableGridView = () => {
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
   const switchTable = useOrderStore((state) => state.switchTable);
+  const applyDiscount = useOrderStore((state) => state.applyDiscount);
 
   const handlePrintKOT = (order: Order) => {
     const newItems = order.items.filter(item => item.kotStatus === 'New');
@@ -1021,7 +1022,8 @@ const TableGridView = () => {
     updateOrderItemsKotStatus(order.id, newItemKotIds);
   };
 
-  const handlePrintBill = (orderId: string) => {
+  const handlePrintBill = (orderId: string, discountValue: number, discountType: DiscountType) => {
+    applyDiscount(orderId, discountValue, discountType);
     updateOrderStatus(orderId, 'Billed');
   };
 
@@ -1069,8 +1071,8 @@ const TableGridView = () => {
     setKotPreviewOrder(null);
   }
 
-  const handleConfirmBill = (orderId: string) => {
-    handlePrintBill(orderId);
+  const handleConfirmBill = (orderId: string, discountValue: number, discountType: DiscountType) => {
+    handlePrintBill(orderId, discountValue, discountType);
     setBillPreviewOrder(null);
   }
 

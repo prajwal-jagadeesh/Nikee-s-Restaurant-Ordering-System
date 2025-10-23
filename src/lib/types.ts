@@ -16,6 +16,7 @@ export type KotStatus = 'New' | 'Printed';
 export type ItemStatus = 'Pending' | 'Preparing' | 'Ready' | 'Served';
 export type OrderType = 'dine-in' | 'online';
 export type OnlinePlatform = 'Zomato' | 'Swiggy' | 'Others';
+export type DiscountType = 'percentage' | 'amount';
 
 export interface MenuItem {
   id: string;
@@ -52,6 +53,9 @@ export interface Order {
   status: OrderStatus;
   timestamp: number;
   total: number;
+  originalTotal?: number;
+  discount?: number;
+  discountType?: DiscountType;
   kotCounter?: number; // To generate unique KOT IDs
   switchedFrom?: string; // To track table switches
   sessionId?: string;

@@ -1,7 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Order, OrderStatus, OrderItem, ItemStatus, OrderType, OnlinePlatform, CustomerDetails } from './types';
+import type { Order, OrderStatus, OrderItem, ItemStatus, OrderType, OnlinePlatform, CustomerDetails, DiscountType } from './types';
 import { useState, useEffect } from 'react';
 import { useMenuStore } from './menu-store';
 import { useTableStore } from './tables-store';
@@ -22,6 +22,7 @@ interface OrderState {
   removeItem: (orderId: string, menuItemId: string) => void;
   switchTable: (orderId: string, newTableId: string) => boolean;
   clearSwitchedFrom: (orderId: string) => void;
+  applyDiscount: (orderId: string, value: number, type: DiscountType) => void;
   clearOrders: () => void;
   setHydrated: (hydrated: boolean) => void;
 }
@@ -200,7 +201,7 @@ export const useOrderStore = create(
 
               const updatedItems = order.items.map((item) => {
                 // We now check against the temporary unique KOT ID assigned to new items
-                if (itemIds.includes(item.kotId) && item.kotStatus === 'New') {
+                if (itemIds.includes(item.kotId!) && item.kotStatus === 'New') {
                   newKotCounter++;
                   return { 
                     ...item, 
@@ -374,6 +375,32 @@ export const useOrderStore = create(
             return order;
           }),
         }));
+      },
+      applyDiscount: (orderId, value, type) => {
+        set(state => ({
+            orders: state.orders.map(order => {
+                if (order.id !== orderId) return order;
+
+                const originalTotal = order.originalTotal || recalculateTotal(order.items);
+                let discountAmount = 0;
+
+                if (type === 'percentage') {
+                    discountAmount = (originalTotal * value) / 100;
+                } else {
+                    discountAmount = value;
+                }
+
+                const newTotal = originalTotal - discountAmount;
+
+                return {
+                    ...order,
+                    total: newTotal > 0 ? newTotal : 0,
+                    originalTotal: originalTotal,
+                    discount: value,
+                    discountType: type,
+                }
+            })
+        }))
       },
       clearOrders: () => {
         set({ orders: [] });
