@@ -101,6 +101,12 @@ This will start the Next.js development server, typically on port `9002`.
 
 This project is configured for both manual and automated deployments to Firebase App Hosting, which works perfectly with the free Spark plan.
 
+### Important: Enable Billing
+
+Firebase App Hosting requires a billing account to be enabled on your Google Cloud project, even if you stay within the generous free tier. **This does not mean you will be charged automatically.** You only pay for usage that exceeds the free limits.
+
+To enable billing, go to your Firebase project's "Usage and billing" page and upgrade your project to the **Blaze (Pay as you go)** plan. You will be prompted to link or create a billing account.
+
 ### Manual Deployment
 
 You can deploy your app at any time from your local machine.
@@ -199,3 +205,4 @@ Now, every time you merge a pull request into your `main` branch, the GitHub Act
 - **`public`**: Static assets.
 - **`tailwind.config.ts`**: Configuration for Tailwind CSS.
 - **`next.config.js`**: Configuration for Next.js.
+```
