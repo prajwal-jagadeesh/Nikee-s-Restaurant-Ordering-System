@@ -124,11 +124,11 @@ const useSession = () => {
 export default function CustomerView() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const tableNumberParam = searchParams.get('table') || searchParams.get('Table') || '1';
+  const tableNumberParam = searchParams.get('table') || searchParams.get('Table');
   
   const firestore = useFirestore();
   const { data: tables } = useTables();
-  const table = useMemo(() => tables.find(t => t.name.replace(/\s/g, '').toLowerCase() === `table${tableNumberParam}`) || tables.find(t => t.name.replace(/\D/g, '') === tableNumberParam), [tables, tableNumberParam]);
+  const table = useMemo(() => tables.find(t => t.name.replace(/\D/g, '') === tableNumberParam), [tables, tableNumberParam]);
 
   const { data: orders } = useOrders();
   const { data: allMenuItems } = useMenuItems();
@@ -448,14 +448,13 @@ export default function CustomerView() {
       {menuCategories.length > 0 ? (
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="md:hidden">
-              <ScrollArea className="w-full whitespace-nowrap rounded-md">
-                  <TabsList className="inline-grid grid-flow-col auto-cols-max">
-                      {menuCategories.map((cat) => (
-                          <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
-                      ))}
-                  </TabsList>
-                  <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+            <div className="overflow-x-auto whitespace-nowrap rounded-md pb-2">
+                <TabsList className="inline-grid grid-flow-col auto-cols-max">
+                    {menuCategories.map((cat) => (
+                        <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
+                    ))}
+                </TabsList>
+            </div>
           </div>
           <div className="hidden md:block">
               <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${menuCategories.length > 0 ? menuCategories.length : 1}, minmax(0, 1fr))`}}>
