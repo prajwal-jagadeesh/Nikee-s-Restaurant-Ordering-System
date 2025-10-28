@@ -540,13 +540,7 @@ export default function CustomerView() {
                               </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
-                              <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('upi')}>
-                                <IndianRupee className="mr-4 h-6 w-6" />
-                                <div>
-                                  <p className="font-semibold">Pay with UPI</p>
-                                  <p className="text-xs text-muted-foreground">Use GPay, PhonePe, Paytm, etc.</p>
-                                </div>
-                              </Button>
+                              
                               <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('card')}>
                                 <CreditCard className="mr-4 h-6 w-6" />
                                 <div>
