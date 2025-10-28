@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetDescription } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode, IndianRupee, CreditCard, Wallet } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode, IndianRupee, CreditCard, Wallet, FileText } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
@@ -22,6 +22,7 @@ import ItemStatusBadge from '@/components/ItemStatusBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -91,6 +92,7 @@ export default function CustomerView() {
   const addOrder = useOrderStore((state) => state.addOrder);
   const addItemsToOrder = useOrderStore((state) => state.addItemsToOrder);
   const setPaymentMethod = useOrderStore((state) => state.setPaymentMethod);
+  const requestBill = useOrderStore((state) => state.requestBill);
 
   const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
   const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
@@ -281,6 +283,16 @@ export default function CustomerView() {
     }
   }
 
+  const handleRequestBill = () => {
+    if (!activeOrder) return;
+    requestBill(activeOrder.id);
+    toast({
+      title: "Bill Requested",
+      description: "A captain has been notified and will bring your bill shortly.",
+    });
+    setIsCartOpen(false);
+  };
+
 
   const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab, menuItems]);
   const isItemInCart = (itemId: string) => activeOrder?.items.some(item => item.menuItem.id === itemId);
@@ -392,7 +404,7 @@ export default function CustomerView() {
             </ScrollArea>
         </div>
         <div className="hidden md:block">
-             <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${menuCategories.length}, minmax(0, 1fr))`}}>
+             <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${menuCategories.length > 0 ? menuCategories.length : 1}, minmax(0, 1fr))`}}>
                 {menuCategories.map((cat) => (
                     <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
                 ))}
@@ -538,6 +550,12 @@ export default function CustomerView() {
                           </Button>
                       </>
                     )}
+                    {activeOrder && cart.length === 0 && !['Billed', 'Paid', 'Cancelled'].includes(activeOrder.status) && (
+                      <Button size="lg" variant="outline" className="w-full" onClick={handleRequestBill} disabled={activeOrder.billRequested}>
+                        <FileText className="mr-2 h-5 w-5" />
+                        {activeOrder.billRequested ? 'Bill Already Requested' : 'Request Bill'}
+                      </Button>
+                    )}
                     {activeOrder?.status === 'Billed' && (
                         <Dialog open={isPaymentOptionsOpen} onOpenChange={setPaymentOptionsOpen}>
                           <DialogTrigger asChild>
@@ -580,5 +598,3 @@ export default function CustomerView() {
     </>
   );
 }
-
-    

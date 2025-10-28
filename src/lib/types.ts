@@ -61,6 +61,7 @@ export interface Order {
   switchedFrom?: string; // To track table switches
   sessionId?: string;
   paymentMethod?: PaymentMethod | null;
+  billRequested?: boolean;
 }
 
 export interface Table {
