@@ -1,7 +1,5 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import { useTableStore } from '@/lib/tables-store';
 import type { Order, OrderItem, Table } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import { Button } from '@/components/ui/button';
@@ -24,6 +22,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useOrders, useTables } from '@/firebase';
+import { useFirestore } from '@/firebase/provider';
+import { doc, updateDoc, getDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
+
 
 // Helper to group items for display
 const groupItems = (items: OrderItem[]) => {
@@ -46,19 +48,77 @@ const naturalSort = (a: Table, b: Table) => {
 };
 
 export default function CaptainView() {
-  const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
-  const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
+  const firestore = useFirestore();
+  const { data: allOrders, loading: ordersLoading } = useOrders();
+  const { data: tables, loading: tablesLoading } = useTables();
   
-  const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
-  const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
-  const updateItemQuantity = useOrderStore((state) => state.updateItemQuantity);
-  const removeItem = useOrderStore((state) => state.removeItem);
-  const switchTable = useOrderStore((state) => state.switchTable);
-  
-  const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [switchingOrder, setSwitchingOrder] = useState<Order | null>(null);
 
+  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
+    const orderRef = doc(firestore, 'orders', orderId);
+    await updateDoc(orderRef, { status });
+  };
+  
+  const updateOrderItemStatus = async (orderId: string, kotId: string, status: OrderItem['itemStatus']) => {
+    const orderRef = doc(firestore, 'orders', orderId);
+    const orderSnap = await getDoc(orderRef);
+    if (orderSnap.exists()) {
+      const orderData = orderSnap.data() as Order;
+      const updatedItems = orderData.items.map(item =>
+        item.kotId === kotId ? { ...item, itemStatus: status } : item
+      );
+      await updateDoc(orderRef, { items: updatedItems });
+    }
+  };
+
+  const updateItemQuantity = async (orderId: string, menuItemId: string, newQuantity: number) => {
+    if (newQuantity < 1) {
+        removeItem(orderId, menuItemId);
+        return;
+    }
+    const orderRef = doc(firestore, 'orders', orderId);
+    const orderSnap = await getDoc(orderRef);
+    if(orderSnap.exists()) {
+        const order = orderSnap.data() as Order;
+        const itemToUpdate = order.items.find(i => i.menuItem.id === menuItemId && i.kotStatus === 'New');
+        const otherItems = order.items.filter(i => i.menuItem.id !== menuItemId || i.kotStatus !== 'New');
+        if (itemToUpdate) {
+            itemToUpdate.quantity = newQuantity;
+            const newTotal = [...otherItems, itemToUpdate].reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
+            await updateDoc(orderRef, { items: [...otherItems, itemToUpdate], total: newTotal, originalTotal: newTotal, discount: 0 });
+        }
+    }
+  };
+
+  const removeItem = async (orderId: string, menuItemId: string) => {
+    const orderRef = doc(firestore, 'orders', orderId);
+    const orderSnap = await getDoc(orderRef);
+    if(orderSnap.exists()) {
+      const order = orderSnap.data() as Order;
+      const itemsToRemove = order.items.filter(i => i.menuItem.id === menuItemId && i.kotStatus === 'New');
+      const newItems = order.items.filter(i => i.menuItem.id !== menuItemId || i.kotStatus !== 'New');
+      const newTotal = newItems.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
+
+      // This is a simplified removal. For more complex scenarios, you might need transactions.
+      await updateDoc(orderRef, { items: newItems, total: newTotal, originalTotal: newTotal, discount: 0 });
+      
+      // If no new items are left, close the sheet
+       if (!newItems.some(i => i.kotStatus === 'New')) {
+         setEditingOrderId(null);
+       }
+    }
+  };
+
+  const switchTable = async (orderId: string, newTableId: string) => {
+    const orderRef = doc(firestore, 'orders', orderId);
+    await updateDoc(orderRef, { 
+        switchedFrom: switchingOrder?.tableId,
+        tableId: newTableId,
+    });
+    return true; // Assume success for now
+  };
+  
   const orders = allOrders.filter(o => o.status !== 'Paid' && o.status !== 'Cancelled');
   
   const handleMarkServed = (orderId: string, kotId: string) => {
@@ -90,11 +150,9 @@ export default function CaptainView() {
   const tableMap = useMemo(() => new Map(tables.map(t => [t.id, t.name])), [tables]);
   const sortedTables = useMemo(() => [...tables].sort(naturalSort), [tables]);
 
-
   const occupiedTableIds = useMemo(() => {
     const occupiedIds = new Set<string>();
     orders.forEach(order => {
-        // The order being switched is not considered "occupied" for the purpose of finding a new table
         if (switchingOrder && order.id === switchingOrder.id) return;
         occupiedIds.add(order.tableId!);
     });
@@ -116,12 +174,11 @@ export default function CaptainView() {
     }
   };
 
-
   const newItemsForEditing = editingOrder ? groupItems(editingOrder.items.filter(i => i.kotStatus === 'New')) : [];
   const newItemsTotal = newItemsForEditing?.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0) || 0;
 
 
-  if (!isHydrated) {
+  if (ordersLoading || tablesLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {[...Array(8)].map((_, i) => (

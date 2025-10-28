@@ -10,11 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode, IndianRupee, CreditCard, Wallet, FileText } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import { useTableStore } from '@/lib/tables-store';
-import { useMenuStore } from '@/lib/menu-store';
-import { useSettingsStore } from '@/lib/settings-store';
-import { useSessionStore } from '@/lib/session-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
@@ -23,7 +18,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useFirestore } from '@/firebase/provider';
+import { useOrders, useTables, useMenuItems, useMenuCategories, useSettings } from '@/firebase';
+import { doc, updateDoc, addDoc, serverTimestamp, collection, arrayUnion } from 'firebase/firestore';
+import { customAlphabet } from 'nanoid';
 
+const nanoid = customAlphabet('1234567890', 6);
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 const statusInfo: Record<OrderStatus, { label: string, description: string, progress: number }> = {
@@ -43,9 +43,14 @@ const statusInfo: Record<OrderStatus, { label: string, description: string, prog
 
 const useRedirectIfSwitched = (currentTable: Table | undefined) => {
     const router = useRouter();
-    const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
-    const allTables = useHydratedStore(useTableStore, state => state.tables, []);
-    const clearSwitchedFrom = useOrderStore(state => state.clearSwitchedFrom);
+    const { data: allOrders } = useOrders();
+    const { data: allTables } = useTables();
+    const firestore = useFirestore();
+
+    const clearSwitchedFrom = async (orderId: string) => {
+        const orderRef = doc(firestore, 'orders', orderId);
+        await updateDoc(orderRef, { switchedFrom: null });
+    };
 
     useEffect(() => {
         if (!currentTable) return;
@@ -60,7 +65,7 @@ const useRedirectIfSwitched = (currentTable: Table | undefined) => {
                 router.replace(`/customer?table=${newTableNumber}`);
             }
         }
-    }, [allOrders, currentTable, allTables, router, clearSwitchedFrom]);
+    }, [allOrders, currentTable, allTables, router]);
 };
 
 // Haversine formula to calculate distance between two lat/lon points
@@ -80,27 +85,61 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => 
     return d;
 }
 
+const useSession = () => {
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [tableId, setTableId] = useState<string | null>(null);
+    const [startTime, setStartTime] = useState<number | null>(null);
+
+    useEffect(() => {
+        const storedSession = localStorage.getItem('customer-session');
+        if (storedSession) {
+            const { id, tableId: sTableId, time } = JSON.parse(storedSession);
+            setSessionId(id);
+            setTableId(sTableId);
+            setStartTime(time);
+        }
+    }, []);
+
+    const startSession = (newTableId: string) => {
+        const newSessionId = `SESS-${Date.now()}`;
+        const newStartTime = Date.now();
+        localStorage.setItem('customer-session', JSON.stringify({ id: newSessionId, tableId: newTableId, time: newStartTime }));
+        setSessionId(newSessionId);
+        setTableId(newTableId);
+        setStartTime(newStartTime);
+    };
+
+    const endSession = () => {
+        localStorage.removeItem('customer-session');
+        setSessionId(null);
+        setTableId(null);
+        setStartTime(null);
+    };
+    
+    const isValid = !!sessionId && !!tableId && !!startTime;
+
+    return { sessionId, tableId, startTime, isValid, startSession, endSession };
+}
+
 export default function CustomerView() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tableNumberParam = searchParams.get('table') || '1';
   
-  const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
+  const firestore = useFirestore();
+  const { data: tables } = useTables();
   const table = useMemo(() => tables.find(t => t.name.toLowerCase().replace(' ', '') === `table${tableNumberParam}`) || tables[0], [tables, tableNumberParam]);
 
-  const orders = useHydratedStore(useOrderStore, state => state.orders, []);
-  const addOrder = useOrderStore((state) => state.addOrder);
-  const addItemsToOrder = useOrderStore((state) => state.addItemsToOrder);
-  const setPaymentMethod = useOrderStore((state) => state.setPaymentMethod);
-
-  const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
+  const { data: orders } = useOrders();
+  const { data: allMenuItems } = useMenuItems();
+  const { data: menuCategoriesData } = useMenuCategories();
   const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
-  const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
-
-  const restaurantLocation = useHydratedStore(useSettingsStore, state => state.location, { latitude: null, longitude: null });
-  const upiDetails = useHydratedStore(useSettingsStore, state => state.upiDetails, { upiId: '', restaurantName: ''});
-
-  const { sessionId, tableId: sessionTableId, startTime, isValid: isSessionValid, startSession, endSession } = useHydratedStore(useSessionStore, state => state, { sessionId: null, tableId: null, startTime: null, isValid: false, startSession: () => {}, endSession: () => {} });
+  const menuCategories = useMemo(() => menuCategoriesData.map(c => c.name), [menuCategoriesData]);
+  
+  const { settings } = useSettings();
+  const restaurantLocation = settings?.location;
+  
+  const { sessionId, tableId: sessionTableId, startTime, isValid: isSessionValid, startSession, endSession } = useSession();
 
   const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
@@ -120,13 +159,11 @@ export default function CustomerView() {
   useEffect(() => {
     if (!table) return;
 
-    // If session is for a different table, end it.
     if (sessionTableId && sessionTableId !== table.id) {
         endSession();
         return;
     }
 
-    // If there's no valid session for this table, start the check.
     if (!isSessionValid || sessionTableId !== table.id) {
       setLocationState({ status: 'checking', message: 'Verifying your location to start a new session...' });
 
@@ -135,8 +172,8 @@ export default function CustomerView() {
         return;
       }
       
-      if (!restaurantLocation.latitude || !restaurantLocation.longitude) {
-        setLocationState({ status: 'ok', message: '' }); // No location set, so we allow orders
+      if (!restaurantLocation?.latitude || !restaurantLocation?.longitude) {
+        setLocationState({ status: 'ok', message: '' });
         startSession(table.id);
         return;
       }
@@ -147,7 +184,7 @@ export default function CustomerView() {
           const userLon = position.coords.longitude;
           const distance = getDistance(userLat, userLon, parseFloat(restaurantLocation.latitude!), parseFloat(restaurantLocation.longitude!));
           
-          if (distance <= 500) { // Increased range for better UX
+          if (distance <= 500) {
              setLocationState({ status: 'ok', message: 'Location verified.' });
              startSession(table.id);
              toast({ title: "Session Started", description: "You can now place your order.", duration: 3000 });
@@ -162,16 +199,13 @@ export default function CustomerView() {
         }
       );
     } else {
-        // Session is valid and for the correct table
         setLocationState({ status: 'ok', message: '' });
     }
   }, [table, restaurantLocation, sessionTableId, isSessionValid, startSession, endSession, toast]);
   
-  // Session Timeout Logic
   useEffect(() => {
     if (!isSessionValid || !startTime) return;
 
-    // If there is an active order, the session does not expire.
     if (activeOrder) return;
     
     const interval = setInterval(() => {
@@ -185,7 +219,7 @@ export default function CustomerView() {
             });
             clearInterval(interval);
         }
-    }, 10000); // Check every 10 seconds
+    }, 10000);
 
     return () => clearInterval(interval);
 
@@ -243,20 +277,47 @@ export default function CustomerView() {
     return activeOrder.discount;
   }, [activeOrder]);
   
-  const placeOrUpdateOrder = () => {
+  const placeOrUpdateOrder = async () => {
     if (!canPlaceOrder || cart.length === 0 || !table) return;
+
+    const newOrderItems: OrderItem[] = cart.map(item => ({
+        ...item,
+        kotStatus: 'New',
+        itemStatus: 'Pending',
+        kotId: `KOT-${nanoid()}`
+    }));
     
     if (activeOrder) {
-      addItemsToOrder(activeOrder.id, cart);
-    } else {
-      addOrder({
-        tableId: table.id,
-        items: cart,
-        sessionId: sessionId!,
+      const orderRef = doc(firestore, 'orders', activeOrder.id);
+      const newTotal = activeOrder.total + newItemsTotal;
+      await updateDoc(orderRef, {
+        items: arrayUnion(...newOrderItems),
+        total: newTotal,
+        originalTotal: newTotal,
+        discount: 0,
       });
+    } else {
+      const newOrder: Omit<Order, 'id'> = {
+        orderType: 'dine-in',
+        tableId: table.id,
+        items: newOrderItems,
+        status: 'New',
+        timestamp: Date.now(),
+        total: newItemsTotal,
+        originalTotal: newItemsTotal,
+        sessionId: sessionId!,
+        kotCounter: newOrderItems.length,
+      };
+      const docRef = await addDoc(collection(firestore, 'orders'), newOrder);
+      await updateDoc(docRef, { id: docRef.id });
     }
     setCart([]);
     setIsCartOpen(false);
+  };
+
+  const setPaymentMethod = async (orderId: string, method: PaymentMethod | null) => {
+    const orderRef = doc(firestore, 'orders', orderId);
+    await updateDoc(orderRef, { paymentMethod: method });
   };
   
   const handlePaymentSelection = (method: PaymentMethod | null) => {
@@ -266,7 +327,7 @@ export default function CustomerView() {
     
     setPaymentOptionsOpen(false);
 
-    const message = method ? `A captain has been notified for your ${method === 'card' ? 'card' : 'cash'} payment.` : "A captain has been notified and will bring your bill shortly.";
+    const message = method ? `A captain has been notified for your ${method === 'card' ? 'card' : 'cash/QR'} payment.` : "A captain has been notified and will bring your bill shortly.";
 
     toast({
       title: "Bill Requested",
@@ -278,11 +339,9 @@ export default function CustomerView() {
   const canProceedToPay = useMemo(() => {
     if (!activeOrder) return false;
 
-    // Must not have any 'New' items waiting to be sent to kitchen
     const hasNewItems = activeOrder.items.some(i => i.kotStatus === 'New');
     if (hasNewItems) return false;
 
-    // All items that have been printed must be served
     const printedItems = activeOrder.items.filter(i => i.kotStatus === 'Printed');
     return printedItems.length > 0 && printedItems.every(i => i.itemStatus === 'Served');
   }, [activeOrder]);
@@ -547,7 +606,6 @@ export default function CustomerView() {
                     {activeOrder && cart.length === 0 && (activeOrder.status === 'Billed' || canProceedToPay) && (
                       <Dialog open={isPaymentOptionsOpen} onOpenChange={(isOpen) => {
                           if (!isOpen && !activeOrder.paymentMethod) {
-                              // If dialog is closed without selection, just request bill
                               handlePaymentSelection(null);
                           }
                           setPaymentOptionsOpen(isOpen);

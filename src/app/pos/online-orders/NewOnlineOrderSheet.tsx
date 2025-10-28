@@ -1,7 +1,5 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
-import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import { useMenuStore } from '@/lib/menu-store';
 import type { MenuItem, OrderItem, OnlinePlatform } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from '@/components/ui/sheet';
@@ -15,6 +13,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useMenuItems, useMenuCategories } from '@/firebase';
+import { useFirestore } from '@/firebase/provider';
+import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { customAlphabet } from 'nanoid';
+
+const nanoid = customAlphabet('1234567890', 6);
 
 interface NewOnlineOrderSheetProps {
     isOpen: boolean;
@@ -22,17 +26,18 @@ interface NewOnlineOrderSheetProps {
 }
 
 export default function NewOnlineOrderSheet({ isOpen, onOpenChange }: NewOnlineOrderSheetProps) {
+    const firestore = useFirestore();
     const { toast } = useToast();
-    const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
-    const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
-    const addOnlineOrder = useOrderStore(state => state.addOnlineOrder);
+    const { data: allMenuItems } = useMenuItems();
+    const { data: menuCategoriesData } = useMenuCategories();
+    const menuCategories = useMemo(() => menuCategoriesData.map(c => c.name), [menuCategoriesData]);
 
     const [selectedPlatform, setSelectedPlatform] = useState<OnlinePlatform | null>(null);
     const [platformOrderId, setPlatformOrderId] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [customerAddress, setCustomerAddress] = useState('');
-    const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
+    const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[]>([]);
     const [activeTab, setActiveTab] = useState(menuCategories[0]);
     
     useEffect(() => {
@@ -82,7 +87,7 @@ export default function NewOnlineOrderSheet({ isOpen, onOpenChange }: NewOnlineO
         return cart.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
     }, [cart]);
 
-    const placeOrder = () => {
+    const placeOrder = async () => {
         if (cart.length === 0 || !selectedPlatform || !customerName) {
             toast({
                 variant: 'destructive',
@@ -92,7 +97,8 @@ export default function NewOnlineOrderSheet({ isOpen, onOpenChange }: NewOnlineO
             return;
         }
 
-        addOnlineOrder({
+        const newOrder = {
+            orderType: 'online',
             onlinePlatform: selectedPlatform,
             platformOrderId,
             customerDetails: {
@@ -100,8 +106,17 @@ export default function NewOnlineOrderSheet({ isOpen, onOpenChange }: NewOnlineO
                 phone: customerPhone,
                 address: customerAddress,
             },
-            items: cart,
-        });
+            items: cart.map(item => ({ ...item, kotStatus: 'New', itemStatus: 'Pending', kotId: `KOT-${nanoid()}`})),
+            status: 'New',
+            timestamp: serverTimestamp(),
+            total: cartTotal,
+            originalTotal: cartTotal,
+            kotCounter: 0,
+        };
+
+        const docRef = await addDoc(collection(firestore, 'orders'), newOrder);
+        await updateDoc(docRef, { id: docRef.id });
+
         toast({
             title: 'Order Created',
             description: `New online order from ${selectedPlatform} has been added.`

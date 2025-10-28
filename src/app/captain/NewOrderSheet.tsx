@@ -1,8 +1,5 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
-import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import { useTableStore } from '@/lib/tables-store';
-import { useMenuStore } from '@/lib/menu-store';
 import type { MenuItem, OrderItem, Table, Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from '@/components/ui/sheet';
@@ -13,6 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import ItemStatusBadge from '@/components/ItemStatusBadge';
+import { useMenuItems, useMenuCategories, useOrders, useTables } from '@/firebase';
+import { useFirestore } from '@/firebase/provider';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { customAlphabet } from 'nanoid';
+
+const nanoid = customAlphabet('1234567890', 6);
+
 
 interface NewOrderSheetProps {
     isOpen: boolean;
@@ -41,23 +45,22 @@ const groupItemsForDisplay = (items: OrderItem[]) => {
 
 
 export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetProps) {
-    const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
-    const tables = useHydratedStore(useTableStore, state => state.tables, []);
-    const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
-    const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
-    const addOrder = useOrderStore(state => state.addOrder);
-    const addItemsToOrder = useOrderStore(state => state.addItemsToOrder);
-
+    const firestore = useFirestore();
+    const { data: allOrders } = useOrders();
+    const { data: tables } = useTables();
+    const { data: allMenuItems } = useMenuItems();
+    const { data: menuCategories } = useMenuCategories();
+    
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[]>([]);
-    const [activeTab, setActiveTab] = useState(menuCategories[0]);
+    const [activeTab, setActiveTab] = useState(menuCategories[0]?.name);
     
     useEffect(() => {
         if(isOpen) {
             setSelectedTableId(null);
             setCart([]);
             if (menuCategories.length > 0) {
-               setActiveTab(menuCategories[0]);
+               setActiveTab(menuCategories[0].name);
             }
         }
     }, [isOpen, menuCategories]);
@@ -101,16 +104,38 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
         return cart.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
     }, [cart]);
 
-    const placeOrUpdateOrder = () => {
+    const placeOrUpdateOrder = async () => {
         if (cart.length === 0 || !selectedTableId) return;
+        
+        const newOrderItems: OrderItem[] = cart.map(item => ({
+            ...item,
+            kotStatus: 'New',
+            itemStatus: 'Pending',
+            kotId: `KOT-${nanoid()}`
+        }));
 
         if (activeOrder) {
-            addItemsToOrder(activeOrder.id, cart);
-        } else {
-            addOrder({
-                tableId: selectedTableId,
-                items: cart,
+            const orderRef = doc(firestore, 'orders', activeOrder.id);
+            const newTotal = activeOrder.total + cartTotal;
+            await updateDoc(orderRef, {
+                items: arrayUnion(...newOrderItems),
+                total: newTotal,
+                originalTotal: newTotal,
+                discount: 0,
             });
+        } else {
+            const newOrder = {
+                orderType: 'dine-in',
+                tableId: selectedTableId,
+                items: newOrderItems,
+                status: 'New',
+                timestamp: serverTimestamp(),
+                total: cartTotal,
+                originalTotal: cartTotal,
+                kotCounter: 0,
+            };
+            const docRef = await addDoc(collection(firestore, 'orders'), newOrder);
+            await updateDoc(docRef, { id: docRef.id });
         }
         onOpenChange(false);
     };
@@ -151,7 +176,7 @@ export default function NewOrderSheet({ isOpen, onOpenChange }: NewOrderSheetPro
                              <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
                                 <TabsList className="grid w-full grid-cols-4 lg:grid-cols-5 xl:grid-cols-7">
                                 {menuCategories.map((cat) => (
-                                    <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
+                                    <TabsTrigger key={cat.id} value={cat.name}>{cat.name}</TabsTrigger>
                                 ))}
                                 </TabsList>
                                  <div className="flex-1 overflow-y-auto mt-4">

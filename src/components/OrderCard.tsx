@@ -14,7 +14,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
-import { useOrderStore } from '@/lib/orders-store';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 interface OrderCardProps {
   order: Order;
@@ -35,7 +36,7 @@ const groupItemsForDisplay = (items: OrderItem[]) => {
     items.forEach(item => {
         const existing = grouped.get(item.menuItem.id);
         if (existing) {
-            existing.count += 1;
+            existing.count += item.quantity;
         } else {
             grouped.set(item.menuItem.id, { ...item, count: 1 });
         }
@@ -69,8 +70,33 @@ export default function OrderCard({
     showDiscountControls = false,
     onReprintKot,
 }: OrderCardProps) {
-  const applyDiscount = useOrderStore(state => state.applyDiscount);
-  const setPaymentMethod = useOrderStore(state => state.setPaymentMethod);
+  const firestore = useFirestore();
+
+  const applyDiscount = async (orderId: string, value: number, type: DiscountType) => {
+    const orderRef = doc(firestore, 'orders', orderId);
+    const subtotal = order.originalTotal || order.items.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
+    
+    let discountAmount = 0;
+    if (type === 'percentage') {
+        discountAmount = (subtotal * value) / 100;
+    } else {
+        discountAmount = value;
+    }
+
+    const newTotal = subtotal - discountAmount;
+
+    await updateDoc(orderRef, {
+        discount: value,
+        discountType: type,
+        total: newTotal > 0 ? newTotal : 0,
+        originalTotal: subtotal
+    });
+  };
+
+  const setPaymentMethod = async (orderId: string, method: PaymentMethod | null) => {
+    const orderRef = doc(firestore, 'orders', orderId);
+    await updateDoc(orderRef, { paymentMethod: method });
+  };
   
   const handleDiscountTypeChange = (type: DiscountType) => {
     applyDiscount(order.id, order.discount || 0, type);
@@ -113,7 +139,7 @@ export default function OrderCard({
             <CardTitle className="text-lg font-headline">{displayName}</CardTitle>
              <div className="flex items-center text-sm text-muted-foreground mt-1">
                 <Clock className="h-4 w-4 mr-1.5" />
-                <span>{formatDistanceToNow(new Date(order.timestamp), { addSuffix: true })}</span>
+                <span>{order.timestamp ? formatDistanceToNow(order.timestamp, { addSuffix: true }) : 'just now'}</span>
             </div>
             <p className="text-xs text-muted-foreground font-semibold mt-1">ID: {order.id}</p>
         </div>
@@ -152,7 +178,7 @@ export default function OrderCard({
               <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                       <QrCode className="h-5 w-5"/>
-                      <p className="font-bold">Cash/QR Payment</p>
+                      <p className="font-bold">Cash / QR Payment</p>
                   </div>
                   <Button size="sm" className="h-7" onClick={() => setPaymentMethod(order.id, null)}>
                       <CircleCheck className="h-4 w-4 mr-1" />

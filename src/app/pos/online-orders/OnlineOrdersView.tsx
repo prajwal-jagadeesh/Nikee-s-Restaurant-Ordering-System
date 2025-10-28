@@ -3,7 +3,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Utensils, Zap, ShoppingBag, Truck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useHydratedStore, useOrderStore } from '@/lib/orders-store';
 import type { Order, OnlinePlatform } from '@/lib/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,12 +10,18 @@ import { formatDistanceToNow } from 'date-fns';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { menuItems } from '@/lib/data';
+import { menuItems as initialMenuItems } from '@/lib/data';
+import { useOrders } from '@/firebase';
+import { useFirestore } from '@/firebase/provider';
+import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { customAlphabet } from 'nanoid';
+
+const nanoid = customAlphabet('1234567890', 6);
 
 const getRandomItems = (): { menuItem: any; quantity: number }[] => {
     const items = [];
     const numItems = Math.floor(Math.random() * 3) + 1; // 1 to 3 items
-    const shuffled = [...menuItems].sort(() => 0.5 - Math.random());
+    const shuffled = [...initialMenuItems].sort(() => 0.5 - Math.random());
     for (let i = 0; i < numItems; i++) {
         items.push({
             menuItem: shuffled[i],
@@ -27,15 +32,19 @@ const getRandomItems = (): { menuItem: any; quantity: number }[] => {
 };
 
 const useMockOrderGenerator = (platform: OnlinePlatform, isEnabled: boolean) => {
-    const addOnlineOrder = useOrderStore(state => state.addOnlineOrder);
+    const firestore = useFirestore();
     const { toast } = useToast();
 
     useEffect(() => {
         if (!isEnabled) return;
 
-        const generateOrder = () => {
+        const generateOrder = async () => {
             const platformOrderId = `${platform.slice(0,1)}${Math.floor(1000 + Math.random() * 9000)}`;
+            const items = getRandomItems();
+            const total = items.reduce((acc, item) => acc + item.menuItem.price * item.quantity, 0);
+
             const newOrder = {
+                orderType: 'online',
                 onlinePlatform: platform,
                 platformOrderId: platformOrderId,
                 customerDetails: {
@@ -43,9 +52,17 @@ const useMockOrderGenerator = (platform: OnlinePlatform, isEnabled: boolean) => 
                     phone: '9876543210',
                     address: '123, Mock Address, City'
                 },
-                items: getRandomItems(),
+                items: items.map(i => ({...i, kotStatus: 'New', itemStatus: 'Pending', kotId: `KOT-${nanoid()}`})),
+                status: 'New',
+                timestamp: serverTimestamp(),
+                total: total,
+                originalTotal: total,
+                kotCounter: 0,
             };
-            addOnlineOrder(newOrder);
+
+            const docRef = await addDoc(collection(firestore, 'orders'), newOrder);
+            await updateDoc(docRef, { id: docRef.id });
+
             toast({
                 title: 'New Online Order!',
                 description: `Order #${platformOrderId} from ${platform} has arrived.`,
@@ -55,23 +72,26 @@ const useMockOrderGenerator = (platform: OnlinePlatform, isEnabled: boolean) => 
         const interval = setInterval(generateOrder, Math.random() * 20000 + 15000); // 15-35 seconds
 
         return () => clearInterval(interval);
-    }, [platform, addOnlineOrder, toast, isEnabled]);
+    }, [platform, firestore, toast, isEnabled]);
 };
 
 
 const OnlineOrderCard = ({ order }: { order: Order }) => {
-    const updateOrderStatus = useOrderStore(state => state.updateOrderStatus);
+    const firestore = useFirestore();
+    const updateOrderStatus = async (status: Order['status']) => {
+        await updateDoc(doc(firestore, 'orders', order.id), { status });
+    };
 
     const handleNextAction = () => {
         switch (order.status) {
             case 'Accepted':
-                updateOrderStatus(order.id, 'Preparing');
+                updateOrderStatus('Preparing');
                 break;
             case 'Food Ready':
-                updateOrderStatus(order.id, 'Out for Delivery');
+                updateOrderStatus('Out for Delivery');
                 break;
             case 'Out for Delivery':
-                updateOrderStatus(order.id, 'Delivered');
+                updateOrderStatus('Delivered');
                 break;
         }
     }
@@ -100,7 +120,7 @@ const OnlineOrderCard = ({ order }: { order: Order }) => {
                         <div>
                             <CardTitle className="text-base">Order #{order.platformOrderId || order.id}</CardTitle>
                             <CardDescription>
-                                {formatDistanceToNow(order.timestamp, { addSuffix: true })}
+                                {order.timestamp ? formatDistanceToNow(order.timestamp, { addSuffix: true }) : 'just now'}
                             </CardDescription>
                         </div>
                         <OrderStatusBadge status={order.status} />
@@ -125,13 +145,13 @@ const OnlineOrderCard = ({ order }: { order: Order }) => {
                         <span>₹{order.total.toFixed(2)}</span>
                     </div>
                     {order.status === 'New' && (
-                        <Button onClick={() => updateOrderStatus(order.id, 'Accepted')}>Accept Order</Button>
+                        <Button onClick={() => updateOrderStatus('Accepted')}>Accept Order</Button>
                     )}
                     {actionLabel && (
                         <Button onClick={handleNextAction}>{actionLabel}</Button>
                     )}
                      {order.status !== 'New' && (
-                        <Button variant="destructive" className="mt-2" onClick={() => updateOrderStatus(order.id, 'Cancelled')}>Cancel Order</Button>
+                        <Button variant="destructive" className="mt-2" onClick={() => updateOrderStatus('Cancelled')}>Cancel Order</Button>
                     )}
                 </CardFooter>
             </Card>
@@ -141,7 +161,7 @@ const OnlineOrderCard = ({ order }: { order: Order }) => {
 
 
 const PlatformTabContent = ({ platform, isLive }: { platform: OnlinePlatform, isLive: boolean }) => {
-    const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
+    const { data: allOrders } = useOrders();
     useMockOrderGenerator(platform, isLive);
 
     const onlineOrders = useMemo(() => {

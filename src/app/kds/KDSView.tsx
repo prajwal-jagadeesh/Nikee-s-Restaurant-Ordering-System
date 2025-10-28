@@ -1,7 +1,5 @@
 'use client';
 import { useMemo } from 'react';
-import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import { useTableStore } from '@/lib/tables-store';
 import type { OrderItem, ItemStatus, Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +9,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import ItemStatusBadge from '@/components/ItemStatusBadge';
 import { Utensils, Truck } from 'lucide-react';
 import { groupBy } from 'lodash';
+import { useOrders, useTables } from '@/firebase';
+import { useFirestore } from '@/firebase/provider';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 
 const itemStatusActions: Record<ItemStatus, { next: ItemStatus; label: string } | null> = {
   'Pending': { next: 'Preparing', label: 'Start Preparing' },
@@ -38,22 +39,32 @@ type GroupedOrder = {
 }
 
 export default function KDSView() {
-  const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
-  const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
+  const firestore = useFirestore();
+  const { data: allOrders, loading: ordersLoading } = useOrders();
+  const { data: tables, loading: tablesLoading } = useTables();
   const tableMap = useMemo(() => new Map(tables.map(t => [t.id, t.name])), [tables]);
   
-  const updateOrderItemStatus = useOrderStore((state) => state.updateOrderItemStatus);
-  const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
+  const updateOrderItemStatus = async (orderId: string, kotId: string, status: ItemStatus) => {
+    const orderRef = doc(firestore, 'orders', orderId);
+    const orderSnap = await getDoc(orderRef);
+    if(orderSnap.exists()) {
+      const order = orderSnap.data() as Order;
+      const updatedItems = order.items.map(item => 
+        item.kotId === kotId ? { ...item, itemStatus: status } : item
+      );
+      await updateDoc(orderRef, { items: updatedItems });
+    }
+  };
 
   const kdsOrders = useMemo((): GroupedOrder[] => {
     const activeKitchenOrders = allOrders.filter(order => {
-        const relevantStatuses = ['Confirmed', 'Preparing', 'Ready', 'Billed'];
+        const relevantStatuses = ['Confirmed', 'Preparing', 'Ready', 'Billed', 'Accepted', 'Food Ready'];
         return relevantStatuses.includes(order.status);
     });
 
     const combinedOrders = activeKitchenOrders.map(order => {
         const kitchenItems = order.items
-            .filter(item => item.kotStatus === 'Printed')
+            .filter(item => item.kotStatus === 'Printed' && item.itemStatus !== 'Served')
             .map(item => ({ ...item, originalOrderId: order.id }));
         
         const groupedByItem = groupBy(kitchenItems, 'menuItem.id');
@@ -88,7 +99,7 @@ export default function KDSView() {
     }
   };
 
-  if (!isHydrated) {
+  if (ordersLoading || tablesLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {[...Array(3)].map((_, i) => (
