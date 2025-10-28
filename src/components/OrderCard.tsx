@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 
 interface OrderCardProps {
   order: Order;
@@ -131,6 +131,21 @@ export default function OrderCard({
     return order.discount;
   }, [subtotal, order]);
 
+  const getFormattedTimestamp = () => {
+    if (!order.timestamp) return 'just now';
+    
+    // Firestore timestamps can be objects with seconds/nanoseconds
+    if (typeof order.timestamp === 'object' && order.timestamp.seconds) {
+      return formatDistanceToNow((order.timestamp as any).toDate(), { addSuffix: true });
+    }
+    
+    // Or they can be numbers (milliseconds)
+    if (typeof order.timestamp === 'number') {
+      return formatDistanceToNow(new Date(order.timestamp), { addSuffix: true });
+    }
+    
+    return 'just now';
+  };
 
   return (
     <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300 relative">
@@ -139,7 +154,7 @@ export default function OrderCard({
             <CardTitle className="text-lg font-headline">{displayName}</CardTitle>
              <div className="flex items-center text-sm text-muted-foreground mt-1">
                 <Clock className="h-4 w-4 mr-1.5" />
-                <span>{order.timestamp ? formatDistanceToNow(order.timestamp, { addSuffix: true }) : 'just now'}</span>
+                <span>{getFormattedTimestamp()}</span>
             </div>
             <p className="text-xs text-muted-foreground font-semibold mt-1">ID: {order.id}</p>
         </div>
