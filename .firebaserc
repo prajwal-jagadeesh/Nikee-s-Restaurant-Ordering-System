@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "nikees-zara"
+  },
+  "targets": {
+    "nikees-zara": {
+      "hosting": {
+        "nikees-zara": [
+          "nikees-zara"
+        ]
+      }
+    }
+  }
+}
