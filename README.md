@@ -62,7 +62,6 @@ The application's logic is built around the lifecycle of an `Order`.
 ### 5. Payment
 - Once an order is `'Billed'`, the "Proceed to Pay" button appears for the customer.
 - The customer can choose a payment method:
-    - **UPI**: Attempts to open a UPI app on the customer's device.
     - **Card** or **Cash/QR**: Sets a `paymentMethod` on the order object.
 - This `paymentMethod` triggers a real-time notification on the corresponding `OrderCard` in the Captain and POS views (e.g., "Card Payment Requested").
 - A captain acknowledges the request, clears the notification, and assists the customer.
@@ -97,15 +96,9 @@ This will start the Next.js development server, typically on port `9002`.
 
 ---
 
-## Deployment to Firebase
+## Deployment to Firebase Hosting (Spark Plan)
 
-This project is configured for both manual and automated deployments to Firebase App Hosting, which works perfectly with the free Spark plan.
-
-### Important: Enable Billing
-
-Firebase App Hosting requires a billing account to be enabled on your Google Cloud project, even if you stay within the generous free tier. **This does not mean you will be charged automatically.** You only pay for usage that exceeds the free limits.
-
-To enable billing, go to your Firebase project's "Usage and billing" page and upgrade your project to the **Blaze (Pay as you go)** plan. You will be prompted to link or create a billing account.
+This project is configured for deployment to **Firebase Hosting**, which works perfectly with the free Spark plan. We will export the Next.js app as a static site.
 
 ### Manual Deployment
 
@@ -124,72 +117,69 @@ In your terminal, log in to your Firebase account:
 firebase login
 ```
 
-#### Step 2: Initialize Firebase
+#### Step 2: Initialize Firebase Hosting
+If you haven't done so already, you need to initialize Firebase Hosting in your project.
+
 1.  In the root directory of your project, run the following command:
     ```bash
-    firebase init
+    firebase init hosting
     ```
 2.  You will be prompted with several questions. Follow these steps:
-    -   "Which Firebase features do you want to set up for this directory?"
-        -   Use the arrow keys to navigate to **App Hosting: Deploy Next.js web apps to a new backend**.
-        -   Press `Space` to select it, then press `Enter`.
-    -   "Please select an option:"
-        -   Select `Use an existing project` and choose the project you created earlier.
-    -   "What do you want to use as your public directory?"
-        -   Press `Enter` to accept the default (`.next`). This is automatically detected.
-    -   The CLI will then create a Firebase backend for App Hosting.
+    -   **"Please select an option:"**
+        -   Select `Use an existing project` and choose your Firebase project from the list.
+    -   **"What do you want to use as your public directory?"**
+        -   Type `out` and press `Enter`. (This is the directory where Next.js exports the static site).
+    -   **"Configure as a single-page app (rewrite all urls to /index.html)?"**
+        -   Type `y` and press `Enter`. This is crucial for a Next.js static export to handle routing correctly.
+    -   **"Set up automatic builds and deploys with GitHub?"**
+        -   Type `n` and press `Enter`. We will set this up separately using the provided workflow files.
+    -   **"File out/index.html already exists. Overwrite?"**
+        -   If this appears, type `n` and press `Enter`.
+
+This will create a `firebase.json` and a `.firebaserc` file in your project.
 
 #### Step 3: Deploy Manually
-After initialization, you can deploy your application at any time by running:
-```bash
-firebase deploy
-```
-The CLI will build your Next.js application and deploy it, providing you with the live URL.
+1.  First, build your static site:
+    ```bash
+    npm run build
+    ```
+2.  After the build is complete, deploy to Firebase:
+    ```bash
+    firebase deploy --only hosting
+    ```
+The CLI will upload your static site and provide you with the live URL.
 
-### Automated Deployments with GitHub Actions
+### Automated Deployments with GitHub Actions (Recommended)
 
-This repository is equipped with GitHub Actions to automatically deploy your application. A workflow will run on every merge to the `main` branch, deploying the latest version of your app to your live URL.
+This repository is equipped with GitHub Actions to automatically deploy your application to Firebase Hosting whenever you merge code into the `main` branch.
 
 #### One-Time Setup for Automated Deployments
 
-To enable this, you need to connect GitHub to Firebase and provide it with the necessary permissions.
+To enable this, you need to provide GitHub with the necessary permissions to deploy to your Firebase project.
 
-1.  **Connect GitHub to Firebase**:
-    *   In your terminal, run the following command from your project's root directory:
-        ```bash
-        firebase init hosting:github
-        ```
-    *   Follow the prompts:
-        *   **Select the repository**: Choose your GitHub repository (`your-username/your-repo-name`).
-        *   **Set up deployment script**: Say **yes** to setting up a build script. The command should be `npm ci && npm run build`.
-        *   **Deploy on merge?**: Say **yes** when asked if you want to deploy on merging to the `main` branch.
-        *   **Overwrite existing files?**: Say **no** if it asks to overwrite the workflow files, as they are already in the repository.
-
-2.  **Create a Service Account**: The GitHub Action needs a service account to authenticate with your Firebase project.
+1.  **Create a Service Account**: The GitHub Action needs a service account to authenticate with your Firebase project.
     *   Go to the Google Cloud Console: [https://console.cloud.google.com/iam-admin/service-accounts](https://console.cloud.google.com/iam-admin/service-accounts)
     *   Make sure you have selected your Firebase project from the project dropdown at the top of the page.
     *   Click **+ CREATE SERVICE ACCOUNT**.
-    *   Give it a name (e.g., `firebase-deploy-action`) and an ID.
+    *   Give it a name (e.g., `github-actions-deployer`) and an ID.
     *   Click **CREATE AND CONTINUE**.
-    *   In the "Grant this service account access to project" step, add the following roles:
-        *   `Firebase App Hosting Admin`
-        *   `API Keys Admin`
+    *   In the "Grant this service account access to project" step, add the **`Firebase Hosting Admin`** role.
     *   Click **CONTINUE**, then **DONE**.
 
-3.  **Generate a Key for the Service Account**:
+2.  **Generate a Key for the Service Account**:
     *   Find the service account you just created in the list.
     *   Click the three-dot menu (⋮) under "Actions" and select **Manage keys**.
     *   Click **ADD KEY** > **Create new key**.
     *   Choose **JSON** as the key type and click **CREATE**. A JSON file will download to your computer.
 
-4.  **Add the Key as a GitHub Secret**:
+3.  **Add the Key as a GitHub Secret**:
     *   Go to your GitHub repository and navigate to **Settings** > **Secrets and variables** > **Actions**.
     *   Click the **New repository secret** button.
     *   For the **Name**, enter exactly: `FIREBASE_SERVICE_ACCOUNT_NIKEES_ZARA`
     *   For the **Secret**, copy the *entire content* of the JSON key file you downloaded and paste it into the box.
     *   Click **Add secret**.
 
-Now, every time you merge a pull request into your `main` branch, the GitHub Action will automatically run, build your project, and deploy it to Firebase App Hosting.
+Now, every time you merge a pull request into your `main` branch, the GitHub Action will automatically run, build your project, and deploy it to Firebase Hosting.
 
 ---
 
@@ -203,6 +193,7 @@ Now, every time you merge a pull request into your `main` branch, the GitHub Act
     - **`*-store.ts`**: Zustand store files (`orders-store.ts`, `menu-store.ts`, etc.) for managing global state.
     - **`data.ts`**: Initial seed data for the menu.
 - **`public`**: Static assets.
+- **`out`**: The static export of the site, generated by `npm run build`. This is the directory deployed to Firebase Hosting.
 - **`tailwind.config.ts`**: Configuration for Tailwind CSS.
-- **`next.config.js`**: Configuration for Next.js.
-```
+- **`next.config.js`**: Configuration for Next.js, set up for static export.
+- **`firebase.json`**: Firebase Hosting configuration.
