@@ -71,7 +71,7 @@ export default function OrderCard({
 }: OrderCardProps) {
   const applyDiscount = useOrderStore(state => state.applyDiscount);
   const setPaymentMethod = useOrderStore(state => state.setPaymentMethod);
-  const clearBillRequest = useOrderStore(state => state.clearBillRequest);
+  const acknowledgeBillRequest = useOrderStore(state => state.acknowledgeBillRequest);
   
   const handleDiscountTypeChange = (type: DiscountType) => {
     applyDiscount(order.id, order.discount || 0, type);
@@ -155,7 +155,7 @@ export default function OrderCard({
                       <FileText className="h-5 w-5"/>
                       <p className="font-bold">Bill Requested</p>
                   </div>
-                  <Button size="sm" className="h-7" onClick={() => clearBillRequest(order.id)}>
+                  <Button size="sm" className="h-7" onClick={() => acknowledgeBillRequest(order.id)}>
                       <CircleCheck className="h-4 w-4 mr-1" />
                       Acknowledge
                   </Button>

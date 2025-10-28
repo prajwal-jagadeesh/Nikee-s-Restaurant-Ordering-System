@@ -92,7 +92,6 @@ export default function CustomerView() {
   const addOrder = useOrderStore((state) => state.addOrder);
   const addItemsToOrder = useOrderStore((state) => state.addItemsToOrder);
   const setPaymentMethod = useOrderStore((state) => state.setPaymentMethod);
-  const requestBill = useOrderStore((state) => state.requestBill);
 
   const allMenuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
   const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
@@ -260,36 +259,36 @@ export default function CustomerView() {
     setIsCartOpen(false);
   };
   
-  const handlePaymentSelection = (method: PaymentMethod) => {
+  const handlePaymentSelection = (method: PaymentMethod | null) => {
     if (!activeOrder) return;
     
-    setPaymentMethod(activeOrder.id, method);
+    // Set payment method, which also triggers bill request
+    if (method) {
+        setPaymentMethod(activeOrder.id, method);
+    } else {
+        // If they just close the dialog, still request the bill
+        setPaymentMethod(activeOrder.id, null);
+    }
+    
     setPaymentOptionsOpen(false);
 
-    if (method === 'cash_at_counter') {
-       toast({
-        title: "Captain Notified",
-        description: "A captain has been notified and will be with you shortly to assist with payment.",
-        duration: 3000,
-      });
-    } else if (method === 'card') {
-       toast({
-        title: "Captain Notified",
-        description: "A captain has been notified and will bring the card machine to your table.",
-        duration: 3000,
-      });
-    }
-  }
+    const message = method ? `A captain has been notified for your ${method === 'card' ? 'card' : 'cash'} payment.` : "A captain has been notified and will bring your bill shortly.";
 
-  const handleRequestBill = () => {
-    if (!activeOrder) return;
-    requestBill(activeOrder.id);
     toast({
       title: "Bill Requested",
-      description: "A captain has been notified and will bring your bill shortly.",
+      description: message,
       duration: 3000,
     });
-  };
+  }
+
+  const canProceedToPay = useMemo(() => {
+    if (!activeOrder) return false;
+    // Can pay if order is billed
+    if (activeOrder.status === 'Billed') return true;
+    // OR if all KOT items are served
+    const printedItems = activeOrder.items.filter(i => i.kotStatus === 'Printed');
+    return printedItems.length > 0 && printedItems.every(i => i.itemStatus === 'Served');
+  }, [activeOrder]);
 
 
   const filteredMenuItems = useMemo(() => menuItems.filter(item => item.category === activeTab), [activeTab, menuItems]);
@@ -548,27 +547,28 @@ export default function CustomerView() {
                           </Button>
                       </>
                     )}
-                    {activeOrder && cart.length === 0 && !['Billed', 'Paid', 'Cancelled'].includes(activeOrder.status) && (
-                      <Button size="lg" variant="outline" className="w-full" onClick={handleRequestBill} disabled={activeOrder.billRequested}>
-                        <FileText className="mr-2 h-5 w-5" />
-                        {activeOrder.billRequested ? 'Bill Already Requested' : 'Request Bill'}
-                      </Button>
-                    )}
-                    {activeOrder?.status === 'Billed' && (
-                        <Dialog open={isPaymentOptionsOpen} onOpenChange={setPaymentOptionsOpen}>
+                    {activeOrder && cart.length === 0 && canProceedToPay && (
+                      <Dialog open={isPaymentOptionsOpen} onOpenChange={(isOpen) => {
+                          if (!isOpen && !activeOrder.paymentMethod) {
+                              // If dialog is closed without selection, just request bill
+                              handlePaymentSelection(null);
+                          }
+                          setPaymentOptionsOpen(isOpen);
+                      }}>
                           <DialogTrigger asChild>
                              <div className="space-y-2">
-                                <p className="text-sm text-center text-muted-foreground">Please select your preferred payment method.</p>
-                                <Button size="lg" className="w-full">
-                                    <Wallet className="mr-2 h-5 w-5" /> Proceed to Pay
+                                <p className="text-sm text-center text-muted-foreground">All items served. Ready to pay?</p>
+                                <Button size="lg" className="w-full" disabled={activeOrder.billRequested}>
+                                    <Wallet className="mr-2 h-5 w-5" />
+                                    {activeOrder.billRequested ? 'Bill Requested' : 'Proceed to Pay'}
                                 </Button>
                              </div>
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Select Payment Method</DialogTitle>
+                              <DialogTitle>Request Bill & Select Payment</DialogTitle>
                               <DialogDescription>
-                                How would you like to pay for your order of ₹{activeOrder.total.toFixed(2)}? A captain will be notified.
+                                A captain will bring your bill. You can optionally select a payment method now.
                               </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
