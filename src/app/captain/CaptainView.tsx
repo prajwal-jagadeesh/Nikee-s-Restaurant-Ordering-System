@@ -39,6 +39,12 @@ const groupItems = (items: OrderItem[]) => {
     return Array.from(grouped.values());
 };
 
+const naturalSort = (a: Table, b: Table) => {
+    const numA = parseInt(a.name.match(/\d+/)?.[0] || '0', 10);
+    const numB = parseInt(b.name.match(/\d+/)?.[0] || '0', 10);
+    return numA - numB;
+};
+
 export default function CaptainView() {
   const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
   const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
@@ -82,7 +88,7 @@ export default function CaptainView() {
   const editingOrder = orders.find(o => o.id === editingOrderId);
   
   const tableMap = useMemo(() => new Map(tables.map(t => [t.id, t.name])), [tables]);
-  const sortedTables = useMemo(() => [...tables].sort((a,b) => a.name.localeCompare(b.name)), [tables]);
+  const sortedTables = useMemo(() => [...tables].sort(naturalSort), [tables]);
 
 
   const occupiedTableIds = useMemo(() => {

@@ -1345,5 +1345,3 @@ export default function POSView({
     </div>
   );
 }
-
-    
