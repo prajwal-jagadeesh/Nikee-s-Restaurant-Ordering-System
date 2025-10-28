@@ -262,13 +262,7 @@ export default function CustomerView() {
   const handlePaymentSelection = (method: PaymentMethod | null) => {
     if (!activeOrder) return;
     
-    // Set payment method, which also triggers bill request
-    if (method) {
-        setPaymentMethod(activeOrder.id, method);
-    } else {
-        // If they just close the dialog, still request the bill
-        setPaymentMethod(activeOrder.id, null);
-    }
+    setPaymentMethod(activeOrder.id, method);
     
     setPaymentOptionsOpen(false);
 
@@ -283,9 +277,12 @@ export default function CustomerView() {
 
   const canProceedToPay = useMemo(() => {
     if (!activeOrder) return false;
-    // Can pay if order is billed
-    if (activeOrder.status === 'Billed') return true;
-    // OR if all KOT items are served
+
+    // Must not have any 'New' items waiting to be sent to kitchen
+    const hasNewItems = activeOrder.items.some(i => i.kotStatus === 'New');
+    if (hasNewItems) return false;
+
+    // All items that have been printed must be served
     const printedItems = activeOrder.items.filter(i => i.kotStatus === 'Printed');
     return printedItems.length > 0 && printedItems.every(i => i.itemStatus === 'Served');
   }, [activeOrder]);
@@ -547,7 +544,7 @@ export default function CustomerView() {
                           </Button>
                       </>
                     )}
-                    {activeOrder && cart.length === 0 && canProceedToPay && (
+                    {activeOrder && cart.length === 0 && (activeOrder.status === 'Billed' || canProceedToPay) && (
                       <Dialog open={isPaymentOptionsOpen} onOpenChange={(isOpen) => {
                           if (!isOpen && !activeOrder.paymentMethod) {
                               // If dialog is closed without selection, just request bill
@@ -557,7 +554,7 @@ export default function CustomerView() {
                       }}>
                           <DialogTrigger asChild>
                              <div className="space-y-2">
-                                <p className="text-sm text-center text-muted-foreground">All items served. Ready to pay?</p>
+                               {activeOrder.status !== 'Billed' && <p className="text-sm text-center text-muted-foreground">All items served. Ready to pay?</p>}
                                 <Button size="lg" className="w-full">
                                     <Wallet className="mr-2 h-5 w-5" />
                                     Proceed to Pay
