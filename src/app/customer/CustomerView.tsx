@@ -128,7 +128,7 @@ export default function CustomerView() {
   
   const firestore = useFirestore();
   const { data: tables } = useTables();
-  const table = useMemo(() => tables.find(t => t.name.toLowerCase().replace(/\s/g, '') === `table${tableNumberParam}`) || tables[0], [tables, tableNumberParam]);
+  const table = useMemo(() => tables.find(t => t.name.replace(/\s/g, '').toLowerCase() === `table${tableNumberParam}`) || tables.find(t => t.name.replace(/\D/g, '') === tableNumberParam), [tables, tableNumberParam]);
 
   const { data: orders } = useOrders();
   const { data: allMenuItems } = useMenuItems();
@@ -540,7 +540,7 @@ export default function CustomerView() {
                         ))}
                     </div>
                     <Separator className="my-3" />
-                    {(activeOrder.discount || 0) > 0 && (
+                    {(order.discount || 0) > 0 && (
                       <div className="space-y-1 text-sm mb-2">
                         <div className='w-full flex justify-between text-muted-foreground'>
                           <span>Subtotal</span>
