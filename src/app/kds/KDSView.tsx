@@ -34,7 +34,7 @@ type GroupedOrder = {
   tableName?: string;
   platform?: string;
   platformOrderId?: string;
-  orderTimestamp: number;
+  orderTimestamp: any;
   items: GroupedKitchenItem[];
 }
 
@@ -98,6 +98,23 @@ export default function KDSView() {
       updateOrderItemStatus(orderId, kotId, action.next);
     }
   };
+  
+  const getFormattedTimestamp = (timestamp: any) => {
+    if (!timestamp) return 'just now';
+
+    // Handle Firestore ServerTimestamp (which is null on client until server processes it)
+    if (typeof timestamp === 'object' && timestamp.seconds) {
+      return formatDistanceToNow(timestamp.toDate(), { addSuffix: true });
+    }
+    
+    // Handle standard JS date numbers
+    if (typeof timestamp === 'number') {
+      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+    }
+    
+    // Fallback for unresolved server timestamps
+    return 'just now';
+  };
 
   if (ordersLoading || tablesLoading) {
     return (
@@ -132,7 +149,7 @@ export default function KDSView() {
                         <div>
                             <CardTitle>{order.orderType === 'dine-in' ? order.tableName : `${order.platform} #${order.platformOrderId}`}</CardTitle>
                             <span className="text-xs font-normal text-muted-foreground -mt-1">
-                                {formatDistanceToNow(new Date(order.orderTimestamp), { addSuffix: true })}
+                                {getFormattedTimestamp(order.orderTimestamp)}
                             </span>
                         </div>
                     </div>
