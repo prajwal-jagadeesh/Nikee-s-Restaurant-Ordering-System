@@ -460,7 +460,7 @@ export default function CustomerView() {
                         ))}
                     </div>
                     <Separator className="my-3" />
-                    {(order.discount || 0) > 0 && (
+                    {(activeOrder.discount || 0) > 0 && (
                       <div className="space-y-1 text-sm mb-2">
                         <div className='w-full flex justify-between text-muted-foreground'>
                           <span>Subtotal</span>
