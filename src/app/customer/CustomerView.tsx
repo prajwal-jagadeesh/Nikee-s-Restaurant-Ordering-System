@@ -16,7 +16,6 @@ import OrderStatusBadge from '@/components/OrderStatusBadge';
 import ItemStatusBadge from '@/components/ItemStatusBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase/provider';
 import { useOrders, useTables, useMenuItems, useMenuCategories, useSettings } from '@/firebase';
@@ -302,7 +301,7 @@ export default function CustomerView() {
         tableId: table.id,
         items: newOrderItems,
         status: 'New',
-        timestamp: Date.now(),
+        timestamp: serverTimestamp() as any,
         total: newItemsTotal,
         originalTotal: newItemsTotal,
         sessionId: sessionId!,
@@ -659,3 +658,5 @@ export default function CustomerView() {
     </>
   );
 }
+
+    
