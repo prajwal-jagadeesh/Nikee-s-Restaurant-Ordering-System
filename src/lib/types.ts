@@ -68,7 +68,21 @@ export interface Table {
   name: string;
 }
 
+export interface MenuCategory {
+  id: string;
+  name: string;
+}
+
 export interface UpiDetails {
   upiId?: string;
   restaurantName?: string;
+}
+
+export interface AppSettings {
+  id: 'global'; // Singleton ID
+  location?: {
+    latitude: string;
+    longitude: string;
+  };
+  upiDetails?: UpiDetails;
 }

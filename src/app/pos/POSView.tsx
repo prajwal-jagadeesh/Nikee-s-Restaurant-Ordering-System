@@ -1,15 +1,11 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
-import { useOrderStore, useHydratedStore } from '@/lib/orders-store';
-import { useTableStore } from '@/lib/tables-store';
-import { useMenuStore } from '@/lib/menu-store';
-import { useSettingsStore } from '@/lib/settings-store';
-import type { Order, Table, MenuItem, OrderItem, UpiDetails, DiscountType } from '@/lib/types';
+import type { Order, Table, MenuItem, UpiDetails, DiscountType, MenuCategory, AppSettings } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import KOTPreviewSheet from './KOTPreviewSheet';
 import BillPreviewSheet from './BillPreviewSheet';
 import { Button } from '@/components/ui/button';
-import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock, Truck, LocateFixed, IndianRupee, QrCode } from 'lucide-react';
+import { Printer, Eye, Plus, Trash2, Pen, Check, LayoutGrid, Settings, Utensils, ArrowRightLeft, BarChart2, Calendar as CalendarIcon, Clock, Truck, LocateFixed, IndianRupee, QrCode, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -52,6 +48,9 @@ import { useToast } from "@/hooks/use-toast";
 import OnlineOrdersView from './online-orders/OnlineOrdersView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import QRCode from 'qrcode.react';
+import { useMenuItems, useMenuCategories, useOrders, useSettings, useTables, useDatabaseSeeder } from '@/firebase/hooks';
+import { doc, updateDoc, addDoc, deleteDoc, writeBatch, collection, getDocs, setDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 
 const naturalSort = (a: Table, b: Table) => {
@@ -61,17 +60,19 @@ const naturalSort = (a: Table, b: Table) => {
 };
 
 const LocationSettings = () => {
+    const firestore = useFirestore();
     const { toast } = useToast();
-    const location = useHydratedStore(useSettingsStore, (state) => state.location, { latitude: '', longitude: '' });
-    const setLocation = useSettingsStore((state) => state.setLocation);
+    const { settings, loading } = useSettings();
 
-    const [latitude, setLatitude] = useState(location.latitude || '');
-    const [longitude, setLongitude] = useState(location.longitude || '');
+    const [latitude, setLatitude] = useState('');
+    const [longitude, setLongitude] = useState('');
 
     useEffect(() => {
-        setLatitude(location.latitude || '');
-        setLongitude(location.longitude || '');
-    }, [location]);
+        if (settings?.location) {
+            setLatitude(settings.location.latitude || '');
+            setLongitude(settings.location.longitude || '');
+        }
+    }, [settings]);
 
     const handleFetchLocation = () => {
         if (navigator.geolocation) {
@@ -81,7 +82,7 @@ const LocationSettings = () => {
                     setLongitude(position.coords.longitude.toString());
                     toast({
                         title: "Location Fetched",
-                        description: "Coordinates have been updated.",
+                        description: "Coordinates have been updated. Click Save to apply.",
                     });
                 },
                 (error) => {
@@ -101,21 +102,34 @@ const LocationSettings = () => {
         }
     };
     
-    const handleSave = () => {
-        setLocation(latitude, longitude);
-         toast({
-            title: "Settings Saved",
-            description: "Your location settings have been updated.",
-        })
+    const handleSave = async () => {
+        const settingsRef = doc(firestore, 'settings', 'global');
+        try {
+            await setDoc(settingsRef, { 
+                location: { latitude, longitude } 
+            }, { merge: true });
+            toast({
+                title: "Settings Saved",
+                description: "Your location settings have been updated.",
+            });
+        } catch (e) {
+             toast({
+                variant: 'destructive',
+                title: "Error Saving",
+                description: "Could not save location settings.",
+            });
+            console.error("Error saving location:", e);
+        }
     }
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Location Settings</CardTitle>
-                <CardDescription>Set your restaurant's coordinates for mapping and other services.</CardDescription>
+                <CardDescription>Set your restaurant's coordinates to verify customer location for ordering.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+                {loading ? <Skeleton className="h-24 w-full" /> : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="latitude">Latitude</Label>
@@ -126,35 +140,50 @@ const LocationSettings = () => {
                         <Input id="longitude" value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="e.g. 77.5946" />
                     </div>
                 </div>
+                )}
                 <Button variant="outline" onClick={handleFetchLocation}>
                     <LocateFixed className="mr-2 h-4 w-4" />
                     Fetch Automatically
                 </Button>
             </CardContent>
             <CardFooter>
-                <Button onClick={handleSave}>Save Location</Button>
+                <Button onClick={handleSave} disabled={loading}>Save Location</Button>
             </CardFooter>
         </Card>
     )
 }
 
 const PaymentSettings = () => {
+    const firestore = useFirestore();
     const { toast } = useToast();
-    const upiDetails = useHydratedStore(useSettingsStore, (state) => state.upiDetails, { upiId: '', restaurantName: '' });
-    const setUpiDetails = useSettingsStore((state) => state.setUpiDetails);
+    const { settings, loading } = useSettings();
 
     const [details, setDetails] = useState<UpiDetails>({ upiId: '', restaurantName: '' });
 
     useEffect(() => {
-        setDetails(upiDetails);
-    }, [upiDetails]);
+        if (settings?.upiDetails) {
+            setDetails(settings.upiDetails);
+        }
+    }, [settings]);
 
-    const handleSave = () => {
-        setUpiDetails(details);
-        toast({
-            title: "Settings Saved",
-            description: "Your payment settings have been updated.",
-        });
+    const handleSave = async () => {
+         const settingsRef = doc(firestore, 'settings', 'global');
+        try {
+            await setDoc(settingsRef, { 
+                upiDetails: details
+            }, { merge: true });
+            toast({
+                title: "Settings Saved",
+                description: "Your payment settings have been updated.",
+            });
+        } catch (e) {
+             toast({
+                variant: 'destructive',
+                title: "Error Saving",
+                description: "Could not save payment settings.",
+            });
+            console.error("Error saving payment details:", e);
+        }
     }
 
     return (
@@ -164,6 +193,8 @@ const PaymentSettings = () => {
                 <CardDescription>Configure UPI and other payment methods.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+            {loading ? <Skeleton className="h-40 w-full" /> : (
+                <>
                 <div className="space-y-2">
                     <Label htmlFor="upiId">UPI ID</Label>
                     <Input 
@@ -182,13 +213,48 @@ const PaymentSettings = () => {
                         placeholder="e.g. Nikee's Zara" 
                     />
                 </div>
+                </>
+            )}
             </CardContent>
             <CardFooter>
-                <Button onClick={handleSave}>Save Payment Settings</Button>
+                <Button onClick={handleSave} disabled={loading}>Save Payment Settings</Button>
             </CardFooter>
         </Card>
     )
 }
+
+const DatabaseSeeder = () => {
+    const { seedDatabase, isSeeding, isDataPresent, loading } = useDatabaseSeeder();
+
+    if (loading) {
+        return (
+            <Card>
+                <CardHeader><CardTitle>Database Setup</CardTitle></CardHeader>
+                <CardContent><Skeleton className="h-10 w-full" /></CardContent>
+            </Card>
+        )
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Initial Database Setup</CardTitle>
+                <CardDescription>
+                    {isDataPresent
+                        ? "Your database has been populated with the initial menu and table data."
+                        : "Click the button to populate your Firestore database with the default menu items and tables."
+                    }
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button onClick={seedDatabase} disabled={isSeeding || isDataPresent}>
+                    {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSeeding ? 'Seeding...' : 'Seed Database'}
+                </Button>
+            </CardContent>
+        </Card>
+    );
+};
 
 
 const SettingsManagement = () => {
@@ -197,12 +263,16 @@ const SettingsManagement = () => {
         <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-3xl font-bold font-headline">Settings</h2>
             <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
                     <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="database">Database</TabsTrigger>
                     <TabsTrigger value="payments">Payments</TabsTrigger>
                     <TabsTrigger value="printer">Printer</TabsTrigger>
                     <TabsTrigger value="location">Location</TabsTrigger>
                 </TabsList>
+                 <TabsContent value="database" className="mt-6">
+                    <DatabaseSeeder />
+                </TabsContent>
                 <TabsContent value="general" className="mt-6">
                     <div className="space-y-6">
                          <Card>
@@ -327,7 +397,7 @@ const SettingsManagement = () => {
 
 
 const AnalyticsView = () => {
-    const allOrders = useHydratedStore(useOrderStore, state => state.orders, []);
+    const { data: allOrders } = useOrders();
     
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: subDays(new Date(), 6),
@@ -505,17 +575,15 @@ const AnalyticsView = () => {
 };
 
 const MenuManagement = () => {
-    const menuItems = useHydratedStore(useMenuStore, state => state.menuItems, []);
-    const menuCategories = useHydratedStore(useMenuStore, state => state.menuCategories, []);
-    const addMenuItem = useMenuStore(state => state.addMenuItem);
-    const updateMenuItem = useMenuStore(state => state.updateMenuItem);
-    const deleteMenuItem = useMenuStore(state => state.deleteMenuItem);
-    const toggleMenuItemAvailability = useMenuStore(state => state.toggleMenuItemAvailability);
+    const firestore = useFirestore();
+    const { data: menuItems, loading: menuLoading } = useMenuItems();
+    const { data: menuCategories, loading: categoriesLoading } = useMenuCategories();
     
     const [isFormOpen, setFormOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
     const groupedItems = useMemo(() => groupBy(menuItems, 'category'), [menuItems]);
+    const sortedCategories = useMemo(() => menuCategories.sort((a,b) => a.name.localeCompare(b.name)), [menuCategories]);
     
     const openEditForm = (item: MenuItem) => {
         setEditingItem(item);
@@ -526,12 +594,21 @@ const MenuManagement = () => {
         setEditingItem(null);
         setFormOpen(true);
     };
+
+    const toggleMenuItemAvailability = async (item: MenuItem) => {
+        const itemRef = doc(firestore, 'menuItems', item.id);
+        await updateDoc(itemRef, { available: !item.available });
+    };
+
+    const deleteMenuItem = async (itemId: string) => {
+        await deleteDoc(doc(firestore, 'menuItems', itemId));
+    };
     
-    const handleSubmit = (formData: Omit<MenuItem, 'id' | 'available'>) => {
+    const handleSubmit = async (formData: Omit<MenuItem, 'id' | 'available'>) => {
       if (editingItem) {
-        updateMenuItem({ ...editingItem, ...formData });
+        await updateDoc(doc(firestore, 'menuItems', editingItem.id), formData);
       } else {
-        addMenuItem(formData);
+        await addDoc(collection(firestore, 'menuItems'), { ...formData, available: true });
       }
       setFormOpen(false);
       setEditingItem(null);
@@ -547,74 +624,78 @@ const MenuManagement = () => {
                     </Button>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-8">
-                        {(menuCategories || []).map(category => (
-                            <div key={category}>
-                                <h3 className="text-xl font-semibold mb-4 font-headline">{category}</h3>
-                                <div className="border rounded-lg overflow-x-auto">
-                                  <UiTable>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[40%] min-w-[200px]">Item</TableHead>
-                                            <TableHead className="w-[15%]">Price</TableHead>
-                                            <TableHead className="w-[20%]">Availability</TableHead>
-                                            <TableHead className="text-right w-[25%]">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                     {(groupedItems[category] || []).map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>
-                                                <div className="font-medium">{item.name}</div>
-                                                <div className="text-xs text-muted-foreground line-clamp-1">{item.description}</div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className="font-mono">₹{item.price.toFixed(2)}</span>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center space-x-2">
-                                                    <Switch 
-                                                        id={`available-${item.id}`} 
-                                                        checked={item.available}
-                                                        onCheckedChange={() => toggleMenuItemAvailability(item.id)}
-                                                    />
-                                                    <Label htmlFor={`available-${item.id}`} className="text-sm">
-                                                        {item.available ? 'Available' : 'Unavailable'}
-                                                    </Label>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex gap-2 justify-end">
-                                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEditForm(item)}>
-                                                        <Pen className="h-4 w-4"/>
-                                                    </Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="destructive" size="icon" className="h-8 w-8">
-                                                                <Trash2 className="h-4 w-4"/>
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                <AlertDialogDescription>This will permanently delete '{item.name}'. This action cannot be undone.</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => deleteMenuItem(item.id)}>Delete</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                     ))}
-                                    </TableBody>
-                                  </UiTable>
+                    {menuLoading || categoriesLoading ? (
+                        <Skeleton className="h-96 w-full" />
+                    ) : (
+                        <div className="space-y-8">
+                            {sortedCategories.map(category => (
+                                <div key={category.id}>
+                                    <h3 className="text-xl font-semibold mb-4 font-headline">{category.name}</h3>
+                                    <div className="border rounded-lg overflow-x-auto">
+                                    <UiTable>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[40%] min-w-[200px]">Item</TableHead>
+                                                <TableHead className="w-[15%]">Price</TableHead>
+                                                <TableHead className="w-[20%]">Availability</TableHead>
+                                                <TableHead className="text-right w-[25%]">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                        {(groupedItems[category.name] || []).map(item => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>
+                                                    <div className="font-medium">{item.name}</div>
+                                                    <div className="text-xs text-muted-foreground line-clamp-1">{item.description}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span className="font-mono">₹{item.price.toFixed(2)}</span>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Switch 
+                                                            id={`available-${item.id}`} 
+                                                            checked={item.available}
+                                                            onCheckedChange={() => toggleMenuItemAvailability(item)}
+                                                        />
+                                                        <Label htmlFor={`available-${item.id}`} className="text-sm">
+                                                            {item.available ? 'Available' : 'Unavailable'}
+                                                        </Label>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex gap-2 justify-end">
+                                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEditForm(item)}>
+                                                            <Pen className="h-4 w-4"/>
+                                                        </Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="destructive" size="icon" className="h-8 w-8">
+                                                                    <Trash2 className="h-4 w-4"/>
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>This will permanently delete '{item.name}'. This action cannot be undone.</AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => deleteMenuItem(item.id)}>Delete</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        </TableBody>
+                                    </UiTable>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
             <MenuItemForm
@@ -622,7 +703,7 @@ const MenuManagement = () => {
                 onOpenChange={setFormOpen}
                 onSubmit={handleSubmit}
                 item={editingItem}
-                categories={menuCategories || []}
+                categories={sortedCategories.map(c => c.name) || []}
             />
         </div>
     )
@@ -642,16 +723,18 @@ const MenuItemForm = ({ isOpen, onOpenChange, onSubmit, item, categories }: {
   const [category, setCategory] = useState('');
 
   useEffect(() => {
-    if (item) {
-      setName(item.name);
-      setDescription(item.description);
-      setPrice(item.price);
-      setCategory(item.category);
-    } else {
-      setName('');
-      setDescription('');
-      setPrice(0);
-      setCategory(categories[0] || '');
+    if (isOpen) {
+        if (item) {
+            setName(item.name);
+            setDescription(item.description);
+            setPrice(item.price);
+            setCategory(item.category);
+        } else {
+            setName('');
+            setDescription('');
+            setPrice(0);
+            setCategory(categories[0] || '');
+        }
     }
   }, [item, categories, isOpen]);
 
@@ -707,11 +790,9 @@ const MenuItemForm = ({ isOpen, onOpenChange, onSubmit, item, categories }: {
 
 
 const TableManagement = () => {
-    const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
-    const addTable = useTableStore((state) => state.addTable);
-    const deleteTable = useTableStore((state) => state.deleteTable);
-    const updateTable = useTableStore((state) => state.updateTable);
-
+    const firestore = useFirestore();
+    const { data: tables, loading } = useTables();
+    
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
     const [isQRCodeDialogOpen, setQRCodeDialogOpen] = useState(false);
@@ -729,6 +810,19 @@ const TableManagement = () => {
             setBaseUrl(window.location.origin);
         }
     }, []);
+
+    const addTable = async (name: string) => {
+        const docRef = await addDoc(collection(firestore, 'tables'), { name });
+        await updateDoc(docRef, { id: docRef.id });
+    };
+
+    const deleteTable = async (id: string) => {
+        await deleteDoc(doc(firestore, 'tables', id));
+    };
+
+    const updateTable = async (id: string, name: string) => {
+        await updateDoc(doc(firestore, 'tables', id), { name });
+    };
 
     const handleAddTable = () => {
         if (tableName.trim()) {
@@ -792,41 +886,45 @@ const TableManagement = () => {
                     </Dialog>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        {sortedTables.map(table => (
-                            <Card key={table.id} className="flex flex-col h-28 transition-all duration-300 rounded-lg border-2 shadow-sm">
-                              <CardHeader className="p-2 pb-0">
-                                <CardTitle className="text-sm font-semibold">{table.name}</CardTitle>
-                              </CardHeader>
-                              <CardContent className="flex flex-col justify-end flex-1 p-2 text-xs text-muted-foreground" />
-                              <CardFooter className="p-2 border-t flex gap-2">
-                                  <Button variant="outline" size="icon" className="h-8 w-8 flex-1" onClick={() => openEditDialog(table)}>
-                                    <Pen className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="outline" size="icon" className="h-8 w-8 flex-1" onClick={() => openQRCodeDialog(table)}>
-                                    <QrCode className="h-4 w-4" />
-                                  </Button>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button variant="destructive" size="icon" className="h-8 w-8 flex-1">
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>This will permanently delete '{table.name}'. This action cannot be undone.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => deleteTable(table.id)}>Delete</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                              </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
+                    {loading ? (
+                        <Skeleton className="h-48 w-full" />
+                    ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                            {sortedTables.map(table => (
+                                <Card key={table.id} className="flex flex-col h-28 transition-all duration-300 rounded-lg border-2 shadow-sm">
+                                <CardHeader className="p-2 pb-0">
+                                    <CardTitle className="text-sm font-semibold">{table.name}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex flex-col justify-end flex-1 p-2 text-xs text-muted-foreground" />
+                                <CardFooter className="p-2 border-t flex gap-2">
+                                    <Button variant="outline" size="icon" className="h-8 w-8 flex-1" onClick={() => openEditDialog(table)}>
+                                        <Pen className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" size="icon" className="h-8 w-8 flex-1" onClick={() => openQRCodeDialog(table)}>
+                                        <QrCode className="h-4 w-4" />
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="icon" className="h-8 w-8 flex-1">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>This will permanently delete '{table.name}'. This action cannot be undone.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => deleteTable(table.id)}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
             
@@ -988,8 +1086,9 @@ const TableCard = ({
 
 
 const TableGridView = () => {
-  const allOrders = useHydratedStore(useOrderStore, (state) => state.orders, []);
-  const tables = useHydratedStore(useTableStore, (state) => state.tables, []);
+  const firestore = useFirestore();
+  const { data: allOrders, loading: ordersLoading } = useOrders();
+  const { data: tables, loading: tablesLoading } = useTables();
   
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [switchingOrder, setSwitchingOrder] = useState<Order | null>(null);
@@ -1018,9 +1117,31 @@ const TableGridView = () => {
   const kotPreviewTable = kotPreviewOrder ? tables.find(t => t.id === kotPreviewOrder.tableId) : null;
   const billPreviewTable = billPreviewOrder ? tables.find(t => t.id === billPreviewOrder.tableId) : null;
   
-  const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
-  const updateOrderItemsKotStatus = useOrderStore((state) => state.updateOrderItemsKotStatus);
-  const switchTable = useOrderStore((state) => state.switchTable);
+  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
+    await updateDoc(doc(firestore, 'orders', orderId), { status });
+  };
+
+  const updateOrderItemsKotStatus = async (orderId: string, newItemKotIds: string[]) => {
+      const orderRef = doc(firestore, 'orders', orderId);
+      const orderSnap = await getDoc(orderRef);
+      if (orderSnap.exists()) {
+          const orderData = orderSnap.data() as Order;
+          const updatedItems = orderData.items.map(item => {
+              if (newItemKotIds.includes(item.kotId!)) {
+                  return { ...item, kotStatus: 'Printed' };
+              }
+              return item;
+          });
+          await updateDoc(orderRef, { items: updatedItems, status: 'Confirmed' });
+      }
+  };
+
+  const switchTable = async (orderId: string, newTableId: string) => {
+    await updateDoc(doc(firestore, 'orders', orderId), { 
+        switchedFrom: selectedOrder?.tableId,
+        tableId: newTableId 
+    });
+  };
 
   const handlePrintKOT = (order: Order) => {
     const newItems = order.items.filter(item => item.kotStatus === 'New');
@@ -1035,23 +1156,21 @@ const TableGridView = () => {
   };
 
   const needsKotPrint = (order: Order) => {
-    return order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New');
+    return order.items.some(item => item.kotStatus === 'New');
   }
 
   const canGenerateBill = (order: Order) => {
-     // Check if there are any new items that haven't been sent to the kitchen yet.
      const hasNewItems = order.items.some(i => i.kotStatus === 'New');
      if (hasNewItems) return false;
 
      const printedItems = order.items.filter(i => i.kotStatus === 'Printed');
      if (printedItems.length === 0 && order.status !== 'Billed') return false;
      
-     // All printed items must be served, unless the order is already billed (for re-printing)
      if (order.status !== 'Billed') {
         return printedItems.every(item => item.itemStatus === 'Served');
      }
      
-     return true; // Already billed, so we can re-print.
+     return true;
   }
 
   const occupiedTableIds = useMemo(() => {
@@ -1071,13 +1190,9 @@ const TableGridView = () => {
 
   const handleSwitchTable = (newTableId: string) => {
     if (switchingOrder) {
-      const success = switchTable(switchingOrder.id, newTableId);
-      if (success) {
-        setSwitchingOrder(null);
-        setSelectedTableId(null);
-      } else {
-        alert('Could not switch table. The selected table might be occupied.');
-      }
+      switchTable(switchingOrder.id, newTableId);
+      setSwitchingOrder(null);
+      setSelectedTableId(null);
     }
   };
 
@@ -1085,13 +1200,11 @@ const TableGridView = () => {
     if (kotPreviewMode === 'new') {
         handlePrintKOT(order);
     }
-    // For reprints, we just close the sheet without changing data
     setKotPreviewOrder(null);
     setKotReprintId(null);
   }
 
   const handleConfirmBill = (orderId: string) => {
-    // Only update status if it's not already billed
     const order = allOrders.find(o => o.id === orderId);
     if(order && order.status !== 'Billed') {
       handlePrintBill(orderId);
@@ -1105,6 +1218,16 @@ const TableGridView = () => {
     setKotReprintId(kotId);
   }
 
+
+  if (ordersLoading || tablesLoading) {
+     return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-4">
+              {[...Array(22)].map((_, j) => (
+                <Skeleton key={j} className="h-32" />
+              ))}
+          </div>
+    );
+  }
 
   return (
     <>
@@ -1236,23 +1359,8 @@ export default function POSView({
   isSidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 }) {
-  const isHydrated = useHydratedStore(useOrderStore, (state) => state.hydrated, false);
   const [activeView, setActiveView] = useState('orders');
 
-  if (!isHydrated) {
-    return (
-      <main className="flex-1 p-6">
-         <Skeleton className="h-12 w-48 mb-6" />
-          <div className="space-y-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-4">
-                {[...Array(22)].map((_, j) => (
-                  <Skeleton key={j} className="h-32" />
-                ))}
-            </div>
-          </div>
-      </main>
-    );
-  }
 
   return (
     <div className="flex min-h-[calc(100vh-theme(height.16))]">
