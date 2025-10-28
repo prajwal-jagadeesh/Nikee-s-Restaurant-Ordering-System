@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { UtensilsCrossed, ChefHat, User, Terminal } from 'lucide-react';
+import { User, ChefHat, Terminal } from 'lucide-react';
 import Link from 'next/link';
 
 const apps = [
@@ -14,10 +14,10 @@ export default function Home() {
   return (
     <div className="container mx-auto p-4">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold font-headline">Welcome to Nikee's Zara</h1>
+        <h1 className="text-4xl lg:text-5xl font-bold font-headline">Welcome to Nikee's Zara</h1>
         <p className="text-lg text-muted-foreground mt-2">Select an application to launch.</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {apps.map((app) => (
           <Card key={app.href} className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">

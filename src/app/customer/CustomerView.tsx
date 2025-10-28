@@ -21,6 +21,7 @@ import OrderStatusBadge from '@/components/OrderStatusBadge';
 import ItemStatusBadge from '@/components/ItemStatusBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -191,10 +192,10 @@ export default function CustomerView() {
 
 
   useEffect(() => {
-    if (menuCategories.length > 0) {
+    if (menuCategories.length > 0 && !activeTab) {
       setActiveTab(menuCategories[0]);
     }
-  }, [menuCategories]);
+  }, [menuCategories, activeTab]);
 
   useRedirectIfSwitched(table);
 
@@ -380,11 +381,14 @@ export default function CustomerView() {
       )}
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9">
-          {menuCategories.map((cat) => (
-            <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
-          ))}
-        </TabsList>
+        <ScrollArea className="w-full whitespace-nowrap rounded-md">
+            <TabsList className="inline-grid grid-flow-col auto-cols-max">
+            {menuCategories.map((cat) => (
+                <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
+            ))}
+            </TabsList>
+            <ScrollBar orientation="horizontal" />
+        </ScrollArea>
         <AnimatePresence mode="wait">
             <motion.div
                 key={activeTab}
@@ -456,7 +460,7 @@ export default function CustomerView() {
                         ))}
                     </div>
                     <Separator className="my-3" />
-                    {(activeOrder.discount || 0) > 0 && (
+                    {(order.discount || 0) > 0 && (
                       <div className="space-y-1 text-sm mb-2">
                         <div className='w-full flex justify-between text-muted-foreground'>
                           <span>Subtotal</span>
@@ -540,7 +544,6 @@ export default function CustomerView() {
                               </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
-                              
                               <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('card')}>
                                 <CreditCard className="mr-4 h-6 w-6" />
                                 <div>

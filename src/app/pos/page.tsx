@@ -20,7 +20,7 @@ export default function POSPage() {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold font-headline">Point of Sale (POS)</h1>
+          <h1 className="text-xl sm:text-2xl font-bold font-headline">Point of Sale (POS)</h1>
         </div>
       </header>
       <main className="flex-1">

@@ -123,7 +123,7 @@ export default function CaptainView() {
 
   if (!isHydrated) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {[...Array(8)].map((_, i) => (
           <Skeleton key={i} className="h-64 w-full" />
         ))}
@@ -133,7 +133,7 @@ export default function CaptainView() {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         <AnimatePresence>
           {orders
             .sort((a,b) => a.timestamp - b.timestamp)
@@ -243,7 +243,7 @@ export default function CaptainView() {
               Select a vacant table to move this order to.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+          <div className="py-4 grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
             {vacantTables.length > 0 ? (
                 vacantTables.map(table => (
                 <Button

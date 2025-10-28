@@ -197,7 +197,7 @@ const SettingsManagement = () => {
         <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-3xl font-bold font-headline">Settings</h2>
             <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="payments">Payments</TabsTrigger>
                     <TabsTrigger value="printer">Printer</TabsTrigger>
@@ -275,7 +275,7 @@ const SettingsManagement = () => {
                             <div className="space-y-2">
                                 <Label htmlFor="printer-select">Default Printer</Label>
                                 <Select defaultValue="tvs-rp-3230">
-                                    <SelectTrigger id="printer-select" className="w-[300px]">
+                                    <SelectTrigger id="printer-select" className="w-full sm:w-[300px]">
                                         <SelectValue placeholder="Select a printer" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -388,7 +388,7 @@ const AnalyticsView = () => {
                                 id="date"
                                 variant={"outline"}
                                 className={cn(
-                                "w-[300px] justify-start text-left font-normal",
+                                "w-full sm:w-[300px] justify-start text-left font-normal",
                                 !dateRange && "text-muted-foreground"
                                 )}
                             >
@@ -551,11 +551,11 @@ const MenuManagement = () => {
                         {(menuCategories || []).map(category => (
                             <div key={category}>
                                 <h3 className="text-xl font-semibold mb-4 font-headline">{category}</h3>
-                                <div className="border rounded-lg">
+                                <div className="border rounded-lg overflow-x-auto">
                                   <UiTable>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[40%]">Item</TableHead>
+                                            <TableHead className="w-[40%] min-w-[200px]">Item</TableHead>
                                             <TableHead className="w-[15%]">Price</TableHead>
                                             <TableHead className="w-[20%]">Availability</TableHead>
                                             <TableHead className="text-right w-[25%]">Actions</TableHead>
@@ -932,7 +932,7 @@ const TableCard = ({
     return (
         <Card
             className={cn(
-                "flex flex-col h-32 w-32 transition-all duration-300 rounded-lg border-2 shadow-sm relative",
+                "flex flex-col h-32 w-full transition-all duration-300 rounded-lg border-2 shadow-sm relative",
                 order ? 'cursor-pointer hover:shadow-lg' : 'cursor-default',
                 statusStyles[status]
             )}
@@ -1108,7 +1108,7 @@ const TableGridView = () => {
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-4">
         <AnimatePresence>
           {sortedTables.map((table) => {
             const order = ordersByTable[table.id];
@@ -1193,7 +1193,7 @@ const TableGridView = () => {
               Select a vacant table to move this order to.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+          <div className="py-4 grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
             {vacantTables.length > 0 ? (
                 vacantTables.map(table => (
                 <Button
@@ -1244,9 +1244,9 @@ export default function POSView({
       <main className="flex-1 p-6">
          <Skeleton className="h-12 w-48 mb-6" />
           <div className="space-y-8">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-11 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-4">
                 {[...Array(22)].map((_, j) => (
-                  <Skeleton key={j} className="h-28 w-28" />
+                  <Skeleton key={j} className="h-32" />
                 ))}
             </div>
           </div>
@@ -1334,7 +1334,7 @@ export default function POSView({
         </SheetContent>
       </Sheet>
 
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 sm:p-6">
         {activeView === 'orders' && <TableGridView />}
         {activeView === 'onlineOrders' && <OnlineOrdersView />}
         {activeView === 'menu' && <MenuManagement />}
