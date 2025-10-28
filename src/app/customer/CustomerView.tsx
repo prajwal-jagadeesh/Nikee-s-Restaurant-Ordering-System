@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetDescription } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode, IndianRupee, CreditCard, Wallet, FileText } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Trash2, RotateCcw, WifiOff, QrCode, IndianRupee, CreditCard, Wallet, FileText, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase/provider';
 import { useOrders, useTables, useMenuItems, useMenuCategories, useSettings } from '@/firebase';
-import { doc, updateDoc, addDoc, serverTimestamp, collection, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, serverTimestamp, collection, arrayUnion, writeBatch, getDoc } from 'firebase/firestore';
 import { customAlphabet } from 'nanoid';
 
 const nanoid = customAlphabet('1234567890', 6);
@@ -52,7 +52,7 @@ const useRedirectIfSwitched = (currentTable: Table | undefined) => {
     };
 
     useEffect(() => {
-        if (!currentTable) return;
+        if (!currentTable?.id) return;
 
         const switchedOrder = allOrders.find(o => o.switchedFrom === currentTable.id);
         
@@ -86,16 +86,20 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 
 const useSession = () => {
     const [sessionId, setSessionId] = useState<string | null>(null);
-    const [tableId, setTableId] = useState<string | null>(null);
+    const [sessionTableId, setSessionTableId] = useState<string | null>(null);
     const [startTime, setStartTime] = useState<number | null>(null);
 
     useEffect(() => {
         const storedSession = localStorage.getItem('customer-session');
         if (storedSession) {
             const { id, tableId: sTableId, time } = JSON.parse(storedSession);
-            setSessionId(id);
-            setTableId(sTableId);
-            setStartTime(time);
+            if (Date.now() - time < SESSION_TIMEOUT_MS) {
+              setSessionId(id);
+              setSessionTableId(sTableId);
+              setStartTime(time);
+            } else {
+              endSession(); // Clear expired session
+            }
         }
     }, []);
 
@@ -104,47 +108,51 @@ const useSession = () => {
         const newStartTime = Date.now();
         localStorage.setItem('customer-session', JSON.stringify({ id: newSessionId, tableId: newTableId, time: newStartTime }));
         setSessionId(newSessionId);
-        setTableId(newTableId);
+        setSessionTableId(newTableId);
         setStartTime(newStartTime);
+        return newSessionId;
     };
 
     const endSession = () => {
         localStorage.removeItem('customer-session');
         setSessionId(null);
-        setTableId(null);
+        setSessionTableId(null);
         setStartTime(null);
     };
     
-    const isValid = !!sessionId && !!tableId && !!startTime;
+    const isValid = !!sessionId && !!sessionTableId && !!startTime;
 
-    return { sessionId, tableId, startTime, isValid, startSession, endSession };
+    return { sessionId, sessionTableId, isValid, startSession, endSession };
 }
 
 export default function CustomerView() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const tableNumberParam = searchParams.get('table') || searchParams.get('Table');
+  const tableNumberParam = searchParams.get('table');
   
   const firestore = useFirestore();
   const { data: tables } = useTables();
-  const table = useMemo(() => tables.find(t => t.name.replace(/\D/g, '') === tableNumberParam), [tables, tableNumberParam]);
+  
+  const table = useMemo(() => {
+    if (!tableNumberParam) return undefined;
+    return tables.find(t => t.name.replace(/\D/g, '') === tableNumberParam);
+  }, [tables, tableNumberParam]);
 
-  const { data: orders } = useOrders();
-  const { data: allMenuItems } = useMenuItems();
-  const { data: menuCategoriesData } = useMenuCategories();
+  const { data: orders, loading: ordersLoading } = useOrders();
+  const { data: allMenuItems, loading: menuItemsLoading } = useMenuItems();
+  const { data: menuCategoriesData, loading: menuCategoriesLoading } = useMenuCategories();
   const menuItems = useMemo(() => allMenuItems.filter(item => item.available), [allMenuItems]);
   const menuCategories = useMemo(() => menuCategoriesData.map(c => c.name), [menuCategoriesData]);
   
   const { settings } = useSettings();
   const restaurantLocation = settings?.location;
   
-  const { sessionId, tableId: sessionTableId, startTime, isValid: isSessionValid, startSession, endSession } = useSession();
+  const { sessionId, sessionTableId, isValid: isSessionValid, startSession, endSession } = useSession();
 
   const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[]>([]);
-  const [activeTab, setActiveTab] = useState(menuCategories[0] || '');
+  const [activeTab, setActiveTab] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isPaymentOptionsOpen, setPaymentOptionsOpen] = useState(false);
-
   const [locationState, setLocationState] = useState<{ status: 'idle' | 'checking' | 'ok' | 'error', message: string }>({ status: 'idle', message: '' });
 
   const { toast } = useToast();
@@ -153,17 +161,12 @@ export default function CustomerView() {
     if (!table || !sessionId) return undefined;
     return orders.find(o => o.tableId === table.id && o.sessionId === sessionId && o.status !== 'Paid' && o.status !== 'Cancelled');
   }, [orders, table, sessionId]);
-
+  
   // Session and Geolocation Logic
   useEffect(() => {
     if (!table) return;
 
-    if (sessionTableId && sessionTableId !== table.id) {
-        endSession();
-        return;
-    }
-
-    if (!isSessionValid || sessionTableId !== table.id) {
+    const startNewSession = () => {
       setLocationState({ status: 'checking', message: 'Verifying your location to start a new session...' });
 
       if (!navigator.geolocation) {
@@ -174,6 +177,7 @@ export default function CustomerView() {
       if (!restaurantLocation?.latitude || !restaurantLocation?.longitude) {
         setLocationState({ status: 'ok', message: '' });
         startSession(table.id);
+        toast({ title: "Session Started", description: "You can now place your order.", duration: 3000 });
         return;
       }
 
@@ -195,35 +199,17 @@ export default function CustomerView() {
         () => {
           setLocationState({ status: 'error', message: 'Please enable location services to place an order.' });
           endSession();
-        }
+        },
+        { timeout: 10000 }
       );
-    } else {
-        setLocationState({ status: 'ok', message: '' });
     }
-  }, [table, restaurantLocation, sessionTableId, isSessionValid, startSession, endSession, toast]);
-  
-  useEffect(() => {
-    if (!isSessionValid || !startTime) return;
-
-    if (activeOrder) return;
     
-    const interval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        if (elapsed > SESSION_TIMEOUT_MS) {
-            endSession();
-            toast({
-                variant: 'destructive',
-                title: 'Session Expired',
-                description: 'Your session has timed out due to inactivity. Please scan the QR code again.',
-            });
-            clearInterval(interval);
-        }
-    }, 10000);
-
-    return () => clearInterval(interval);
-
-  }, [isSessionValid, startTime, activeOrder, endSession, toast]);
-
+    if (isSessionValid && sessionTableId === table.id) {
+        setLocationState({ status: 'ok', message: '' });
+    } else {
+        startNewSession();
+    }
+  }, [table?.id, restaurantLocation, sessionTableId, isSessionValid]);
 
   useEffect(() => {
     if (menuCategories.length > 0 && !activeTab) {
@@ -391,32 +377,60 @@ export default function CustomerView() {
       </Popover>
     )
   }
-  
-  if (!table) {
-    return <div className="text-center py-10">
-      <h1 className="text-2xl font-bold">Table not found</h1>
-      <p>The requested table number does not exist.</p>
-    </div>
-  }
 
+  const isLoading = ordersLoading || menuItemsLoading || menuCategoriesLoading;
+
+  if (!tableNumberParam) {
+    return (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <Card className="max-w-sm text-center">
+                <CardHeader>
+                    <CardTitle>Welcome to Nikee's Zara</CardTitle>
+                    <CardDescription>Please scan the QR code on your table to begin ordering.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <QrCode className="mx-auto h-24 w-24 text-muted-foreground" />
+                </CardContent>
+            </Card>
+        </div>
+    )
+  }
+  
+  if (isLoading || !table) {
+    return (
+        <div className="flex items-center justify-center h-[calc(100vh-10rem)]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    )
+  }
 
   return (
     <>
       <AnimatePresence>
-        {!isSessionValid && locationState.status !== 'checking' && (
+        {!isSessionValid && locationState.status !== 'ok' && (
            <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
            >
               <Card className="max-w-sm text-center">
                   <CardHeader>
-                      <CardTitle>Session Expired or Invalid</CardTitle>
-                      <CardDescription>Your ordering session is not active. Please scan the QR code on your table to begin.</CardDescription>
+                      <CardTitle>Session Issue</CardTitle>
+                      <CardDescription>
+                         {locationState.status === 'checking' && locationState.message}
+                         {locationState.status === 'error' && (
+                            <>
+                                {locationState.message}
+                                <br />
+                                Please scan the QR code again.
+                            </>
+                         )}
+                      </CardDescription>
                   </CardHeader>
                   <CardContent>
-                      <QrCode className="mx-auto h-24 w-24 text-muted-foreground" />
+                      {locationState.status === 'checking' && <Loader2 className="mx-auto h-16 w-16 animate-spin text-primary" />}
+                      {locationState.status === 'error' && <WifiOff className="mx-auto h-16 w-16 text-destructive" />}
                   </CardContent>
               </Card>
            </motion.div>
@@ -424,26 +438,9 @@ export default function CustomerView() {
       </AnimatePresence>
       <div className="text-center mb-6">
         <h1 className="text-4xl font-bold font-headline">Welcome to Nikee's Zara</h1>
+        <p className="text-lg text-muted-foreground">You are at {table.name}</p>
       </div>
-
-       {locationState.status === 'error' && (
-        <Alert variant="destructive" className="mb-6">
-          <WifiOff className="h-4 w-4" />
-          <AlertTitle>Order Placement Disabled</AlertTitle>
-          <AlertDescription>
-            {locationState.message}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {locationState.status === 'checking' && (
-         <Alert className="mb-6">
-          <AlertDescription className="text-center">
-            {locationState.message}
-          </AlertDescription>
-        </Alert>
-      )}
-
+      
       {menuCategories.length > 0 ? (
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="md:hidden">
@@ -515,11 +512,11 @@ export default function CustomerView() {
           <SheetContent className="flex flex-col">
             <SheetHeader>
               <SheetTitle>
-                Your Order
+                Your Order for {table.name}
               </SheetTitle>
-               <CardDescription>
+               <SheetDescription>
                   {activeOrder && statusInfo[activeOrder.status] ? statusInfo[activeOrder.status].description : "Review your items before placing the order."}
-                </CardDescription>
+                </SheetDescription>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto -mx-6 px-6 divide-y">
               {activeOrder && (
@@ -538,7 +535,7 @@ export default function CustomerView() {
                         ))}
                     </div>
                     <Separator className="my-3" />
-                    {(order.discount || 0) > 0 && (
+                    {(activeOrder.discount || 0) > 0 && (
                       <div className="space-y-1 text-sm mb-2">
                         <div className='w-full flex justify-between text-muted-foreground'>
                           <span>Subtotal</span>
@@ -658,5 +655,3 @@ export default function CustomerView() {
     </>
   );
 }
-
-    

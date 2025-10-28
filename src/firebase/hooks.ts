@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { useFirestore } from './provider';
 import type { MenuItem, Table, Order, MenuCategory, AppSettings } from '@/lib/types';
-import { menuItems as initialMenuItems, menuCategories as initialMenuCategories } from '@/lib/data';
+import { menuItems as initialMenuItems, menuCategories as initialMenuCategoriesData } from '@/lib/data';
 
 // --- Generic Hooks ---
 
@@ -126,6 +126,8 @@ export function useDatabaseSeeder() {
       const menuSnapshot = await getDocs(menuItemsRef);
       if (!menuSnapshot.empty) {
         setIsDataPresent(true);
+      } else {
+        setIsDataPresent(false);
       }
     } catch (e) {
       console.error("Error checking for data", e);
@@ -144,28 +146,35 @@ export function useDatabaseSeeder() {
         const batch = writeBatch(firestore);
         
         // Seed Menu Items
-        const menuItemsRef = collection(firestore, 'menuItems');
+        const menuItemsCollectionRef = collection(firestore, 'menuItems');
         initialMenuItems.forEach(item => {
-            const docRef = doc(menuItemsRef, item.id);
+            const docRef = doc(menuItemsCollectionRef, item.id);
             batch.set(docRef, item);
         });
 
         // Seed Menu Categories
-        const menuCategoriesRef = collection(firestore, 'menuCategories');
-        initialMenuCategories.forEach((categoryName, index) => {
-             const docRef = doc(menuCategoriesRef);
-             batch.set(docRef, { name: categoryName, id: docRef.id });
-        });
+        const menuCategoriesCollectionRef = collection(firestore, 'menuCategories');
+        const existingCategoriesSnapshot = await getDocs(menuCategoriesCollectionRef);
+        if (existingCategoriesSnapshot.empty) {
+            initialMenuCategoriesData.forEach((categoryName) => {
+                 const docRef = doc(menuCategoriesCollectionRef);
+                 batch.set(docRef, { name: categoryName, id: docRef.id });
+            });
+        }
+
 
         // Seed Tables
-        const tablesRef = collection(firestore, 'tables');
-        initialTables.forEach(table => {
-            const docRef = doc(tablesRef);
-            batch.set(docRef, { ...table, id: docRef.id });
-        });
+        const tablesCollectionRef = collection(firestore, 'tables');
+        const existingTablesSnapshot = await getDocs(tablesCollectionRef);
+        if (existingTablesSnapshot.empty) {
+          initialTables.forEach(table => {
+              const docRef = doc(tablesCollectionRef);
+              batch.set(docRef, { ...table, id: docRef.id });
+          });
+        }
         
         await batch.commit();
-        setIsDataPresent(true); // Set data as present after seeding
+        await checkDataPresence(); // Re-check after seeding
         alert('Database seeded successfully!');
 
     } catch (error) {
@@ -176,5 +185,5 @@ export function useDatabaseSeeder() {
     }
   };
 
-  return { seedDatabase, isSeeding, isDataPresent, loading };
+  return { seedDatabase, isSeeding, isDataPresent, loading, checkDataPresence };
 }

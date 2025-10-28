@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { Order, Table, MenuItem, UpiDetails, DiscountType, MenuCategory, AppSettings } from '@/lib/types';
 import OrderCard from '@/components/OrderCard';
 import KOTPreviewSheet from './KOTPreviewSheet';
@@ -40,7 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { addDays, format, startOfDay, endOfDay, startOfMonth, subDays } from 'date-fns';
+import { addDays, format, startOfDay, endOfDay, startOfMonth, subDays, endOfMonth } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -49,7 +49,7 @@ import OnlineOrdersView from './online-orders/OnlineOrdersView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import QRCode from 'qrcode.react';
 import { useMenuItems, useMenuCategories, useOrders, useSettings, useTables, useDatabaseSeeder } from '@/firebase/hooks';
-import { doc, updateDoc, addDoc, deleteDoc, writeBatch, collection, getDocs, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, deleteDoc, writeBatch, collection, getDocs, setDoc, getDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 
 
@@ -224,7 +224,11 @@ const PaymentSettings = () => {
 }
 
 const DatabaseSeeder = () => {
-    const { seedDatabase, isSeeding, isDataPresent, loading } = useDatabaseSeeder();
+    const { seedDatabase, isSeeding, isDataPresent, loading, checkDataPresence } = useDatabaseSeeder();
+
+    const handleSeed = async () => {
+        await seedDatabase();
+    }
 
     if (loading) {
         return (
@@ -247,10 +251,15 @@ const DatabaseSeeder = () => {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Button onClick={seedDatabase} disabled={isSeeding || isDataPresent}>
+                <Button onClick={handleSeed} disabled={isSeeding || isDataPresent}>
                     {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isSeeding ? 'Seeding...' : 'Seed Database'}
+                    {isSeeding ? 'Seeding...' : isDataPresent ? 'Data Already Seeded' : 'Seed Database'}
                 </Button>
+                 {!isDataPresent && !isSeeding && (
+                    <Button variant="outline" onClick={checkDataPresence} className="ml-4">
+                        Refresh Status
+                    </Button>
+                )}
             </CardContent>
         </Card>
     );
@@ -583,7 +592,7 @@ const MenuManagement = () => {
     const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
     const groupedItems = useMemo(() => groupBy(menuItems, 'category'), [menuItems]);
-    const sortedCategories = useMemo(() => menuCategories.sort((a,b) => a.name.localeCompare(b.name)), [menuCategories]);
+    const sortedCategories = useMemo(() => [...menuCategories].sort((a,b) => a.name.localeCompare(b.name)), [menuCategories]);
     
     const openEditForm = (item: MenuItem) => {
         setEditingItem(item);
@@ -986,10 +995,11 @@ const useElapsedTime = (timestamp: number) => {
             setElapsed(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
         };
 
-        update();
-        const interval = setInterval(update, 1000);
-
-        return () => clearInterval(interval);
+        if (timestamp > 0) {
+            update();
+            const interval = setInterval(update, 1000);
+            return () => clearInterval(interval);
+        }
     }, [timestamp]);
 
     return elapsed;
