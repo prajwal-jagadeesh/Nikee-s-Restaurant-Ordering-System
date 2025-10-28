@@ -41,6 +41,19 @@ export default function BillPreviewSheet({ order, table, onClose, onConfirm }: B
     }
     
     const buttonText = order.status === 'Billed' ? 'Print Duplicate Bill' : 'Confirm & Generate Bill';
+    
+    const getOrderDate = () => {
+        if (!order.timestamp) return null;
+        if (typeof order.timestamp === 'object' && (order.timestamp as any).toDate) {
+            return (order.timestamp as any).toDate();
+        }
+        if (typeof order.timestamp === 'number') {
+            return new Date(order.timestamp);
+        }
+        return null;
+    }
+
+    const orderDate = getOrderDate();
 
     return (
         <Sheet open={!!order} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -57,12 +70,12 @@ export default function BillPreviewSheet({ order, table, onClose, onConfirm }: B
                 <div className="flex-1 overflow-y-auto my-4 -mx-2 px-2 border-t pt-4">
                     <div className="space-y-1 text-xs">
                         <div className="flex justify-between">
-                            <span>Order ID: {order.id}</span>
+                            <span>Order ID: {order.id.substring(0, 15)}...</span>
                             <span>Table: {table.name}</span>
                         </div>
                          <div className="flex justify-between">
-                            <span>Date: {new Date(order.timestamp).toLocaleDateString()}</span>
-                            <span>Time: {new Date(order.timestamp).toLocaleTimeString()}</span>
+                            <span>Date: {orderDate ? orderDate.toLocaleDateString() : 'Pending'}</span>
+                            <span>Time: {orderDate ? orderDate.toLocaleTimeString() : 'Pending'}</span>
                         </div>
                     </div>
                     <Separator className="my-3 border-dashed" />
