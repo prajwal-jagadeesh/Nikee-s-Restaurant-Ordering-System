@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "MenuItem": {
+      "title": "Menu Item",
+      "description": "Represents a single item on the restaurant's menu.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "available": { "type": "boolean" }
+      },
+      "required": ["id", "name", "price", "category", "available"]
+    },
+    "Table": {
+      "title": "Table",
+      "description": "Represents a single table in the restaurant.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Represents a customer's order.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderType": { "type": "string", "enum": ["dine-in", "online"] },
+        "tableId": { "type": "string" },
+        "onlinePlatform": { "type": "string", "enum": ["Zomato", "Swiggy", "Others"] },
+        "platformOrderId": { "type": "string" },
+        "customerDetails": { "$ref": "#/entities/CustomerDetails" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/entities/OrderItem" }
+        },
+        "status": { "type": "string", "enum": ["New", "Confirmed", "Preparing", "Ready", "Served", "Billed", "Paid", "Cancelled", "Accepted", "Food Ready", "Out for Delivery", "Delivered"] },
+        "timestamp": { "type": "number" },
+        "total": { "type": "number" },
+        "originalTotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "discountType": { "type": "string", "enum": ["percentage", "amount"] },
+        "kotCounter": { "type": "number" },
+        "switchedFrom": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "paymentMethod": { "type": "string", "enum": ["card", "cash_qr"] }
+      },
+      "required": ["id", "orderType", "items", "status", "timestamp", "total"]
+    },
+    "OrderItem": {
+        "title": "Order Item",
+        "description": "A single item within an order.",
+        "type": "object",
+        "properties": {
+            "menuItem": { "$ref": "#/entities/MenuItem" },
+            "quantity": { "type": "number" },
+            "notes": { "type": "string" },
+            "kotStatus": { "type": "string", "enum": ["New", "Printed"] },
+            "itemStatus": { "type": "string", "enum": ["Pending", "Preparing", "Ready", "Served"] },
+            "kotId": { "type": "string" }
+        },
+        "required": ["menuItem", "quantity", "kotStatus", "itemStatus"]
+    },
+    "CustomerDetails": {
+        "title": "Customer Details",
+        "description": "Details of the customer for online orders.",
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" },
+            "phone": { "type": "string" },
+            "address": { "type": "string" }
+        },
+        "required": ["name"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global settings for the application.",
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "object",
+          "properties": {
+            "latitude": { "type": "string" },
+            "longitude": { "type": "string" }
+          }
+        },
+        "upiDetails": {
+          "type": "object",
+          "properties": {
+            "upiId": { "type": "string" },
+            "restaurantName": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "auth": {
+    "providers": []
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Stores all customer orders."
+    },
+    "/menuItems/{menuItemId}": {
+      "schema": { "$ref": "#/entities/MenuItem" },
+      "description": "Stores all available menu items."
+    },
+    "/tables/{tableId}": {
+      "schema": { "$ref": "#/entities/Table" },
+      "description": "Stores all restaurant tables."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/Settings" },
+      "description": "Stores global application settings."
+    }
+  }
+}
