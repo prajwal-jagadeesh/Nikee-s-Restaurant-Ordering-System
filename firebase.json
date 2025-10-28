@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "target": "nikees-zara",
+    "target": "nikees-demo",
     "public": "out",
     "ignore": [
       "firebase.json",
