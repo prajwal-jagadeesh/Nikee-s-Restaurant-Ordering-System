@@ -381,14 +381,23 @@ export default function CustomerView() {
       )}
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <ScrollArea className="w-full whitespace-nowrap rounded-md">
-            <TabsList className="inline-grid grid-flow-col auto-cols-max">
-            {menuCategories.map((cat) => (
-                <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
-            ))}
+        <div className="md:hidden">
+            <ScrollArea className="w-full whitespace-nowrap rounded-md">
+                <TabsList className="inline-grid grid-flow-col auto-cols-max">
+                    {menuCategories.map((cat) => (
+                        <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
+                    ))}
+                </TabsList>
+                <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+        </div>
+        <div className="hidden md:block">
+             <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${menuCategories.length}, minmax(0, 1fr))`}}>
+                {menuCategories.map((cat) => (
+                    <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
+                ))}
             </TabsList>
-            <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
         <AnimatePresence mode="wait">
             <motion.div
                 key={activeTab}
