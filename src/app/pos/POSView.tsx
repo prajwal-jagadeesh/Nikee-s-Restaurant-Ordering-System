@@ -608,7 +608,8 @@ const MenuManagement = () => {
       if (editingItem) {
         await updateDoc(doc(firestore, 'menuItems', editingItem.id), formData);
       } else {
-        await addDoc(collection(firestore, 'menuItems'), { ...formData, available: true });
+        const docRef = await addDoc(collection(firestore, 'menuItems'), { ...formData, available: true });
+        await updateDoc(docRef, { id: docRef.id });
       }
       setFormOpen(false);
       setEditingItem(null);

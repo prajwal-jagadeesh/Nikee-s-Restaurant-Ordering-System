@@ -30,7 +30,7 @@ export function useCollection<T>(path: string) {
     const unsubscribe = onSnapshot(
       collection(firestore, path),
       snapshot => {
-        const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as T[];
+        const docs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as T[];
         setData(docs);
         setLoading(false);
       },
@@ -64,7 +64,7 @@ export function useDoc<T>(path: string) {
       docRef,
       docSnapshot => {
         if (docSnapshot.exists()) {
-          setData({ id: docSnapshot.id, ...docSnapshot.data() } as T);
+          setData({ ...docSnapshot.data(), id: docSnapshot.id } as T);
         } else {
           setData(null);
         }
