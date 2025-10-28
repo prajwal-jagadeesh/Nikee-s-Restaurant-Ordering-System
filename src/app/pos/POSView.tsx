@@ -54,8 +54,8 @@ import { useFirestore } from '@/firebase';
 
 
 const naturalSort = (a: Table, b: Table) => {
-    const numA = parseInt(a.name.match(/\d+/)?.[0] || '0', 10);
-    const numB = parseInt(b.name.match(/\d+/)?.[0] || '0', 10);
+    const numA = parseInt(a.name.replace(/\D/g, '') || '0', 10);
+    const numB = parseInt(b.name.replace(/\D/g, '') || '0', 10);
     return numA - numB;
 };
 
@@ -1167,7 +1167,8 @@ const TableGridView = () => {
   };
 
   const needsKotPrint = (order: Order) => {
-    return order.items.some(item => item.kotStatus === 'New');
+    // KOT can only be printed if the order is confirmed AND has new items.
+    return order.status === 'Confirmed' && order.items.some(item => item.kotStatus === 'New');
   }
 
   const canGenerateBill = (order: Order) => {
