@@ -124,11 +124,11 @@ const useSession = () => {
 export default function CustomerView() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const tableNumberParam = searchParams.get('table') || '1';
+  const tableNumberParam = searchParams.get('table') || searchParams.get('Table') || '1';
   
   const firestore = useFirestore();
   const { data: tables } = useTables();
-  const table = useMemo(() => tables.find(t => t.name.toLowerCase().replace(' ', '') === `table${tableNumberParam}`) || tables[0], [tables, tableNumberParam]);
+  const table = useMemo(() => tables.find(t => t.name.toLowerCase().replace(/\s/g, '') === `table${tableNumberParam}`) || tables[0], [tables, tableNumberParam]);
 
   const { data: orders } = useOrders();
   const { data: allMenuItems } = useMenuItems();
