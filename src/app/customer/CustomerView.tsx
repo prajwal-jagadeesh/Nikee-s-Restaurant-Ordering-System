@@ -266,11 +266,7 @@ export default function CustomerView() {
     setPaymentMethod(activeOrder.id, method);
     setPaymentOptionsOpen(false);
 
-    if (method === 'upi') {
-      const payeeName = upiDetails.restaurantName || "Nikee's Zara";
-      const upiLink = `upi://pay?pa=${upiDetails.upiId}&pn=${encodeURIComponent(payeeName)}&am=${activeOrder.total.toFixed(2)}&cu=INR&tn=Order%20at%20${encodeURIComponent(payeeName)}`;
-      window.location.href = upiLink;
-    } else if (method === 'cash_at_counter') {
+    if (method === 'cash_at_counter') {
        toast({
         title: "Captain Notified",
         description: "A captain has been notified and will be with you shortly to assist with payment.",
@@ -290,7 +286,6 @@ export default function CustomerView() {
       title: "Bill Requested",
       description: "A captain has been notified and will bring your bill shortly.",
     });
-    setIsCartOpen(false);
   };
 
 
@@ -424,7 +419,7 @@ export default function CustomerView() {
                             <CardHeader>
                                 <CardTitle>{item.name}</CardTitle>
                             </CardHeader>
-                            <CardContent className="flex-1">
+                            <CardContent>
                             <p className="text-sm text-muted-foreground">{item.description}</p>
                             </CardContent>
                             <CardFooter className="flex justify-between items-center mt-auto">
@@ -559,15 +554,18 @@ export default function CustomerView() {
                     {activeOrder?.status === 'Billed' && (
                         <Dialog open={isPaymentOptionsOpen} onOpenChange={setPaymentOptionsOpen}>
                           <DialogTrigger asChild>
-                            <Button size="lg" className="w-full">
-                                <Wallet className="mr-2 h-5 w-5" /> Proceed to Pay
-                            </Button>
+                             <div className="space-y-2">
+                                <p className="text-sm text-center text-muted-foreground">Please select your preferred payment method.</p>
+                                <Button size="lg" className="w-full">
+                                    <Wallet className="mr-2 h-5 w-5" /> Proceed to Pay
+                                </Button>
+                             </div>
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
                               <DialogTitle>Select Payment Method</DialogTitle>
                               <DialogDescription>
-                                How would you like to pay for your order of ₹{activeOrder.total.toFixed(2)}?
+                                How would you like to pay for your order of ₹{activeOrder.total.toFixed(2)}? A captain will be notified.
                               </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
@@ -579,9 +577,9 @@ export default function CustomerView() {
                                 </div>
                               </Button>
                                <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('cash_at_counter')}>
-                                <QrCode className="mr-4 h-6 w-6" />
+                                <IndianRupee className="mr-4 h-6 w-6" />
                                 <div>
-                                  <p className="font-semibold">Cash or Counter QR</p>
+                                  <p className="font-semibold">Cash</p>
                                   <p className="text-xs text-muted-foreground">Pay at the billing counter.</p>
                                 </div>
                               </Button>

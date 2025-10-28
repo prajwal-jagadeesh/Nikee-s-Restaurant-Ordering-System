@@ -17,7 +17,7 @@ export type ItemStatus = 'Pending' | 'Preparing' | 'Ready' | 'Served';
 export type OrderType = 'dine-in' | 'online';
 export type OnlinePlatform = 'Zomato' | 'Swiggy' | 'Others';
 export type DiscountType = 'percentage' | 'amount';
-export type PaymentMethod = 'upi' | 'card' | 'cash_at_counter';
+export type PaymentMethod = 'card' | 'cash_at_counter';
 
 export interface MenuItem {
   id: string;
