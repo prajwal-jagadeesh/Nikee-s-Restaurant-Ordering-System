@@ -1,0 +1,101 @@
+/**
+ * @fileoverview Firestore Security Rules for Prototyping.
+ *
+ * Core Philosophy:
+ * This ruleset prioritizes rapid prototyping and assumes a trusted backend.  It focuses on securing basic access control (no open writes) while relaxing data validation.
+ *
+ * Data Structure:
+ * - /orders/{orderId}: Stores all customer orders.
+ * - /menuItems/{menuItemId}: Stores all available menu items.
+ * - /tables/{tableId}: Stores all restaurant tables.
+ * - /settings/{settingId}: Stores global application settings.
+ *
+ * Key Security Decisions:
+ * - Read access is public for all collections.
+ * - Write access is restricted, but schema validation is minimal.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Grants public read access and restricts write access to authenticated users.
+     * @path /orders/{orderId}
+     * @allow get, list: (get) Any user can read order data. (list) Any user can list order data.
+     * @allow create: (create) An authenticated user can create an order.
+     * @allow update: (update) An authenticated user can update an order.
+     * @allow delete: (delete) An authenticated user can delete an order.
+     * @deny create: (create) An unauthenticated user cannot create an order.
+     * @deny update: (update) An unauthenticated user cannot update an order.
+     * @deny delete: (delete) An unauthenticated user cannot delete an order.
+     * @principle Allows public reads while restricting writes to authenticated users.
+     */
+    match /orders/{orderId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Grants public read access and restricts write access to authenticated users.
+     * @path /menuItems/{menuItemId}
+     * @allow get, list: (get) Any user can read menu item data. (list) Any user can list menu item data.
+     * @allow create: (create) An authenticated user can create a menu item.
+     * @allow update: (update) An authenticated user can update a menu item.
+     * @allow delete: (delete) An authenticated user can delete a menu item.
+     * @deny create: (create) An unauthenticated user cannot create a menu item.
+     * @deny update: (update) An unauthenticated user cannot update a menu item.
+     * @deny delete: (delete) An unauthenticated user cannot delete a menu item.
+     * @principle Allows public reads while restricting writes to authenticated users.
+     */
+    match /menuItems/{menuItemId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Grants public read access and restricts write access to authenticated users.
+     * @path /tables/{tableId}
+     * @allow get, list: (get) Any user can read table data. (list) Any user can list table data.
+     * @allow create: (create) An authenticated user can create a table.
+     * @allow update: (update) An authenticated user can update a table.
+     * @allow delete: (delete) An authenticated user can delete a table.
+     * @deny create: (create) An unauthenticated user cannot create a table.
+     * @deny update: (update) An unauthenticated user cannot update a table.
+     * @deny delete: (delete) An unauthenticated user cannot delete a table.
+     * @principle Allows public reads while restricting writes to authenticated users.
+     */
+    match /tables/{tableId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Grants public read access and restricts write access to authenticated users.
+     * @path /settings/{settingId}
+     * @allow get, list: (get) Any user can read settings data. (list) Any user can list settings data.
+     * @allow create: (create) An authenticated user can create a setting.
+     * @allow update: (update) An authenticated user can update a setting.
+     * @allow delete: (delete) An authenticated user can delete a setting.
+     * @deny create: (create) An unauthenticated user cannot create a setting.
+     * @deny update: (update) An unauthenticated user cannot update a setting.
+     * @deny delete: (delete) An unauthenticated user cannot delete a setting.
+     * @principle Allows public reads while restricting writes to authenticated users.
+     */
+    match /settings/{settingId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+  }
+
+  function isSignedIn() {
+    return request.auth != null;
+  }
+}
