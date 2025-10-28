@@ -103,7 +103,7 @@ export default function CustomerView() {
 
   const { sessionId, tableId: sessionTableId, startTime, isValid: isSessionValid, startSession, endSession } = useHydratedStore(useSessionStore, state => state, { sessionId: null, tableId: null, startTime: null, isValid: false, startSession: () => {}, endSession: () => {} });
 
-  const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus'>[]>([]);
+  const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[]>([]);
   const [activeTab, setActiveTab] = useState(menuCategories[0]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isPaymentOptionsOpen, setPaymentOptionsOpen] = useState(false);
@@ -270,11 +270,13 @@ export default function CustomerView() {
        toast({
         title: "Captain Notified",
         description: "A captain has been notified and will be with you shortly to assist with payment.",
+        duration: 3000,
       });
     } else if (method === 'card') {
        toast({
         title: "Captain Notified",
         description: "A captain has been notified and will bring the card machine to your table.",
+        duration: 3000,
       });
     }
   }
@@ -285,6 +287,7 @@ export default function CustomerView() {
     toast({
       title: "Bill Requested",
       description: "A captain has been notified and will bring your bill shortly.",
+      duration: 3000,
     });
   };
 
@@ -455,9 +458,9 @@ export default function CustomerView() {
               <SheetTitle>
                 Your Order
               </SheetTitle>
-               <SheetDescription>
+               <CardDescription>
                   {activeOrder && statusInfo[activeOrder.status] ? statusInfo[activeOrder.status].description : "Review your items before placing the order."}
-                </SheetDescription>
+                </CardDescription>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto -mx-6 px-6 divide-y">
               {activeOrder && (
