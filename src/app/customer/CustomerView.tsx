@@ -558,9 +558,9 @@ export default function CustomerView() {
                           <DialogTrigger asChild>
                              <div className="space-y-2">
                                 <p className="text-sm text-center text-muted-foreground">All items served. Ready to pay?</p>
-                                <Button size="lg" className="w-full" disabled={activeOrder.billRequested}>
+                                <Button size="lg" className="w-full">
                                     <Wallet className="mr-2 h-5 w-5" />
-                                    {activeOrder.billRequested ? 'Bill Requested' : 'Proceed to Pay'}
+                                    Proceed to Pay
                                 </Button>
                              </div>
                           </DialogTrigger>
@@ -579,10 +579,10 @@ export default function CustomerView() {
                                   <p className="text-xs text-muted-foreground">Request card machine at table</p>
                                 </div>
                               </Button>
-                               <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('cash_at_counter')}>
+                               <Button variant="outline" className="justify-start h-14 text-left" onClick={() => handlePaymentSelection('cash_qr')}>
                                 <IndianRupee className="mr-4 h-6 w-6" />
                                 <div>
-                                  <p className="font-semibold">Cash</p>
+                                  <p className="font-semibold">Cash / QR</p>
                                   <p className="text-xs text-muted-foreground">Pay at the billing counter.</p>
                                 </div>
                               </Button>

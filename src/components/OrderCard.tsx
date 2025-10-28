@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import type { Order, OrderItem, DiscountType, PaymentMethod } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, Percent, BadgeIndianRupee, Printer, Wallet, CircleCheck, CreditCard, FileText, IndianRupee } from 'lucide-react';
+import { Clock, ChefHat, ArrowRightLeft, Pen, Trash2, Percent, BadgeIndianRupee, Printer, Wallet, CircleCheck, CreditCard, FileText, IndianRupee, QrCode } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import ItemStatusBadge from './ItemStatusBadge';
@@ -71,7 +71,6 @@ export default function OrderCard({
 }: OrderCardProps) {
   const applyDiscount = useOrderStore(state => state.applyDiscount);
   const setPaymentMethod = useOrderStore(state => state.setPaymentMethod);
-  const acknowledgeBillRequest = useOrderStore(state => state.acknowledgeBillRequest);
   
   const handleDiscountTypeChange = (type: DiscountType) => {
     applyDiscount(order.id, order.discount || 0, type);
@@ -148,27 +147,12 @@ export default function OrderCard({
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-2 pt-2">
-        {order.billRequested && (
-          <div className="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-300 p-3 rounded-md mb-2">
-              <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                      <FileText className="h-5 w-5"/>
-                      <p className="font-bold">Bill Requested</p>
-                  </div>
-                  <Button size="sm" className="h-7" onClick={() => acknowledgeBillRequest(order.id)}>
-                      <CircleCheck className="h-4 w-4 mr-1" />
-                      Acknowledge
-                  </Button>
-              </div>
-          </div>
-        )}
-
-        {order.paymentMethod === 'cash_at_counter' && (
+        {order.paymentMethod === 'cash_qr' && (
           <div className="bg-yellow-100 dark:bg-yellow-900/40 border border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-300 p-3 rounded-md mb-2">
               <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                      <IndianRupee className="h-5 w-5"/>
-                      <p className="font-bold">Cash Payment Requested</p>
+                      <QrCode className="h-5 w-5"/>
+                      <p className="font-bold">Cash/QR Payment</p>
                   </div>
                   <Button size="sm" className="h-7" onClick={() => setPaymentMethod(order.id, null)}>
                       <CircleCheck className="h-4 w-4 mr-1" />

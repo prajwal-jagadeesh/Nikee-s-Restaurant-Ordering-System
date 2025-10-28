@@ -24,7 +24,6 @@ interface OrderState {
   clearSwitchedFrom: (orderId: string) => void;
   applyDiscount: (orderId: string, value: number, type: DiscountType) => void;
   setPaymentMethod: (orderId: string, method: PaymentMethod | null) => void;
-  acknowledgeBillRequest: (orderId: string) => void;
   clearOrders: () => void;
   setHydrated: (hydrated: boolean) => void;
 }
@@ -407,14 +406,7 @@ export const useOrderStore = create(
       setPaymentMethod: (orderId, method) => {
         set(state => ({
           orders: state.orders.map(order => 
-            order.id === orderId ? { ...order, paymentMethod: method, billRequested: true } : order
-          )
-        }))
-      },
-      acknowledgeBillRequest: (orderId) => {
-        set(state => ({
-          orders: state.orders.map(order =>
-            order.id === orderId ? { ...order, billRequested: false } : order
+            order.id === orderId ? { ...order, paymentMethod: method } : order
           )
         }))
       },
