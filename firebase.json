@@ -1,6 +1,5 @@
 {
   "hosting": {
-    "target": "nikees-demo",
     "public": "out",
     "ignore": [
       "firebase.json",
