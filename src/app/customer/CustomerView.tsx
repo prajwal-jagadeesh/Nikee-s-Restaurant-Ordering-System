@@ -31,7 +31,7 @@ const statusInfo: Record<OrderStatus, { label: string, description: string, prog
   'Confirmed': { label: 'Order Confirmed', description: 'Your order has been confirmed and will be sent to the kitchen.', progress: 40 },
   'Preparing': { label: 'Preparing', description: 'Your dishes are being prepared with care by our chefs.', progress: 60 },
   'Ready': { label: 'Ready for Serving', description: 'Your order is ready and will be served shortly.', progress: 80 },
-  'Served': { label: 'Served', description: 'Enjoy your meal! Your order has been served.', progress: 100 },
+  'Served': { label: 'Enjoy your meal! Your order has been served.', progress: 100 },
   'Billed': { label: 'Bill Generated', description: 'The bill has been generated. Please proceed to payment.', progress: 100 },
   'Paid': { label: 'Paid', description: 'Thank you for your visit!', progress: 100 },
   'Cancelled': { label: 'Cancelled', description: 'This order has been cancelled.', progress: 0 },
@@ -142,7 +142,7 @@ export default function CustomerView() {
   const { sessionId, tableId: sessionTableId, startTime, isValid: isSessionValid, startSession, endSession } = useSession();
 
   const [cart, setCart] = useState<Omit<OrderItem, 'kotStatus' | 'itemStatus' | 'kotId'>[]>([]);
-  const [activeTab, setActiveTab] = useState(menuCategories[0]);
+  const [activeTab, setActiveTab] = useState(menuCategories[0] || '');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isPaymentOptionsOpen, setPaymentOptionsOpen] = useState(false);
 
@@ -327,7 +327,7 @@ export default function CustomerView() {
     
     setPaymentOptionsOpen(false);
 
-    const message = method ? `A captain has been notified for your ${method === 'card' ? 'card' : 'cash/QR'} payment.` : "A captain has been notified and will bring your bill shortly.";
+    const message = method ? `A captain has been notified for your ${method === 'card' ? 'card' : 'cash/QR'} payment.` : "A captain has been notified and will bring your bill.";
 
     toast({
       title: "Bill Requested",
@@ -445,55 +445,61 @@ export default function CustomerView() {
         </Alert>
       )}
 
-      <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="md:hidden">
-            <ScrollArea className="w-full whitespace-nowrap rounded-md">
-                <TabsList className="inline-grid grid-flow-col auto-cols-max">
-                    {menuCategories.map((cat) => (
-                        <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
-                    ))}
-                </TabsList>
-                <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+      {menuCategories.length > 0 ? (
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="md:hidden">
+              <ScrollArea className="w-full whitespace-nowrap rounded-md">
+                  <TabsList className="inline-grid grid-flow-col auto-cols-max">
+                      {menuCategories.map((cat) => (
+                          <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
+                      ))}
+                  </TabsList>
+                  <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+          </div>
+          <div className="hidden md:block">
+              <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${menuCategories.length > 0 ? menuCategories.length : 1}, minmax(0, 1fr))`}}>
+                  {menuCategories.map((cat) => (
+                      <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
+                  ))}
+              </TabsList>
+          </div>
+          <AnimatePresence mode="wait">
+              <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+              >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                      {filteredMenuItems.map((item) => (
+                          <Card key={item.id} className="h-full flex flex-col overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 bg-card/70">
+                              <CardHeader>
+                                  <CardTitle>{item.name}</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                              <p className="text-sm text-muted-foreground">{item.description}</p>
+                              </CardContent>
+                              <CardFooter className="flex justify-between items-center mt-auto">
+                              <span className="font-bold text-lg">₹{item.price.toFixed(2)}</span>
+                              {isItemInCart(item.id) ? (
+                                  <ReorderPopover item={item} />
+                              ) : (
+                                  <Button onClick={() => addToCart(item)} disabled={!canPlaceOrder}>Add to Order</Button>
+                              )}
+                              </CardFooter>
+                          </Card>
+                      ))}
+                  </div>
+              </motion.div>
+          </AnimatePresence>
+        </Tabs>
+      ) : (
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">The menu is not available at the moment. Please check back later.</p>
         </div>
-        <div className="hidden md:block">
-             <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${menuCategories.length > 0 ? menuCategories.length : 1}, minmax(0, 1fr))`}}>
-                {menuCategories.map((cat) => (
-                    <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
-                ))}
-            </TabsList>
-        </div>
-        <AnimatePresence mode="wait">
-            <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-            >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-                    {filteredMenuItems.map((item) => (
-                        <Card key={item.id} className="h-full flex flex-col overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 bg-card/70">
-                            <CardHeader>
-                                <CardTitle>{item.name}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                            <p className="text-sm text-muted-foreground">{item.description}</p>
-                            </CardContent>
-                            <CardFooter className="flex justify-between items-center mt-auto">
-                            <span className="font-bold text-lg">₹{item.price.toFixed(2)}</span>
-                            {isItemInCart(item.id) ? (
-                                <ReorderPopover item={item} />
-                            ) : (
-                                <Button onClick={() => addToCart(item)} disabled={!canPlaceOrder}>Add to Order</Button>
-                            )}
-                            </CardFooter>
-                        </Card>
-                    ))}
-                </div>
-            </motion.div>
-        </AnimatePresence>
-      </Tabs>
+      )}
       
       {/* Floating Action Buttons */}
        <div className="fixed bottom-6 right-6 z-40">
